@@ -2,6 +2,8 @@ using System.Net.Sockets;
 using Renci.SshNet;
 using Renci.SshNet.Common;
 using ServerDesk.Application.HostTrust;
+using ServerDesk.Application.Profiles;
+using ServerDesk.Application.Routing;
 using ServerDesk.Application.Secrets;
 using ServerDesk.Application.Sessions;
 using ServerDesk.Domain.Errors;
@@ -32,14 +34,18 @@ public sealed class SshRemoteSessionFactory : IRemoteSessionFactory
         ISecretStore secretStore,
         IHostTrustService hostTrustService,
         IInteractiveAuthenticationPrompt interactivePrompt,
-        SshSessionOptions options)
+        SshSessionOptions options,
+        IConnectionRouteRepository? routeRepository = null,
+        IProfileRepository? profileRepository = null)
     {
         _options = options ?? throw new ArgumentNullException(nameof(options));
         _clientFactory = new SshClientFactory(
             secretStore ?? throw new ArgumentNullException(nameof(secretStore)),
             hostTrustService ?? throw new ArgumentNullException(nameof(hostTrustService)),
             interactivePrompt ?? throw new ArgumentNullException(nameof(interactivePrompt)),
-            options);
+            options,
+            routeRepository,
+            profileRepository);
     }
 
     public IRemoteSession Create(ServerProfile profile)
@@ -56,6 +62,7 @@ internal enum SshChannelPurpose
     FileTransfer,
     Terminal,
     PortForward,
+    Bastion,
 }
 
 internal sealed class SshClientFactory
@@ -64,28 +71,191 @@ internal sealed class SshClientFactory
     private readonly IHostTrustService _hostTrustService;
     private readonly IInteractiveAuthenticationPrompt _interactivePrompt;
     private readonly SshSessionOptions _options;
+    private readonly IConnectionRouteRepository? _routeRepository;
+    private readonly IProfileRepository? _profileRepository;
 
     public SshClientFactory(
         ISecretStore secretStore,
         IHostTrustService hostTrustService,
         IInteractiveAuthenticationPrompt interactivePrompt,
-        SshSessionOptions options)
+        SshSessionOptions options,
+        IConnectionRouteRepository? routeRepository = null,
+        IProfileRepository? profileRepository = null)
     {
         _secretStore = secretStore;
         _hostTrustService = hostTrustService;
         _interactivePrompt = interactivePrompt;
         _options = options;
+        _routeRepository = routeRepository;
+        _profileRepository = profileRepository;
     }
 
-    public async ValueTask<SshClientLease> CreateAsync(
+    public ValueTask<SshClientLease> CreateAsync(
+        ServerProfile profile,
+        SshChannelPurpose purpose,
+        CancellationToken cancellationToken) =>
+        CreateAsyncInternal(profile, purpose, cancellationToken, []);
+
+    internal async ValueTask<SshConnectionPlan> CreateConnectionPlanAsync(
         ServerProfile profile,
         SshChannelPurpose purpose,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(profile);
-        var resources = new List<IDisposable>();
-        AuthenticationMethod authenticationMethod;
+        return await CreateConnectionPlanInternalAsync(profile, purpose, cancellationToken, [])
+            .ConfigureAwait(false);
+    }
 
+    internal void VerifyHostKey(
+        ServerProfile profile,
+        SshConnectionState state,
+        HostKeyEventArgs eventArgs,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var observation = HostKeyObservation.Create(
+                profile.Host,
+                profile.Port,
+                eventArgs.HostKeyName,
+                HostKeyFingerprint.FromHostKey(eventArgs.HostKey));
+            var verification = _hostTrustService.VerifyAsync(observation, cancellationToken)
+                .AsTask()
+                .GetAwaiter()
+                .GetResult();
+            eventArgs.CanTrust = verification.IsTrusted;
+            if (!verification.IsTrusted)
+            {
+                state.HostTrustFailure = verification;
+            }
+        }
+        catch (OperationCanceledException exception)
+        {
+            state.HostTrustBridgeException = exception;
+            eventArgs.CanTrust = false;
+        }
+        catch (Exception exception)
+        {
+            state.HostTrustBridgeException = exception;
+            eventArgs.CanTrust = false;
+        }
+    }
+
+    private async ValueTask<SshClientLease> CreateAsyncInternal(
+        ServerProfile profile,
+        SshChannelPurpose purpose,
+        CancellationToken cancellationToken,
+        HashSet<Guid> routeStack)
+    {
+        ArgumentNullException.ThrowIfNull(profile);
+        var plan = await CreateConnectionPlanInternalAsync(profile, purpose, cancellationToken, routeStack)
+            .ConfigureAwait(false);
+        try
+        {
+            var client = new SshClient(plan.ConnectionInfo)
+            {
+                KeepAliveInterval = _options.KeepAliveInterval,
+            };
+            var lease = new SshClientLease(client, plan, purpose);
+            client.HostKeyReceived += (_, eventArgs) =>
+                VerifyHostKey(profile, plan.State, eventArgs, cancellationToken);
+            return lease;
+        }
+        catch
+        {
+            plan.Dispose();
+            throw;
+        }
+    }
+
+    private async ValueTask<SshConnectionPlan> CreateConnectionPlanInternalAsync(
+        ServerProfile profile,
+        SshChannelPurpose purpose,
+        CancellationToken cancellationToken,
+        HashSet<Guid> routeStack)
+    {
+        if (!routeStack.Add(profile.Id))
+        {
+            throw CreateSessionException(
+                RemoteErrorCode.InvalidEndpoint,
+                "The SSH connection route contains a cycle. Remove the circular bastion reference before reconnecting.");
+        }
+
+        var resources = new List<IDisposable>();
+        try
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var state = new SshConnectionState();
+            var authenticationMethod = await CreateAuthenticationMethodAsync(
+                    profile,
+                    state,
+                    resources,
+                    cancellationToken)
+                .ConfigureAwait(false);
+            var route = await ResolveRouteAsync(profile.Id, cancellationToken).ConfigureAwait(false);
+
+            ConnectionInfo connectionInfo;
+            switch (route.Kind)
+            {
+                case ServerConnectionRouteKind.Direct:
+                    connectionInfo = CreateDirectConnectionInfo(profile, authenticationMethod);
+                    break;
+
+                case ServerConnectionRouteKind.HttpProxy:
+                case ServerConnectionRouteKind.Socks4Proxy:
+                case ServerConnectionRouteKind.Socks5Proxy:
+                    connectionInfo = await CreateProxyConnectionInfoAsync(
+                            profile,
+                            route,
+                            authenticationMethod,
+                            cancellationToken)
+                        .ConfigureAwait(false);
+                    break;
+
+                case ServerConnectionRouteKind.Bastion:
+                    connectionInfo = await CreateBastionConnectionInfoAsync(
+                            profile,
+                            route,
+                            authenticationMethod,
+                            purpose,
+                            resources,
+                            cancellationToken,
+                            routeStack)
+                        .ConfigureAwait(false);
+                    break;
+
+                default:
+                    throw CreateSessionException(
+                        RemoteErrorCode.InvalidEndpoint,
+                        "The configured SSH connection route is not supported.");
+            }
+
+            connectionInfo.Timeout = _options.ConnectTimeout;
+            connectionInfo.ChannelCloseTimeout = _options.DisconnectTimeout;
+            return new SshConnectionPlan(connectionInfo, state, resources);
+        }
+        catch
+        {
+            for (var index = resources.Count - 1; index >= 0; index--)
+            {
+                resources[index].Dispose();
+            }
+
+            throw;
+        }
+        finally
+        {
+            routeStack.Remove(profile.Id);
+        }
+    }
+
+    private async ValueTask<AuthenticationMethod> CreateAuthenticationMethodAsync(
+        ServerProfile profile,
+        SshConnectionState state,
+        ICollection<IDisposable> resources,
+        CancellationToken cancellationToken)
+    {
+        AuthenticationMethod authenticationMethod;
         switch (profile.AuthenticationKind)
         {
             case ServerAuthenticationKind.Password:
@@ -107,7 +277,6 @@ internal sealed class SshClientFactory
                     ? null
                     : await _secretStore.GetAsync(profile.CredentialReference.Value, cancellationToken)
                         .ConfigureAwait(false);
-
                 IPrivateKeySource privateKey;
                 try
                 {
@@ -135,6 +304,8 @@ internal sealed class SshClientFactory
 
             case ServerAuthenticationKind.KeyboardInteractive:
                 var keyboardInteractive = new KeyboardInteractiveAuthenticationMethod(profile.Username);
+                keyboardInteractive.AuthenticationPrompt += (_, eventArgs) =>
+                    HandleInteractiveAuthentication(profile, state, eventArgs, cancellationToken);
                 authenticationMethod = keyboardInteractive;
                 resources.Add(authenticationMethod);
                 break;
@@ -150,30 +321,136 @@ internal sealed class SshClientFactory
                     "The configured SSH authentication type is not supported.");
         }
 
-        var connectionInfo = new ConnectionInfo(
+        return authenticationMethod;
+    }
+
+    private async ValueTask<ServerConnectionRoute> ResolveRouteAsync(
+        Guid serverProfileId,
+        CancellationToken cancellationToken)
+    {
+        if (_routeRepository is null)
+        {
+            return ServerConnectionRoute.Direct(serverProfileId);
+        }
+
+        return await _routeRepository.GetAsync(serverProfileId, cancellationToken).ConfigureAwait(false)
+            ?? ServerConnectionRoute.Direct(serverProfileId);
+    }
+
+    private static ConnectionInfo CreateDirectConnectionInfo(
+        ServerProfile profile,
+        AuthenticationMethod authenticationMethod) =>
+        new(profile.Host, profile.Port, profile.Username, authenticationMethod);
+
+    private async ValueTask<ConnectionInfo> CreateProxyConnectionInfoAsync(
+        ServerProfile profile,
+        ServerConnectionRoute route,
+        AuthenticationMethod authenticationMethod,
+        CancellationToken cancellationToken)
+    {
+        var proxyPassword = route.ProxyCredentialReference is null
+            ? null
+            : await _secretStore.GetAsync(route.ProxyCredentialReference.Value, cancellationToken)
+                .ConfigureAwait(false);
+        if (route.ProxyCredentialReference is not null && proxyPassword is null)
+        {
+            throw CreateSessionException(
+                RemoteErrorCode.AuthenticationFailed,
+                "The stored SSH proxy password could not be found. Edit the server route and enter the proxy credential again.");
+        }
+
+        var proxyType = route.Kind switch
+        {
+            ServerConnectionRouteKind.HttpProxy => ProxyTypes.Http,
+            ServerConnectionRouteKind.Socks4Proxy => ProxyTypes.Socks4,
+            ServerConnectionRouteKind.Socks5Proxy => ProxyTypes.Socks5,
+            _ => throw new InvalidOperationException("Route is not a proxy route."),
+        };
+
+        return new ConnectionInfo(
             profile.Host,
             profile.Port,
             profile.Username,
-            authenticationMethod)
-        {
-            Timeout = _options.ConnectTimeout,
-            ChannelCloseTimeout = _options.DisconnectTimeout,
-        };
+            proxyType,
+            route.ProxyHost,
+            route.ProxyPort!.Value,
+            route.ProxyUsername,
+            proxyPassword,
+            authenticationMethod);
+    }
 
-        var client = new SshClient(connectionInfo)
+    private async ValueTask<ConnectionInfo> CreateBastionConnectionInfoAsync(
+        ServerProfile targetProfile,
+        ServerConnectionRoute targetRoute,
+        AuthenticationMethod targetAuthenticationMethod,
+        SshChannelPurpose purpose,
+        ICollection<IDisposable> resources,
+        CancellationToken cancellationToken,
+        HashSet<Guid> routeStack)
+    {
+        if (_routeRepository is null || _profileRepository is null || targetRoute.BastionProfileId is null)
         {
-            KeepAliveInterval = _options.KeepAliveInterval,
-        };
-        var lease = new SshClientLease(client, resources, purpose);
-
-        client.HostKeyReceived += (_, eventArgs) => VerifyHostKey(profile, lease, eventArgs, cancellationToken);
-        if (authenticationMethod is KeyboardInteractiveAuthenticationMethod interactiveMethod)
-        {
-            interactiveMethod.AuthenticationPrompt += (_, eventArgs) =>
-                HandleInteractiveAuthentication(profile, lease, eventArgs, cancellationToken);
+            throw CreateSessionException(
+                RemoteErrorCode.InvalidEndpoint,
+                "The configured bastion route cannot be resolved. Re-save the server route and select a valid bastion profile.");
         }
 
-        return lease;
+        var bastion = await _profileRepository.GetAsync(targetRoute.BastionProfileId.Value, cancellationToken)
+            .ConfigureAwait(false);
+        if (bastion is null)
+        {
+            throw CreateSessionException(
+                RemoteErrorCode.InvalidEndpoint,
+                "The configured bastion server profile no longer exists. Select another bastion or use a direct route.");
+        }
+
+        var bastionRoute = await ResolveRouteAsync(bastion.Id, cancellationToken).ConfigureAwait(false);
+        if (bastionRoute.IsBastion)
+        {
+            throw CreateSessionException(
+                RemoteErrorCode.InvalidEndpoint,
+                "Nested bastion routes are not supported in V1. The selected bastion must connect directly or through HTTP/SOCKS proxy.");
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
+        var bastionLease = await CreateAsyncInternal(
+                bastion,
+                SshChannelPurpose.Bastion,
+                cancellationToken,
+                routeStack)
+            .ConfigureAwait(false);
+        resources.Add(bastionLease);
+        try
+        {
+            await bastionLease.Client.ConnectAsync(cancellationToken).ConfigureAwait(false);
+            if (!bastionLease.Client.IsConnected)
+            {
+                throw new SshConnectionException("The bastion SSH session could not be established.");
+            }
+
+            var forward = new ForwardedPortLocal(
+                "127.0.0.1",
+                0,
+                targetProfile.Host,
+                checked((uint)targetProfile.Port));
+            bastionLease.Client.AddForwardedPort(forward);
+            forward.Start();
+            resources.Add(forward);
+            cancellationToken.ThrowIfCancellationRequested();
+
+            return new ConnectionInfo(
+                "127.0.0.1",
+                checked((int)forward.BoundPort),
+                targetProfile.Username,
+                targetAuthenticationMethod);
+        }
+        catch (Exception exception) when (exception is not RemoteSessionException)
+        {
+            throw CreateSessionException(
+                RemoteErrorCode.ConnectionFailed,
+                $"ServerDesk could not establish the SSH route through bastion '{bastion.Name}'.",
+                exception);
+        }
     }
 
     private async ValueTask<string> GetRequiredSecretAsync(
@@ -200,44 +477,9 @@ internal sealed class SshClientFactory
         return secret;
     }
 
-    private void VerifyHostKey(
-        ServerProfile profile,
-        SshClientLease lease,
-        HostKeyEventArgs eventArgs,
-        CancellationToken cancellationToken)
-    {
-        try
-        {
-            var observation = HostKeyObservation.Create(
-                profile.Host,
-                profile.Port,
-                eventArgs.HostKeyName,
-                HostKeyFingerprint.FromHostKey(eventArgs.HostKey));
-            var verification = _hostTrustService.VerifyAsync(observation, cancellationToken)
-                .AsTask()
-                .GetAwaiter()
-                .GetResult();
-            eventArgs.CanTrust = verification.IsTrusted;
-            if (!verification.IsTrusted)
-            {
-                lease.HostTrustFailure = verification;
-            }
-        }
-        catch (OperationCanceledException exception)
-        {
-            lease.HostTrustBridgeException = exception;
-            eventArgs.CanTrust = false;
-        }
-        catch (Exception exception)
-        {
-            lease.HostTrustBridgeException = exception;
-            eventArgs.CanTrust = false;
-        }
-    }
-
     private void HandleInteractiveAuthentication(
         ServerProfile profile,
-        SshClientLease lease,
+        SshConnectionState state,
         AuthenticationPromptEventArgs eventArgs,
         CancellationToken cancellationToken)
     {
@@ -259,13 +501,13 @@ internal sealed class SshClientFactory
 
             if (responses is null)
             {
-                lease.InteractiveAuthenticationCancelled = true;
+                state.InteractiveAuthenticationCancelled = true;
                 return;
             }
 
             if (responses.Count != eventArgs.Prompts.Count)
             {
-                lease.InteractiveAuthenticationException = new InvalidOperationException(
+                state.InteractiveAuthenticationException = new InvalidOperationException(
                     "The interactive authentication prompt returned an unexpected number of responses.");
                 return;
             }
@@ -277,12 +519,12 @@ internal sealed class SshClientFactory
         }
         catch (OperationCanceledException exception)
         {
-            lease.InteractiveAuthenticationCancelled = true;
-            lease.InteractiveAuthenticationException = exception;
+            state.InteractiveAuthenticationCancelled = true;
+            state.InteractiveAuthenticationException = exception;
         }
         catch (Exception exception)
         {
-            lease.InteractiveAuthenticationException = exception;
+            state.InteractiveAuthenticationException = exception;
         }
     }
 
@@ -298,25 +540,8 @@ internal sealed class SshClientFactory
             innerException);
 }
 
-internal sealed class SshClientLease : IDisposable
+internal sealed class SshConnectionState
 {
-    private readonly IReadOnlyList<IDisposable> _resources;
-    private bool _disposed;
-
-    public SshClientLease(
-        SshClient client,
-        IReadOnlyList<IDisposable> resources,
-        SshChannelPurpose purpose)
-    {
-        Client = client;
-        _resources = resources;
-        Purpose = purpose;
-    }
-
-    public SshClient Client { get; }
-
-    public SshChannelPurpose Purpose { get; }
-
     public HostTrustVerification? HostTrustFailure { get; set; }
 
     public Exception? HostTrustBridgeException { get; set; }
@@ -324,6 +549,65 @@ internal sealed class SshClientLease : IDisposable
     public bool InteractiveAuthenticationCancelled { get; set; }
 
     public Exception? InteractiveAuthenticationException { get; set; }
+}
+
+internal sealed class SshConnectionPlan : IDisposable
+{
+    private readonly IReadOnlyList<IDisposable> _resources;
+    private bool _disposed;
+
+    public SshConnectionPlan(
+        ConnectionInfo connectionInfo,
+        SshConnectionState state,
+        IReadOnlyList<IDisposable> resources)
+    {
+        ConnectionInfo = connectionInfo;
+        State = state;
+        _resources = resources;
+    }
+
+    public ConnectionInfo ConnectionInfo { get; }
+
+    public SshConnectionState State { get; }
+
+    public void Dispose()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
+        for (var index = _resources.Count - 1; index >= 0; index--)
+        {
+            _resources[index].Dispose();
+        }
+    }
+}
+
+internal sealed class SshClientLease : IDisposable
+{
+    private readonly SshConnectionPlan _plan;
+    private bool _disposed;
+
+    public SshClientLease(SshClient client, SshConnectionPlan plan, SshChannelPurpose purpose)
+    {
+        Client = client;
+        _plan = plan;
+        Purpose = purpose;
+    }
+
+    public SshClient Client { get; }
+
+    public SshChannelPurpose Purpose { get; }
+
+    public HostTrustVerification? HostTrustFailure => _plan.State.HostTrustFailure;
+
+    public Exception? HostTrustBridgeException => _plan.State.HostTrustBridgeException;
+
+    public bool InteractiveAuthenticationCancelled => _plan.State.InteractiveAuthenticationCancelled;
+
+    public Exception? InteractiveAuthenticationException => _plan.State.InteractiveAuthenticationException;
 
     public void Dispose()
     {
@@ -334,10 +618,7 @@ internal sealed class SshClientLease : IDisposable
 
         _disposed = true;
         Client.Dispose();
-        for (var index = _resources.Count - 1; index >= 0; index--)
-        {
-            _resources[index].Dispose();
-        }
+        _plan.Dispose();
     }
 }
 
@@ -478,7 +759,6 @@ internal sealed class SshRemoteSession : IRemoteSession
 
             Transition(RemoteSessionState.Disconnecting);
             StopConnectionMonitor();
-
             try
             {
                 if (_lease.Client.IsConnected)
@@ -725,6 +1005,10 @@ internal static class SshRemoteErrorMapper
             SshAuthenticationException => new RemoteError(
                 RemoteErrorCode.AuthenticationFailed,
                 "SSH authentication failed. Check the username and configured credential."),
+            ProxyException => new RemoteError(
+                RemoteErrorCode.ConnectionFailed,
+                "ServerDesk could not establish the configured SSH proxy route.",
+                exception.Message),
             SocketException => new RemoteError(
                 RemoteErrorCode.ConnectionFailed,
                 "ServerDesk could not reach the SSH server.",
