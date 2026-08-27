@@ -224,6 +224,21 @@ On every certified OS family:
 - light/dark/system theme;
 - keyboard-only pass over core workflow.
 
+### M1.5 Windows PTY smoke checklist
+
+Run this checklist on Windows with the WebView2 Runtime installed and a disposable Linux SSH target:
+
+1. Build ServerDesk from a clean checkout and verify `TerminalFrontend/dist/index.html`, `terminal.js`, and `terminal.css` are copied beside the app output. Disconnect the Windows machine from the internet after build; opening a terminal must still work because runtime assets are local.
+2. Add/select a server profile and click **Terminal**. Verify host-trust and credential prompts behave exactly like a normal SSH connection and a shell prompt appears.
+3. Run `printf '\033[31mred\033[0m\n'` and verify ANSI color rendering. Run `top`, `less /etc/services`, and, when installed, `vim`; full-screen repaint/input must remain usable.
+4. Resize the terminal window repeatedly, then run `stty size`; rows/columns must follow the visible xterm area.
+5. Open at least three tabs, including two tabs to the same server. Run `sleep 20` in one tab and continue typing commands in another; tabs must remain independent.
+6. While a terminal tab is busy, perform an SFTP operation through the integration harness/current file transport. The terminal must not block the independent SFTP channel.
+7. Select terminal text and press `Ctrl+Shift+C`; paste with `Ctrl+Shift+V`. Press plain `Ctrl+C` while `sleep 20` is running and verify SIGINT reaches the remote shell.
+8. Generate several screens of output, press `Ctrl+Shift+F`, search backward/forward, then close search and verify terminal focus/input resumes.
+9. Close a busy terminal tab. Confirm the tab disappears promptly and no further remote input is accepted for that disposed session. Close the entire Terminal window with multiple tabs open and verify every PTY is cleaned up.
+10. Drop the SSH connection while a tab is open. The tab/header must show disconnected/faulted state rather than claiming success, and opening a fresh tab must create a fresh SSH session.
+
 ## 10. Definition of tested
 
 A feature is not “tested” solely because a mocked happy-path unit test exists.
