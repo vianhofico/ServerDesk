@@ -7,6 +7,8 @@ public enum RemoteErrorCode
     HostKeyUnknown,
     HostKeyMismatch,
     PermissionDenied,
+    PathNotFound,
+    PathConflict,
     SudoRequired,
     CommandNotFound,
     CapabilityUnavailable,
