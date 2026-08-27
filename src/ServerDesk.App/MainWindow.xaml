@@ -4,19 +4,18 @@
         Title="ServerDesk"
         Width="1280"
         Height="800"
-        MinWidth="960"
+        MinWidth="980"
         MinHeight="640"
-        WindowStartupLocation="CenterScreen"
-        Background="{StaticResource WindowBackgroundBrush}">
-    <Grid>
+        WindowStartupLocation="CenterScreen">
+    <Grid Background="{DynamicResource WindowBackgroundBrush}">
         <Grid.RowDefinitions>
-            <RowDefinition Height="56" />
+            <RowDefinition Height="60" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
         <Border Grid.Row="0"
-                Background="{StaticResource SurfaceBrush}"
-                BorderBrush="{StaticResource BorderBrush}"
+                Background="{DynamicResource SurfaceBrush}"
+                BorderBrush="{DynamicResource BorderBrush}"
                 BorderThickness="0,0,0,1">
             <Grid Margin="20,0">
                 <Grid.ColumnDefinitions>
@@ -26,114 +25,283 @@
                 </Grid.ColumnDefinitions>
 
                 <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                    <Border Width="30" Height="30" CornerRadius="8" Background="{StaticResource AccentBrush}">
-                        <TextBlock Text="S" Foreground="White" FontWeight="SemiBold"
-                                   HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    <Border Width="34" Height="34" CornerRadius="9" Background="{DynamicResource AccentBrush}">
+                        <TextBlock Text="S"
+                                   Foreground="White"
+                                   FontWeight="SemiBold"
+                                   FontSize="16"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center" />
                     </Border>
-                    <TextBlock Text="ServerDesk" Margin="10,0,0,0" FontSize="18" FontWeight="SemiBold"
-                               VerticalAlignment="Center" />
+                    <StackPanel Margin="10,0,0,0" VerticalAlignment="Center">
+                        <TextBlock Text="ServerDesk" FontSize="17" FontWeight="SemiBold" />
+                        <TextBlock Text="Windows-first Linux administration"
+                                   FontSize="11"
+                                   Foreground="{DynamicResource MutedTextBrush}" />
+                    </StackPanel>
                 </StackPanel>
 
-                <TextBlock Grid.Column="2"
-                           Text="Foundation workspace"
-                           Foreground="{StaticResource MutedTextBrush}"
-                           VerticalAlignment="Center" />
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Border Margin="0,0,14,0"
+                            Padding="10,5"
+                            CornerRadius="12"
+                            Background="{DynamicResource AccentSoftBrush}">
+                        <StackPanel Orientation="Horizontal">
+                            <Ellipse Width="7" Height="7"
+                                     Fill="{DynamicResource SuccessBrush}"
+                                     VerticalAlignment="Center" />
+                            <TextBlock Margin="7,0,0,0"
+                                       Text="M0 Foundation"
+                                       FontSize="12"
+                                       FontWeight="SemiBold" />
+                        </StackPanel>
+                    </Border>
+
+                    <TextBlock Text="Theme"
+                               Margin="0,0,7,0"
+                               Foreground="{DynamicResource MutedTextBrush}"
+                               VerticalAlignment="Center" />
+                    <ComboBox Width="112"
+                              ItemsSource="{Binding ThemeOptions}"
+                              SelectedItem="{Binding ThemePreference, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                </StackPanel>
             </Grid>
         </Border>
 
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="240" />
+                <ColumnDefinition Width="248" />
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
 
             <Border Grid.Column="0"
-                    Background="{StaticResource SurfaceBrush}"
-                    BorderBrush="{StaticResource BorderBrush}"
+                    Background="{DynamicResource SurfaceBrush}"
+                    BorderBrush="{DynamicResource BorderBrush}"
                     BorderThickness="0,0,1,0">
-                <DockPanel Margin="14">
-                    <StackPanel DockPanel.Dock="Top">
-                        <TextBlock Text="SERVERS" FontSize="11" FontWeight="SemiBold"
-                                   Foreground="{StaticResource MutedTextBrush}" Margin="8,4,8,8" />
-                        <Border Background="#EEF4FF" CornerRadius="8" Padding="10,8" Margin="0,0,0,16">
-                            <StackPanel>
-                                <TextBlock Text="No server connected" FontWeight="SemiBold" />
-                                <TextBlock Text="Remote profiles arrive in M1" FontSize="12"
-                                           Foreground="{StaticResource MutedTextBrush}" Margin="0,3,0,0" />
-                            </StackPanel>
-                        </Border>
+                <Grid Margin="14">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
 
-                        <TextBlock Text="WORKSPACE" FontSize="11" FontWeight="SemiBold"
-                                   Foreground="{StaticResource MutedTextBrush}" Margin="8,0,8,6" />
-                        <ListBox BorderThickness="0" Background="Transparent" SelectedIndex="0">
-                            <ListBoxItem Padding="10,8">Dashboard</ListBoxItem>
-                            <ListBoxItem Padding="10,8" IsEnabled="False">Explorer</ListBoxItem>
-                            <ListBoxItem Padding="10,8" IsEnabled="False">Terminal</ListBoxItem>
-                            <ListBoxItem Padding="10,8" IsEnabled="False">Processes</ListBoxItem>
-                            <ListBoxItem Padding="10,8" IsEnabled="False">Services</ListBoxItem>
-                            <ListBoxItem Padding="10,8" IsEnabled="False">Docker</ListBoxItem>
-                            <ListBoxItem Padding="10,8" IsEnabled="False">Storage</ListBoxItem>
-                            <ListBoxItem Padding="10,8" IsEnabled="False">Network</ListBoxItem>
-                            <ListBoxItem Padding="10,8" IsEnabled="False">Logs</ListBoxItem>
+                    <TextBlock Grid.Row="0"
+                               Text="SERVERS"
+                               Margin="8,4,8,8"
+                               FontSize="11"
+                               FontWeight="SemiBold"
+                               Foreground="{DynamicResource MutedTextBrush}" />
+
+                    <Border Grid.Row="1"
+                            Margin="0,0,0,18"
+                            Padding="12,10"
+                            CornerRadius="8"
+                            Background="{DynamicResource SurfaceSecondaryBrush}">
+                        <StackPanel>
+                            <TextBlock Text="No server connected" FontWeight="SemiBold" />
+                            <TextBlock Margin="0,4,0,0"
+                                       Text="Secure profiles and SSH arrive in M1"
+                                       TextWrapping="Wrap"
+                                       FontSize="12"
+                                       Foreground="{DynamicResource MutedTextBrush}" />
+                        </StackPanel>
+                    </Border>
+
+                    <StackPanel Grid.Row="2">
+                        <TextBlock Text="WORKSPACE"
+                                   Margin="8,0,8,7"
+                                   FontSize="11"
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource MutedTextBrush}" />
+                        <ListBox ItemsSource="{Binding NavigationItems}"
+                                 SelectedItem="{Binding SelectedNavigationItem, Mode=TwoWay}"
+                                 BorderThickness="0"
+                                 Background="Transparent">
+                            <ListBox.ItemContainerStyle>
+                                <Style TargetType="ListBoxItem">
+                                    <Setter Property="IsEnabled" Value="{Binding IsAvailable}" />
+                                    <Setter Property="Padding" Value="0" />
+                                    <Setter Property="Margin" Value="0,1" />
+                                    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                    <Setter Property="Background" Value="Transparent" />
+                                    <Setter Property="BorderThickness" Value="0" />
+                                    <Setter Property="Template">
+                                        <Setter.Value>
+                                            <ControlTemplate TargetType="ListBoxItem">
+                                                <Border x:Name="ItemRoot"
+                                                        Padding="10,8"
+                                                        CornerRadius="7"
+                                                        Background="{TemplateBinding Background}">
+                                                    <ContentPresenter />
+                                                </Border>
+                                                <ControlTemplate.Triggers>
+                                                    <Trigger Property="IsSelected" Value="True">
+                                                        <Setter TargetName="ItemRoot"
+                                                                Property="Background"
+                                                                Value="{DynamicResource AccentSoftBrush}" />
+                                                    </Trigger>
+                                                    <Trigger Property="IsEnabled" Value="False">
+                                                        <Setter Property="Opacity" Value="0.48" />
+                                                    </Trigger>
+                                                </ControlTemplate.Triggers>
+                                            </ControlTemplate>
+                                        </Setter.Value>
+                                    </Setter>
+                                </Style>
+                            </ListBox.ItemContainerStyle>
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding Title}" FontSize="13" />
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
                         </ListBox>
                     </StackPanel>
-                </DockPanel>
+
+                    <Border Grid.Row="3"
+                            Margin="0,14,0,0"
+                            Padding="10"
+                            CornerRadius="8"
+                            BorderBrush="{DynamicResource BorderBrush}"
+                            BorderThickness="1">
+                        <StackPanel>
+                            <TextBlock Text="Local-only foundation"
+                                       FontSize="12"
+                                       FontWeight="SemiBold" />
+                            <TextBlock Margin="0,3,0,0"
+                                       Text="Credentials: Windows Credential Manager"
+                                       TextWrapping="Wrap"
+                                       FontSize="11"
+                                       Foreground="{DynamicResource MutedTextBrush}" />
+                            <TextBlock Text="Metadata: SQLite"
+                                       FontSize="11"
+                                       Foreground="{DynamicResource MutedTextBrush}" />
+                        </StackPanel>
+                    </Border>
+                </Grid>
             </Border>
 
             <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto">
-                <Grid Margin="32">
+                <Grid Margin="34,30">
                     <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
 
                     <StackPanel Grid.Row="0">
-                        <TextBlock Text="Server administration, visually." FontSize="30" FontWeight="SemiBold" />
-                        <TextBlock Margin="0,8,0,0"
-                                   MaxWidth="760"
+                        <TextBlock Text="{Binding CurrentTitle}"
+                                   FontSize="30"
+                                   FontWeight="SemiBold" />
+                        <TextBlock Margin="0,7,0,0"
+                                   MaxWidth="780"
                                    HorizontalAlignment="Left"
+                                   Text="{Binding CurrentDescription}"
                                    TextWrapping="Wrap"
-                                   Foreground="{StaticResource MutedTextBrush}"
                                    FontSize="14"
-                                   Text="This bootstrap shell establishes the Windows-first workspace. Secure SSH/SFTP connections, terminal, Explorer and capability detection are implemented in M1 according to the repository roadmap." />
+                                   Foreground="{DynamicResource MutedTextBrush}" />
                     </StackPanel>
 
-                    <UniformGrid Grid.Row="1" Columns="3" Margin="0,28,0,0">
-                        <Border Margin="0,0,12,0" Padding="18" CornerRadius="10"
-                                Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
+                    <UniformGrid Grid.Row="1" Columns="3" Margin="0,26,0,0">
+                        <Border Margin="0,0,8,0"
+                                Padding="18"
+                                CornerRadius="10"
+                                Background="{DynamicResource SurfaceBrush}"
+                                BorderBrush="{DynamicResource BorderBrush}"
+                                BorderThickness="1">
                             <StackPanel>
-                                <TextBlock Text="Secure remote core" FontWeight="SemiBold" FontSize="16" />
-                                <TextBlock Margin="0,8,0,0" TextWrapping="Wrap" Foreground="{StaticResource MutedTextBrush}"
-                                           Text="SSH host verification, secure credentials, SFTP, PTY terminal, tunnels and reconnect." />
+                                <TextBlock Text="Secure secrets" FontSize="15" FontWeight="SemiBold" />
+                                <TextBlock Margin="0,7,0,0"
+                                           Text="Passwords and passphrases are kept outside SQLite in Windows Credential Manager."
+                                           TextWrapping="Wrap"
+                                           Foreground="{DynamicResource MutedTextBrush}" />
+                                <TextBlock Margin="0,12,0,0"
+                                           Text="READY"
+                                           FontSize="11"
+                                           FontWeight="Bold"
+                                           Foreground="{DynamicResource SuccessBrush}" />
                             </StackPanel>
                         </Border>
-                        <Border Margin="6,0" Padding="18" CornerRadius="10"
-                                Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
+
+                        <Border Margin="4,0"
+                                Padding="18"
+                                CornerRadius="10"
+                                Background="{DynamicResource SurfaceBrush}"
+                                BorderBrush="{DynamicResource BorderBrush}"
+                                BorderThickness="1">
                             <StackPanel>
-                                <TextBlock Text="Windows-like controls" FontWeight="SemiBold" FontSize="16" />
-                                <TextBlock Margin="0,8,0,0" TextWrapping="Wrap" Foreground="{StaticResource MutedTextBrush}"
-                                           Text="Explorer, Task-Manager-like processes, Services, logs, storage and network." />
+                                <TextBlock Text="Versioned metadata" FontSize="15" FontWeight="SemiBold" />
+                                <TextBlock Margin="0,7,0,0"
+                                           Text="Server profiles and operation history use a versioned SQLite schema with no raw secret columns."
+                                           TextWrapping="Wrap"
+                                           Foreground="{DynamicResource MutedTextBrush}" />
+                                <TextBlock Margin="0,12,0,0"
+                                           Text="SCHEMA V1"
+                                           FontSize="11"
+                                           FontWeight="Bold"
+                                           Foreground="{DynamicResource SuccessBrush}" />
                             </StackPanel>
                         </Border>
-                        <Border Margin="12,0,0,0" Padding="18" CornerRadius="10"
-                                Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
+
+                        <Border Margin="8,0,0,0"
+                                Padding="18"
+                                CornerRadius="10"
+                                Background="{DynamicResource SurfaceBrush}"
+                                BorderBrush="{DynamicResource BorderBrush}"
+                                BorderThickness="1">
                             <StackPanel>
-                                <TextBlock Text="DevOps workspace" FontWeight="SemiBold" FontSize="16" />
-                                <TextBlock Margin="0,8,0,0" TextWrapping="Wrap" Foreground="{StaticResource MutedTextBrush}"
-                                           Text="Docker, Compose, Git, nginx, SSL and deployment workflows without exposing admin sockets." />
+                                <TextBlock Text="Theme &amp; shell" FontSize="15" FontWeight="SemiBold" />
+                                <TextBlock Margin="0,7,0,0"
+                                           Text="MVVM navigation and System/Light/Dark theme preferences are persisted locally."
+                                           TextWrapping="Wrap"
+                                           Foreground="{DynamicResource MutedTextBrush}" />
+                                <TextBlock Margin="0,12,0,0"
+                                           Text="{Binding EffectiveTheme, StringFormat=ACTIVE: {0}}"
+                                           FontSize="11"
+                                           FontWeight="Bold"
+                                           Foreground="{DynamicResource AccentBrush}" />
                             </StackPanel>
                         </Border>
                     </UniformGrid>
 
-                    <Border Grid.Row="2" Margin="0,28,0,0" Padding="18" CornerRadius="10"
-                            Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
-                        <StackPanel>
-                            <TextBlock Text="Implementation contract" FontWeight="SemiBold" FontSize="16" />
-                            <TextBlock Margin="0,8,0,0" TextWrapping="Wrap" Foreground="{StaticResource MutedTextBrush}"
-                                       Text="Agents must follow AGENTS.md, the architecture boundaries, security invariants, support matrix and milestone gates before a feature is considered complete." />
-                        </StackPanel>
+                    <Border Grid.Row="2"
+                            Margin="0,24,0,0"
+                            Padding="20"
+                            CornerRadius="10"
+                            Background="{DynamicResource SurfaceBrush}"
+                            BorderBrush="{DynamicResource BorderBrush}"
+                            BorderThickness="1">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <TextBlock Text="Next milestone: M1 Remote Core"
+                                           FontSize="16"
+                                           FontWeight="SemiBold" />
+                                <TextBlock Margin="0,6,24,0"
+                                           MaxWidth="720"
+                                           Text="The foundation now exposes stable ports for profiles, secrets, operation audit and remote sessions. M1 can add SSH.NET/SFTP/PTY/tunnels without reversing dependencies."
+                                           TextWrapping="Wrap"
+                                           Foreground="{DynamicResource MutedTextBrush}" />
+                            </StackPanel>
+                            <Border Grid.Column="1"
+                                    Padding="10,5"
+                                    CornerRadius="12"
+                                    Background="{DynamicResource SurfaceSecondaryBrush}"
+                                    VerticalAlignment="Top">
+                                <TextBlock Text="Agentless first" FontSize="12" FontWeight="SemiBold" />
+                            </Border>
+                        </Grid>
                     </Border>
+
+                    <TextBlock Grid.Row="3"
+                               Margin="2,14,0,0"
+                               Text="{Binding SettingsMessage}"
+                               Foreground="{DynamicResource WarningBrush}"
+                               TextWrapping="Wrap" />
                 </Grid>
             </ScrollViewer>
         </Grid>

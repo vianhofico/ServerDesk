@@ -1,22 +1,23 @@
+using ServerDesk.Domain.Secrets;
+
 namespace ServerDesk.Domain.Servers;
 
-public sealed record ServerProfile(
-    Guid Id,
-    string Name,
-    string Host,
-    int Port,
-    string Username,
-    string? Environment,
-    string? CredentialReference)
+public sealed record ServerProfile
 {
-    public static ServerProfile Create(
+    private ServerProfile(
+        Guid id,
         string name,
         string host,
         int port,
         string username,
-        string? environment = null,
-        string? credentialReference = null)
+        string? environment,
+        SecretReference? credentialReference)
     {
+        if (id == Guid.Empty)
+        {
+            throw new ArgumentException("Server profile id cannot be empty.", nameof(id));
+        }
+
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
         ArgumentException.ThrowIfNullOrWhiteSpace(host);
         ArgumentException.ThrowIfNullOrWhiteSpace(username);
@@ -26,13 +27,52 @@ public sealed record ServerProfile(
             throw new ArgumentOutOfRangeException(nameof(port), "Port must be between 1 and 65535.");
         }
 
-        return new ServerProfile(
-            Guid.NewGuid(),
-            name.Trim(),
-            host.Trim(),
-            port,
-            username.Trim(),
-            string.IsNullOrWhiteSpace(environment) ? null : environment.Trim(),
-            credentialReference);
+        Id = id;
+        Name = name.Trim();
+        Host = host.Trim();
+        Port = port;
+        Username = username.Trim();
+        Environment = string.IsNullOrWhiteSpace(environment) ? null : environment.Trim();
+        CredentialReference = credentialReference;
     }
+
+    public Guid Id { get; }
+
+    public string Name { get; }
+
+    public string Host { get; }
+
+    public int Port { get; }
+
+    public string Username { get; }
+
+    public string? Environment { get; }
+
+    public SecretReference? CredentialReference { get; }
+
+    public static ServerProfile Create(
+        string name,
+        string host,
+        int port,
+        string username,
+        string? environment = null,
+        SecretReference? credentialReference = null) =>
+        new(
+            Guid.NewGuid(),
+            name,
+            host,
+            port,
+            username,
+            environment,
+            credentialReference);
+
+    public static ServerProfile Rehydrate(
+        Guid id,
+        string name,
+        string host,
+        int port,
+        string username,
+        string? environment,
+        SecretReference? credentialReference) =>
+        new(id, name, host, port, username, environment, credentialReference);
 }

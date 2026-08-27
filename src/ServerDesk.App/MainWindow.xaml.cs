@@ -1,11 +1,12 @@
-using System.Windows;
+using ServerDesk.App.Presentation;
 
 namespace ServerDesk.App;
 
-public partial class MainWindow : Window
+public partial class MainWindow : System.Windows.Window
 {
-    public MainWindow()
+    public MainWindow(ShellViewModel viewModel)
     {
         InitializeComponent();
+        DataContext = viewModel;
     }
 }
