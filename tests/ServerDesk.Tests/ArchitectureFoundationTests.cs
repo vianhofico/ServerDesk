@@ -14,11 +14,11 @@ public sealed class ArchitectureFoundationTests
             .Select(reference => reference.Name ?? string.Empty)
             .ToArray();
 
-        Assert.False(references.Any(name => name.StartsWith("Presentation", StringComparison.Ordinal)));
-        Assert.False(references.Any(name => name.StartsWith("WindowsBase", StringComparison.Ordinal)));
-        Assert.False(references.Any(name => name.StartsWith("Microsoft.Data.Sqlite", StringComparison.Ordinal)));
-        Assert.False(references.Any(name => name.StartsWith("ServerDesk.Platform", StringComparison.Ordinal)));
-        Assert.False(references.Any(name => name.StartsWith("ServerDesk.Infrastructure", StringComparison.Ordinal)));
+        Assert.DoesNotContain(references, name => name.StartsWith("Presentation", StringComparison.Ordinal));
+        Assert.DoesNotContain(references, name => name.StartsWith("WindowsBase", StringComparison.Ordinal));
+        Assert.DoesNotContain(references, name => name.StartsWith("Microsoft.Data.Sqlite", StringComparison.Ordinal));
+        Assert.DoesNotContain(references, name => name.StartsWith("ServerDesk.Platform", StringComparison.Ordinal));
+        Assert.DoesNotContain(references, name => name.StartsWith("ServerDesk.Infrastructure", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -29,9 +29,9 @@ public sealed class ArchitectureFoundationTests
             .Select(reference => reference.Name ?? string.Empty)
             .ToArray();
 
-        Assert.False(references.Any(name => name.StartsWith("Microsoft.Data.Sqlite", StringComparison.Ordinal)));
-        Assert.False(references.Any(name => name.StartsWith("ServerDesk.Platform", StringComparison.Ordinal)));
-        Assert.False(references.Any(name => name.StartsWith("ServerDesk.Infrastructure", StringComparison.Ordinal)));
-        Assert.False(references.Any(name => name.StartsWith("PresentationFramework", StringComparison.Ordinal)));
+        Assert.DoesNotContain(references, name => name.StartsWith("Microsoft.Data.Sqlite", StringComparison.Ordinal));
+        Assert.DoesNotContain(references, name => name.StartsWith("ServerDesk.Platform", StringComparison.Ordinal));
+        Assert.DoesNotContain(references, name => name.StartsWith("ServerDesk.Infrastructure", StringComparison.Ordinal));
+        Assert.DoesNotContain(references, name => name.StartsWith("PresentationFramework", StringComparison.Ordinal));
     }
 }

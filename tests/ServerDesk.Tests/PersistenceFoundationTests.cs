@@ -16,10 +16,11 @@ public sealed class PersistenceFoundationTests
     [Fact]
     public async Task SqliteProfileRoundTripPersistsOnlyCredentialReference()
     {
+        var cancellationToken = TestContext.Current.CancellationToken;
         using var paths = new TemporaryAppPaths();
         var factory = new SqliteConnectionFactory(paths);
         var initializer = new SqliteDatabaseInitializer(factory);
-        await initializer.InitializeAsync();
+        await initializer.InitializeAsync(cancellationToken);
 
         var repository = new SqliteProfileRepository(factory);
         var reference = SecretReference.Create("ssh-password");
@@ -31,48 +32,52 @@ public sealed class PersistenceFoundationTests
             "production",
             reference);
 
-        await repository.UpsertAsync(profile);
-        var loaded = await repository.GetAsync(profile.Id);
+        await repository.UpsertAsync(profile, cancellationToken);
+        var loaded = await repository.GetAsync(profile.Id, cancellationToken);
 
         Assert.NotNull(loaded);
         Assert.Equal(profile, loaded);
-        Assert.Equal(SqliteDatabaseInitializer.CurrentSchemaVersion, await initializer.GetSchemaVersionAsync());
+        Assert.Equal(
+            SqliteDatabaseInitializer.CurrentSchemaVersion,
+            await initializer.GetSchemaVersionAsync(cancellationToken));
     }
 
     [Fact]
     public async Task SqliteSchemaContainsNoRawSecretColumns()
     {
+        var cancellationToken = TestContext.Current.CancellationToken;
         using var paths = new TemporaryAppPaths();
         var factory = new SqliteConnectionFactory(paths);
         var initializer = new SqliteDatabaseInitializer(factory);
-        await initializer.InitializeAsync();
+        await initializer.InitializeAsync(cancellationToken);
 
         await using var connection = factory.Create();
-        await connection.OpenAsync();
+        await connection.OpenAsync(cancellationToken);
         await using var command = connection.CreateCommand();
         command.CommandText = "PRAGMA table_info(server_profiles);";
-        await using var reader = await command.ExecuteReaderAsync();
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
 
         var columns = new List<string>();
-        while (await reader.ReadAsync())
+        while (await reader.ReadAsync(cancellationToken))
         {
             columns.Add(reader.GetString(1));
         }
 
         Assert.Contains("credential_reference", columns);
-        Assert.False(columns.Any(column => column.Contains("password", StringComparison.OrdinalIgnoreCase)));
-        Assert.False(columns.Any(column => column.Contains("passphrase", StringComparison.OrdinalIgnoreCase)));
-        Assert.False(columns.Any(column => column.Contains("private_key", StringComparison.OrdinalIgnoreCase)));
-        Assert.False(columns.Any(column => column.Contains("sudo_secret", StringComparison.OrdinalIgnoreCase)));
+        Assert.DoesNotContain(columns, column => column.Contains("password", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(columns, column => column.Contains("passphrase", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(columns, column => column.Contains("private_key", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(columns, column => column.Contains("sudo_secret", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]
     public async Task OperationAuditRoundTripKeepsSafeSummaryData()
     {
+        var cancellationToken = TestContext.Current.CancellationToken;
         using var paths = new TemporaryAppPaths();
         var factory = new SqliteConnectionFactory(paths);
         var initializer = new SqliteDatabaseInitializer(factory);
-        await initializer.InitializeAsync();
+        await initializer.InitializeAsync(cancellationToken);
 
         var audit = new SqliteOperationAudit(factory);
         var entry = OperationAuditEntry.Create(
@@ -82,8 +87,8 @@ public sealed class PersistenceFoundationTests
             OperationOutcome.Succeeded,
             "local");
 
-        await audit.AppendAsync(entry);
-        var recent = await audit.ListRecentAsync(10);
+        await audit.AppendAsync(entry, cancellationToken);
+        var recent = await audit.ListRecentAsync(10, cancellationToken);
 
         var loaded = Assert.Single(recent);
         Assert.Equal(entry, loaded);
@@ -92,11 +97,12 @@ public sealed class PersistenceFoundationTests
     [Fact]
     public async Task JsonSettingsRoundTripPersistsThemePreference()
     {
+        var cancellationToken = TestContext.Current.CancellationToken;
         using var paths = new TemporaryAppPaths();
         var store = new JsonAppSettingsStore(paths);
 
-        await store.SaveAsync(new AppSettings(AppThemePreference.Dark));
-        var loaded = await store.LoadAsync();
+        await store.SaveAsync(new AppSettings(AppThemePreference.Dark), cancellationToken);
+        var loaded = await store.LoadAsync(cancellationToken);
 
         Assert.Equal(AppThemePreference.Dark, loaded.ThemePreference);
     }
