@@ -27,7 +27,7 @@ public sealed class SqliteConnectionFactory
 
 public sealed class SqliteDatabaseInitializer
 {
-    public const int CurrentSchemaVersion = 5;
+    public const int CurrentSchemaVersion = 6;
 
     private readonly SqliteConnectionFactory _connectionFactory;
 
@@ -212,6 +212,54 @@ public sealed class SqliteDatabaseInitializer
                     ON server_connection_routes(bastion_profile_id);
 
                 UPDATE schema_info SET version = 5 WHERE singleton_id = 1;
+                """;
+
+            await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+            transaction.Commit();
+            version = 5;
+        }
+
+        if (version < 6)
+        {
+            using var transaction = connection.BeginTransaction();
+            await using var command = connection.CreateCommand();
+            command.Transaction = transaction;
+            command.CommandText =
+                """
+                CREATE TABLE server_profile_organization (
+                    server_profile_id TEXT NOT NULL PRIMARY KEY,
+                    group_name TEXT NULL,
+                    tags_json TEXT NOT NULL DEFAULT '[]',
+                    is_favorite INTEGER NOT NULL DEFAULT 0 CHECK (is_favorite IN (0, 1)),
+                    created_utc TEXT NOT NULL,
+                    updated_utc TEXT NOT NULL,
+                    FOREIGN KEY(server_profile_id) REFERENCES server_profiles(id) ON DELETE CASCADE
+                );
+
+                CREATE INDEX ix_server_profile_organization_group
+                    ON server_profile_organization(group_name COLLATE NOCASE);
+                CREATE INDEX ix_server_profile_organization_favorite
+                    ON server_profile_organization(is_favorite DESC, group_name COLLATE NOCASE);
+
+                CREATE TABLE connection_history (
+                    id TEXT NOT NULL PRIMARY KEY,
+                    server_profile_id TEXT NULL,
+                    profile_name TEXT NOT NULL,
+                    endpoint TEXT NOT NULL,
+                    route_summary TEXT NOT NULL,
+                    started_utc TEXT NOT NULL,
+                    ended_utc TEXT NOT NULL,
+                    outcome INTEGER NOT NULL CHECK (outcome BETWEEN 1 AND 6),
+                    failure_code INTEGER NULL,
+                    FOREIGN KEY(server_profile_id) REFERENCES server_profiles(id) ON DELETE SET NULL
+                );
+
+                CREATE INDEX ix_connection_history_started
+                    ON connection_history(started_utc DESC, id DESC);
+                CREATE INDEX ix_connection_history_server
+                    ON connection_history(server_profile_id, started_utc DESC);
+
+                UPDATE schema_info SET version = 6 WHERE singleton_id = 1;
                 """;
 
             await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
