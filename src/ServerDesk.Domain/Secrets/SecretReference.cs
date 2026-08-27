@@ -37,6 +37,16 @@ public readonly record struct SecretReference
         return new SecretReference($"{Prefix}ssh-profile:{profileId:N}");
     }
 
+    public static SecretReference ForServerProxy(Guid profileId)
+    {
+        if (profileId == Guid.Empty)
+        {
+            throw new ArgumentException("Server profile id cannot be empty.", nameof(profileId));
+        }
+
+        return new SecretReference($"{Prefix}ssh-proxy:{profileId:N}");
+    }
+
     public static SecretReference Parse(string value)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(value);
