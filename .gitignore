@@ -38,3 +38,5 @@ Thumbs.db
 # Packages
 *.nupkg
 *.snupkg
+src/ServerDesk.App/TerminalFrontend/node_modules/
+src/ServerDesk.App/TerminalFrontend/dist/
