@@ -1,7 +1,9 @@
 using System.Collections.ObjectModel;
 using System.Globalization;
 using ServerDesk.Application.Profiles;
+using ServerDesk.Application.Sessions;
 using ServerDesk.Application.Settings;
+using ServerDesk.Domain.Errors;
 using ServerDesk.Domain.Servers;
 
 namespace ServerDesk.App.Presentation;
@@ -28,7 +30,7 @@ public sealed class NavigationService : INavigationService
         Current = new NavigationItem(
             "dashboard",
             "Servers",
-            "Manage secure server profiles before connecting through SSH.");
+            "Manage secure server profiles and SSH sessions.");
     }
 
     public NavigationItem Current { get; private set; }
@@ -177,8 +179,8 @@ public sealed class ProfileEditorViewModel : ObservableObject
             }
 
             return AuthenticationKind == ServerAuthenticationKind.SshAgent
-                ? "ServerDesk will use your SSH agent in M1.3."
-                : "Credentials will be requested interactively when connecting in M1.3.";
+                ? "SSH-agent profiles are retained, but the current transport does not connect them yet."
+                : "The SSH server will request interactive responses when you connect.";
         }
     }
 
@@ -191,8 +193,13 @@ public sealed class ProfileEditorViewModel : ObservableObject
     }
 }
 
-public sealed class ServerProfileListItemViewModel
+public sealed class ServerProfileListItemViewModel : ObservableObject
 {
+    private RemoteSessionState _connectionState = RemoteSessionState.Disconnected;
+    private RemoteError? _connectionError;
+    private string? _serverVersion;
+    private DateTimeOffset? _connectedAtUtc;
+
     public ServerProfileListItemViewModel(ServerProfile profile)
     {
         Profile = profile;
@@ -216,6 +223,84 @@ public sealed class ServerProfileListItemViewModel
         ServerAuthenticationKind.KeyboardInteractive => "Keyboard interactive",
         _ => "Unknown",
     };
+
+    public RemoteSessionState ConnectionState => _connectionState;
+
+    public string ConnectionLabel => _connectionState switch
+    {
+        RemoteSessionState.Created or RemoteSessionState.Disconnected => "Not connected",
+        RemoteSessionState.Connecting => "Connecting…",
+        RemoteSessionState.Connected => "Connected",
+        RemoteSessionState.Reconnecting => "Reconnecting…",
+        RemoteSessionState.Disconnecting => "Disconnecting…",
+        RemoteSessionState.Faulted => "Connection failed",
+        _ => "Not connected",
+    };
+
+    public string ConnectionDetail
+    {
+        get
+        {
+            if (_connectionError is not null && _connectionState is RemoteSessionState.Faulted or RemoteSessionState.Disconnected)
+            {
+                return _connectionError.Message;
+            }
+
+            return _connectionState switch
+            {
+                RemoteSessionState.Connecting => "Verifying the SSH host identity, then authenticating.",
+                RemoteSessionState.Reconnecting => "Starting a fresh SSH session. Remote mutations are never retried automatically.",
+                RemoteSessionState.Connected => string.IsNullOrWhiteSpace(_serverVersion)
+                    ? "Secure SSH control session established."
+                    : $"Secure SSH control session established · {_serverVersion}",
+                RemoteSessionState.Disconnecting => "Closing the SSH control session without blocking the UI.",
+                _ => Profile.AuthenticationKind == ServerAuthenticationKind.SshAgent
+                    ? "This profile uses SSH agent authentication, which is not supported by the current transport yet."
+                    : "Ready. Host identity must be trusted before authentication is allowed.",
+            };
+        }
+    }
+
+    public string ServerVersionDisplay => string.IsNullOrWhiteSpace(_serverVersion) ? "—" : _serverVersion;
+
+    public string ConnectedSinceDisplay => _connectedAtUtc is null
+        ? "—"
+        : _connectedAtUtc.Value.ToLocalTime().ToString("HH:mm:ss", CultureInfo.CurrentCulture);
+
+    public bool CanConnect =>
+        Profile.AuthenticationKind != ServerAuthenticationKind.SshAgent &&
+        _connectionState is RemoteSessionState.Created or RemoteSessionState.Disconnected or RemoteSessionState.Faulted;
+
+    public bool CanDisconnect =>
+        _connectionState is RemoteSessionState.Connected or RemoteSessionState.Connecting or RemoteSessionState.Reconnecting;
+
+    public bool CanModifyProfile =>
+        _connectionState is RemoteSessionState.Created or RemoteSessionState.Disconnected or RemoteSessionState.Faulted;
+
+    public string ConnectActionLabel => _connectionState == RemoteSessionState.Faulted ? "Reconnect" : "Connect";
+
+    public string DisconnectActionLabel =>
+        _connectionState is RemoteSessionState.Connecting or RemoteSessionState.Reconnecting ? "Cancel" : "Disconnect";
+
+    public void ApplySession(IRemoteSession session)
+    {
+        ArgumentNullException.ThrowIfNull(session);
+        _connectionState = session.State;
+        _connectionError = session.LastError;
+        _serverVersion = session.ServerVersion;
+        _connectedAtUtc = session.ConnectedAtUtc;
+
+        OnPropertyChanged(nameof(ConnectionState));
+        OnPropertyChanged(nameof(ConnectionLabel));
+        OnPropertyChanged(nameof(ConnectionDetail));
+        OnPropertyChanged(nameof(ServerVersionDisplay));
+        OnPropertyChanged(nameof(ConnectedSinceDisplay));
+        OnPropertyChanged(nameof(CanConnect));
+        OnPropertyChanged(nameof(CanDisconnect));
+        OnPropertyChanged(nameof(CanModifyProfile));
+        OnPropertyChanged(nameof(ConnectActionLabel));
+        OnPropertyChanged(nameof(DisconnectActionLabel));
+    }
 }
 
 public sealed class ShellViewModel : ObservableObject
@@ -224,6 +309,11 @@ public sealed class ShellViewModel : ObservableObject
     private readonly IThemeService _themeService;
     private readonly IAppSettingsStore _settingsStore;
     private readonly IServerProfileService _serverProfileService;
+    private readonly IRemoteSessionFactory _remoteSessionFactory;
+    private readonly SynchronizationContext? _uiContext;
+    private readonly Dictionary<Guid, IRemoteSession> _sessions = [];
+    private readonly Dictionary<Guid, Action<RemoteSessionState>> _sessionHandlers = [];
+    private readonly Dictionary<Guid, CancellationTokenSource> _connectionCancellations = [];
     private NavigationItem _selectedNavigationItem;
     private ServerProfileListItemViewModel? _selectedServer;
     private ProfileEditorViewModel? _editor;
@@ -238,16 +328,19 @@ public sealed class ShellViewModel : ObservableObject
         INavigationService navigationService,
         IThemeService themeService,
         IAppSettingsStore settingsStore,
-        IServerProfileService serverProfileService)
+        IServerProfileService serverProfileService,
+        IRemoteSessionFactory remoteSessionFactory)
     {
         _navigationService = navigationService;
         _themeService = themeService;
         _settingsStore = settingsStore;
         _serverProfileService = serverProfileService;
+        _remoteSessionFactory = remoteSessionFactory;
+        _uiContext = SynchronizationContext.Current;
 
         NavigationItems =
         [
-            new("dashboard", "Dashboard", "Server profiles and connection readiness."),
+            new("dashboard", "Dashboard", "Server profiles and secure SSH connection state."),
             new("explorer", "Explorer", "Remote SFTP file management arrives in M1.4.", false),
             new("terminal", "Terminal", "Interactive SSH PTY arrives in M1.5.", false),
             new("processes", "Processes", "Task-Manager-like process management arrives in M2.", false),
@@ -265,12 +358,24 @@ public sealed class ShellViewModel : ObservableObject
         _navigationService.CurrentChanged += OnCurrentNavigationChanged;
 
         AddServerCommand = new RelayCommand(BeginAddServer, () => !IsBusy);
-        EditServerCommand = new RelayCommand(BeginEditServer, () => SelectedServer is not null && !IsBusy);
-        RequestDeleteServerCommand = new RelayCommand(RequestDeleteServer, () => SelectedServer is not null && !IsBusy);
+        EditServerCommand = new RelayCommand(
+            BeginEditServer,
+            () => SelectedServer?.CanModifyProfile == true && !IsBusy);
+        RequestDeleteServerCommand = new RelayCommand(
+            RequestDeleteServer,
+            () => SelectedServer?.CanModifyProfile == true && !IsBusy);
         CancelDeleteServerCommand = new RelayCommand(() => IsDeleteConfirmationVisible = false);
-        ConfirmDeleteServerCommand = new AsyncRelayCommand(DeleteSelectedServerAsync, () => SelectedServer is not null && !IsBusy);
+        ConfirmDeleteServerCommand = new AsyncRelayCommand(
+            DeleteSelectedServerAsync,
+            () => SelectedServer?.CanModifyProfile == true && !IsBusy);
         SaveServerCommand = new AsyncRelayCommand(SaveServerAsync, () => Editor is not null && !IsBusy);
         CancelEditorCommand = new RelayCommand(CancelEditor, () => Editor is not null && !IsBusy);
+        ConnectServerCommand = new AsyncRelayCommand(
+            ConnectSelectedServerAsync,
+            () => SelectedServer?.CanConnect == true && Editor is null && !IsBusy);
+        DisconnectServerCommand = new AsyncRelayCommand(
+            DisconnectSelectedServerAsync,
+            () => SelectedServer?.CanDisconnect == true && Editor is null);
     }
 
     public IReadOnlyList<NavigationItem> NavigationItems { get; }
@@ -292,6 +397,10 @@ public sealed class ShellViewModel : ObservableObject
     public AsyncRelayCommand SaveServerCommand { get; }
 
     public RelayCommand CancelEditorCommand { get; }
+
+    public AsyncRelayCommand ConnectServerCommand { get; }
+
+    public AsyncRelayCommand DisconnectServerCommand { get; }
 
     public NavigationItem SelectedNavigationItem
     {
@@ -436,6 +545,19 @@ public sealed class ShellViewModel : ObservableObject
         await LoadProfilesAsync(selectedId: null, cancellationToken).ConfigureAwait(true);
     }
 
+    public async ValueTask ShutdownAsync()
+    {
+        foreach (var cancellation in _connectionCancellations.Values)
+        {
+            cancellation.Cancel();
+        }
+
+        foreach (var id in _sessions.Keys.ToArray())
+        {
+            await DisposeCachedSessionAsync(id).ConfigureAwait(false);
+        }
+    }
+
     private void BeginAddServer()
     {
         ErrorMessage = null;
@@ -446,7 +568,7 @@ public sealed class ShellViewModel : ObservableObject
 
     private void BeginEditServer()
     {
-        if (SelectedServer is null)
+        if (SelectedServer?.CanModifyProfile != true)
         {
             return;
         }
@@ -470,10 +592,104 @@ public sealed class ShellViewModel : ObservableObject
 
     private void RequestDeleteServer()
     {
-        if (SelectedServer is not null)
+        if (SelectedServer?.CanModifyProfile == true)
         {
             IsDeleteConfirmationVisible = true;
             ErrorMessage = null;
+        }
+    }
+
+    private async Task ConnectSelectedServerAsync()
+    {
+        var selected = SelectedServer;
+        if (selected?.CanConnect != true)
+        {
+            return;
+        }
+
+        ErrorMessage = null;
+        StatusMessage = null;
+        var session = GetOrCreateSession(selected);
+        var cancellation = new CancellationTokenSource();
+        _connectionCancellations[selected.Id] = cancellation;
+
+        try
+        {
+            await session.ConnectAsync(cancellation.Token).ConfigureAwait(true);
+            selected.ApplySession(session);
+            StatusMessage = $"Connected securely to {selected.Name}.";
+        }
+        catch (OperationCanceledException)
+        {
+            selected.ApplySession(session);
+            StatusMessage = $"Connection to {selected.Name} was cancelled.";
+        }
+        catch (RemoteSessionException exception)
+        {
+            selected.ApplySession(session);
+            ErrorMessage = exception.Error.Message;
+        }
+        catch (Exception exception)
+        {
+            selected.ApplySession(session);
+            ErrorMessage = $"Could not connect to {selected.Name}: {exception.Message}";
+        }
+        finally
+        {
+            if (_connectionCancellations.Remove(selected.Id, out var currentCancellation))
+            {
+                currentCancellation.Dispose();
+            }
+
+            RaiseCommandStates();
+        }
+    }
+
+    private async Task DisconnectSelectedServerAsync()
+    {
+        var selected = SelectedServer;
+        if (selected is null)
+        {
+            return;
+        }
+
+        if (selected.ConnectionState is RemoteSessionState.Connecting or RemoteSessionState.Reconnecting)
+        {
+            if (_connectionCancellations.TryGetValue(selected.Id, out var connectionCancellation))
+            {
+                connectionCancellation.Cancel();
+                StatusMessage = $"Cancelling connection to {selected.Name}…";
+            }
+
+            return;
+        }
+
+        if (!_sessions.TryGetValue(selected.Id, out var session))
+        {
+            return;
+        }
+
+        ErrorMessage = null;
+        StatusMessage = null;
+        try
+        {
+            await session.DisconnectAsync().ConfigureAwait(true);
+            selected.ApplySession(session);
+            StatusMessage = $"Disconnected from {selected.Name}.";
+        }
+        catch (RemoteSessionException exception)
+        {
+            selected.ApplySession(session);
+            ErrorMessage = exception.Error.Message;
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            selected.ApplySession(session);
+            ErrorMessage = $"Could not disconnect cleanly from {selected.Name}: {exception.Message}";
+        }
+        finally
+        {
+            RaiseCommandStates();
         }
     }
 
@@ -511,6 +727,7 @@ public sealed class ShellViewModel : ObservableObject
             }
             else
             {
+                await DisposeCachedSessionAsync(Editor.ProfileId.Value).ConfigureAwait(true);
                 var replaceSecret = !string.IsNullOrEmpty(Editor.NewSecret);
                 saved = await _serverProfileService.UpdateAsync(
                         Editor.ProfileId.Value,
@@ -541,7 +758,7 @@ public sealed class ShellViewModel : ObservableObject
 
     private async Task DeleteSelectedServerAsync()
     {
-        if (SelectedServer is null)
+        if (SelectedServer?.CanModifyProfile != true)
         {
             return;
         }
@@ -552,6 +769,7 @@ public sealed class ShellViewModel : ObservableObject
         ErrorMessage = null;
         try
         {
+            await DisposeCachedSessionAsync(selectedId).ConfigureAwait(true);
             await _serverProfileService.DeleteAsync(selectedId).ConfigureAwait(true);
             IsDeleteConfirmationVisible = false;
             Editor = null;
@@ -568,13 +786,95 @@ public sealed class ShellViewModel : ObservableObject
         }
     }
 
+    private IRemoteSession GetOrCreateSession(ServerProfileListItemViewModel item)
+    {
+        if (_sessions.TryGetValue(item.Id, out var existing))
+        {
+            return existing;
+        }
+
+        var session = _remoteSessionFactory.Create(item.Profile);
+        Action<RemoteSessionState> handler = _ => OnSessionStateChanged(item.Id, session);
+        session.StateChanged += handler;
+        _sessions[item.Id] = session;
+        _sessionHandlers[item.Id] = handler;
+        item.ApplySession(session);
+        return session;
+    }
+
+    private void OnSessionStateChanged(Guid serverId, IRemoteSession session)
+    {
+        void Apply()
+        {
+            var item = Servers.FirstOrDefault(server => server.Id == serverId);
+            item?.ApplySession(session);
+            if (SelectedServer?.Id == serverId)
+            {
+                if (session.LastError is not null && session.State == RemoteSessionState.Faulted)
+                {
+                    ErrorMessage = session.LastError.Message;
+                }
+
+                RaiseCommandStates();
+            }
+        }
+
+        if (_uiContext is null || ReferenceEquals(SynchronizationContext.Current, _uiContext))
+        {
+            Apply();
+            return;
+        }
+
+        _uiContext.Post(_ => Apply(), null);
+    }
+
+    private async ValueTask DisposeCachedSessionAsync(Guid serverId)
+    {
+        if (_connectionCancellations.Remove(serverId, out var connectionCancellation))
+        {
+            connectionCancellation.Cancel();
+            connectionCancellation.Dispose();
+        }
+
+        if (!_sessions.Remove(serverId, out var session))
+        {
+            return;
+        }
+
+        if (_sessionHandlers.Remove(serverId, out var handler))
+        {
+            session.StateChanged -= handler;
+        }
+
+        if (session.State == RemoteSessionState.Connected)
+        {
+            using var disconnectTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+            try
+            {
+                await session.DisconnectAsync(disconnectTimeout.Token).ConfigureAwait(false);
+            }
+            catch
+            {
+                // Disposal below is the final local cleanup path.
+            }
+        }
+
+        await session.DisposeAsync().ConfigureAwait(false);
+    }
+
     private async Task LoadProfilesAsync(Guid? selectedId, CancellationToken cancellationToken = default)
     {
         var profiles = await _serverProfileService.ListAsync(cancellationToken).ConfigureAwait(true);
         Servers.Clear();
         foreach (var profile in profiles)
         {
-            Servers.Add(new ServerProfileListItemViewModel(profile));
+            var item = new ServerProfileListItemViewModel(profile);
+            if (_sessions.TryGetValue(profile.Id, out var session))
+            {
+                item.ApplySession(session);
+            }
+
+            Servers.Add(item);
         }
 
         SelectedServer = selectedId is null
@@ -616,5 +916,7 @@ public sealed class ShellViewModel : ObservableObject
         ConfirmDeleteServerCommand.RaiseCanExecuteChanged();
         SaveServerCommand.RaiseCanExecuteChanged();
         CancelEditorCommand.RaiseCanExecuteChanged();
+        ConnectServerCommand.RaiseCanExecuteChanged();
+        DisconnectServerCommand.RaiseCanExecuteChanged();
     }
 }

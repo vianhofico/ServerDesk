@@ -1,4 +1,5 @@
 using ServerDesk.Application.Profiles;
+using ServerDesk.Application.Sessions;
 using ServerDesk.Domain.Servers;
 using Xunit;
 
@@ -30,8 +31,20 @@ public sealed class ArchitectureFoundationTests
             .ToArray();
 
         Assert.DoesNotContain(references, name => name.StartsWith("Microsoft.Data.Sqlite", StringComparison.Ordinal));
+        Assert.DoesNotContain(references, name => name.StartsWith("Renci.SshNet", StringComparison.Ordinal));
         Assert.DoesNotContain(references, name => name.StartsWith("ServerDesk.Platform", StringComparison.Ordinal));
         Assert.DoesNotContain(references, name => name.StartsWith("ServerDesk.Infrastructure", StringComparison.Ordinal));
         Assert.DoesNotContain(references, name => name.StartsWith("PresentationFramework", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void RemoteSessionContractDoesNotExposeSshNetTypes()
+    {
+        var publicTypeNames = typeof(IRemoteSession).Assembly
+            .ExportedTypes
+            .Select(type => type.FullName ?? type.Name)
+            .ToArray();
+
+        Assert.DoesNotContain(publicTypeNames, name => name.StartsWith("Renci.SshNet", StringComparison.Ordinal));
     }
 }

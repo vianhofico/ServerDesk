@@ -44,3 +44,76 @@ jobs:
           path: artifacts/build.binlog
           if-no-files-found: ignore
           retention-days: 7
+
+  ssh-integration:
+    name: OpenSSH integration
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    env:
+      SERVERDESK_SSH_HOST: 127.0.0.1
+      SERVERDESK_SSH_PORT: 2222
+      SERVERDESK_SSH_USER: serverdesk_ci
+      SERVERDESK_SSH_PASSWORD: serverdesk-password
+      SERVERDESK_SSH_KEY: /tmp/serverdesk_ci_key
+      SERVERDESK_SSH_KEY_PASSPHRASE: serverdesk-key-pass
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Configure disposable OpenSSH server
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y openssh-server
+
+          sudo useradd -m -s /bin/bash serverdesk_ci
+          echo 'serverdesk_ci:serverdesk-password' | sudo chpasswd
+
+          ssh-keygen -q -t ed25519 -N 'serverdesk-key-pass' -f /tmp/serverdesk_ci_key
+          sudo install -d -m 700 -o serverdesk_ci -g serverdesk_ci /home/serverdesk_ci/.ssh
+          sudo install -m 600 -o serverdesk_ci -g serverdesk_ci /tmp/serverdesk_ci_key.pub /home/serverdesk_ci/.ssh/authorized_keys
+
+          sudo mkdir -p /run/sshd
+          sudo ssh-keygen -A
+          cat <<'EOF' | sudo tee /tmp/serverdesk-sshd_config >/dev/null
+          Port 2222
+          ListenAddress 127.0.0.1
+          HostKey /etc/ssh/ssh_host_ed25519_key
+          PasswordAuthentication yes
+          PubkeyAuthentication yes
+          KbdInteractiveAuthentication yes
+          UsePAM yes
+          PermitRootLogin no
+          AllowUsers serverdesk_ci
+          PidFile /tmp/serverdesk-sshd.pid
+          LogLevel VERBOSE
+          EOF
+
+          sudo /usr/sbin/sshd -f /tmp/serverdesk-sshd_config -E /tmp/serverdesk-sshd.log
+          for attempt in {1..20}; do
+            if ssh-keyscan -p 2222 127.0.0.1 >/dev/null 2>&1; then
+              exit 0
+            fi
+            sleep 0.25
+          done
+
+          cat /tmp/serverdesk-sshd.log
+          exit 1
+
+      - name: Restore integration tests
+        run: dotnet restore tests/ServerDesk.Ssh.IntegrationTests/ServerDesk.Ssh.IntegrationTests.csproj
+
+      - name: Run SSH integration tests
+        run: dotnet test tests/ServerDesk.Ssh.IntegrationTests/ServerDesk.Ssh.IntegrationTests.csproj --configuration Release --no-restore
+
+      - name: Show SSH server log on failure
+        if: failure()
+        run: sudo cat /tmp/serverdesk-sshd.log || true

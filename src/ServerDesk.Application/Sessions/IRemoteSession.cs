@@ -1,3 +1,4 @@
+using ServerDesk.Domain.Errors;
 using ServerDesk.Domain.Servers;
 
 namespace ServerDesk.Application.Sessions;
@@ -13,11 +14,28 @@ public enum RemoteSessionState
     Faulted,
 }
 
+public sealed class RemoteSessionException : Exception
+{
+    public RemoteSessionException(RemoteError error, Exception? innerException = null)
+        : base(error?.Message, innerException)
+    {
+        Error = error ?? throw new ArgumentNullException(nameof(error));
+    }
+
+    public RemoteError Error { get; }
+}
+
 public interface IRemoteSession : IAsyncDisposable
 {
     Guid ServerProfileId { get; }
 
     RemoteSessionState State { get; }
+
+    RemoteError? LastError { get; }
+
+    string? ServerVersion { get; }
+
+    DateTimeOffset? ConnectedAtUtc { get; }
 
     event Action<RemoteSessionState>? StateChanged;
 
