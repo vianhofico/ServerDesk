@@ -15,4 +15,9 @@
     <ProjectReference Include="..\..\src\ServerDesk.Infrastructure.Ssh\ServerDesk.Infrastructure.Ssh.csproj" />
     <ProjectReference Include="..\..\src\ServerDesk.Platform.Windows\ServerDesk.Platform.Windows.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="Fixtures\Capabilities\**\*"
+          CopyToOutputDirectory="PreserveNewest"
+          CopyToPublishDirectory="Never" />
+  </ItemGroup>
 </Project>
