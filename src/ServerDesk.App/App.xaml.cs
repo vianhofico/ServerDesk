@@ -15,6 +15,7 @@ using ServerDesk.Application.RemoteEditing;
 using ServerDesk.Application.RemoteFiles;
 using ServerDesk.Application.Routing;
 using ServerDesk.Application.Secrets;
+using ServerDesk.Application.Services;
 using ServerDesk.Application.Sessions;
 using ServerDesk.Application.Settings;
 using ServerDesk.Application.Terminal;
@@ -150,6 +151,12 @@ public partial class App : System.Windows.Application
         services.AddSingleton<IServerProcessService>(provider =>
             new AuditedServerProcessService(
                 provider.GetRequiredService<ServerProcessService>(),
+                provider.GetRequiredService<IOperationAudit>()));
+        services.AddSingleton(SystemdServiceOptions.Default);
+        services.AddSingleton<SystemdServiceManager>();
+        services.AddSingleton<IServerServiceManager>(provider =>
+            new AuditedServerServiceManager(
+                provider.GetRequiredService<SystemdServiceManager>(),
                 provider.GetRequiredService<IOperationAudit>()));
 
         services.AddSingleton<INavigationService, NavigationService>();
