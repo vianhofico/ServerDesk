@@ -13,12 +13,17 @@ public sealed class ProcessAuditTests
     [Fact]
     public async Task ForceKillIsAuditedAsDestructiveSuccess()
     {
+        var cancellationToken = TestContext.Current.CancellationToken;
         var audit = new RecordingAudit();
         var service = new AuditedServerProcessService(
             new StubProcessService(new ServerProcessActionResult(true, null, "sent")),
             audit);
 
-        var result = await service.SignalAsync(CreateProfile(), 4242, ServerProcessSignal.ForceKill);
+        var result = await service.SignalAsync(
+            CreateProfile(),
+            4242,
+            ServerProcessSignal.ForceKill,
+            cancellationToken);
 
         Assert.True(result.IsSuccess);
         var entry = Assert.Single(audit.Entries);
@@ -32,13 +37,18 @@ public sealed class ProcessAuditTests
     [Fact]
     public async Task AmbiguousSignalIsAuditedUnknownWithoutChangingError()
     {
+        var cancellationToken = TestContext.Current.CancellationToken;
         var error = new RemoteError(RemoteErrorCode.AmbiguousState, "unknown completion");
         var audit = new RecordingAudit();
         var service = new AuditedServerProcessService(
             new StubProcessService(new ServerProcessActionResult(false, error, error.Message)),
             audit);
 
-        var result = await service.SignalAsync(CreateProfile(), 4242, ServerProcessSignal.Terminate);
+        var result = await service.SignalAsync(
+            CreateProfile(),
+            4242,
+            ServerProcessSignal.Terminate,
+            cancellationToken);
 
         Assert.False(result.IsSuccess);
         Assert.Equal(RemoteErrorCode.AmbiguousState, result.Error?.Code);
@@ -49,11 +59,16 @@ public sealed class ProcessAuditTests
     [Fact]
     public async Task AuditFailureNeverTurnsSuccessfulSignalIntoRetryableFailure()
     {
+        var cancellationToken = TestContext.Current.CancellationToken;
         var service = new AuditedServerProcessService(
             new StubProcessService(new ServerProcessActionResult(true, null, "sent")),
             new ThrowingAudit());
 
-        var result = await service.SignalAsync(CreateProfile(), 4242, ServerProcessSignal.Terminate);
+        var result = await service.SignalAsync(
+            CreateProfile(),
+            4242,
+            ServerProcessSignal.Terminate,
+            cancellationToken);
 
         Assert.True(result.IsSuccess);
         Assert.Null(result.Error);
