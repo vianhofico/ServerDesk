@@ -8,6 +8,7 @@ namespace ServerDesk.App;
 public partial class MainWindow : Window
 {
     private readonly ShellViewModel _viewModel;
+    private ProfileEditorViewModel? _observedEditor;
 
     public MainWindow(ShellViewModel viewModel)
     {
@@ -15,11 +16,13 @@ public partial class MainWindow : Window
         _viewModel = viewModel;
         DataContext = viewModel;
         _viewModel.PropertyChanged += ViewModelOnPropertyChanged;
+        ObserveEditor(_viewModel.Editor);
     }
 
     protected override void OnClosed(EventArgs e)
     {
         _viewModel.PropertyChanged -= ViewModelOnPropertyChanged;
+        ObserveEditor(null);
         CredentialSecretBox.Password = string.Empty;
         base.OnClosed(e);
     }
@@ -36,7 +39,33 @@ public partial class MainWindow : Window
     {
         if (e.PropertyName == nameof(ShellViewModel.Editor))
         {
+            ObserveEditor(_viewModel.Editor);
             CredentialSecretBox.Password = string.Empty;
+        }
+    }
+
+    private void EditorOnPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(ProfileEditorViewModel.NewSecret) &&
+            _observedEditor is not null &&
+            string.IsNullOrEmpty(_observedEditor.NewSecret) &&
+            !string.IsNullOrEmpty(CredentialSecretBox.Password))
+        {
+            CredentialSecretBox.Password = string.Empty;
+        }
+    }
+
+    private void ObserveEditor(ProfileEditorViewModel? editor)
+    {
+        if (_observedEditor is not null)
+        {
+            _observedEditor.PropertyChanged -= EditorOnPropertyChanged;
+        }
+
+        _observedEditor = editor;
+        if (_observedEditor is not null)
+        {
+            _observedEditor.PropertyChanged += EditorOnPropertyChanged;
         }
     }
 }
