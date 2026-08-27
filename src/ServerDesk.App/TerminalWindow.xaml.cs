@@ -183,6 +183,8 @@ public partial class TerminalWindow : Window
 internal sealed class TerminalTabHost : Grid, IAsyncDisposable
 {
     private const string VirtualHost = "terminal.serverdesk.local";
+    private const string VirtualOrigin = "https://terminal.serverdesk.local/";
+    private const int MaxBridgeTextLength = 1_000_000;
 
     private readonly IRemoteTerminalSession _session;
     private readonly WebView2 _webView;
@@ -233,7 +235,8 @@ internal sealed class TerminalTabHost : Grid, IAsyncDisposable
             frontendDirectory,
             CoreWebView2HostResourceAccessKind.DenyCors);
         core.WebMessageReceived += CoreOnWebMessageReceived;
-        core.Navigate($"https://{VirtualHost}/index.html");
+        core.NavigationStarting += CoreOnNavigationStarting;
+        core.Navigate($"{VirtualOrigin}index.html");
 
         await _frontendReady.Task.WaitAsync(TimeSpan.FromSeconds(10), token).ConfigureAwait(true);
         await _session.ConnectAsync(_requestedSize, token).ConfigureAwait(true);
@@ -265,6 +268,7 @@ internal sealed class TerminalTabHost : Grid, IAsyncDisposable
         if (_webView.CoreWebView2 is { } core)
         {
             core.WebMessageReceived -= CoreOnWebMessageReceived;
+            core.NavigationStarting -= CoreOnNavigationStarting;
         }
 
         try
@@ -276,6 +280,15 @@ internal sealed class TerminalTabHost : Grid, IAsyncDisposable
             _webView.Dispose();
             _messageGate.Dispose();
             _lifetimeCancellation.Dispose();
+        }
+    }
+
+    private void CoreOnNavigationStarting(object? sender, CoreWebView2NavigationStartingEventArgs e)
+    {
+        if (!e.Uri.StartsWith(VirtualOrigin, StringComparison.OrdinalIgnoreCase))
+        {
+            e.Cancel = true;
+            ErrorRaised?.Invoke("Terminal navigation outside the packaged local frontend was blocked.");
         }
     }
 
@@ -305,8 +318,7 @@ internal sealed class TerminalTabHost : Grid, IAsyncDisposable
 
                 case "input":
                     if (_session.State == TerminalSessionState.Connected &&
-                        root.TryGetProperty("data", out var dataElement) &&
-                        dataElement.GetString() is { } input)
+                        TryReadBoundedText(root, "data", out var input))
                     {
                         await ExecuteSerializedAsync(
                                 cancellationToken => _session.SendAsync(input, cancellationToken),
@@ -323,6 +335,28 @@ internal sealed class TerminalTabHost : Grid, IAsyncDisposable
                                 cancellationToken => _session.ResizeAsync(_requestedSize, cancellationToken),
                                 _lifetimeCancellation.Token)
                             .ConfigureAwait(true);
+                    }
+                    break;
+
+                case "copy":
+                    if (TryReadBoundedText(root, "data", out var selection) && selection.Length > 0)
+                    {
+                        Clipboard.SetText(selection);
+                    }
+                    break;
+
+                case "pasteRequest":
+                    if (Clipboard.ContainsText())
+                    {
+                        var clipboardText = Clipboard.GetText();
+                        if (clipboardText.Length <= MaxBridgeTextLength)
+                        {
+                            PostMessage(new { type = "paste", data = clipboardText });
+                        }
+                        else
+                        {
+                            ErrorRaised?.Invoke("Clipboard text is too large to paste into a terminal in one operation.");
+                        }
                     }
                     break;
             }
@@ -405,6 +439,24 @@ internal sealed class TerminalTabHost : Grid, IAsyncDisposable
         }
 
         _webView.CoreWebView2.PostWebMessageAsJson(JsonSerializer.Serialize(message));
+    }
+
+    private static bool TryReadBoundedText(JsonElement root, string propertyName, out string value)
+    {
+        value = string.Empty;
+        if (!root.TryGetProperty(propertyName, out var element) || element.ValueKind != JsonValueKind.String)
+        {
+            return false;
+        }
+
+        var candidate = element.GetString();
+        if (candidate is null || candidate.Length > MaxBridgeTextLength)
+        {
+            return false;
+        }
+
+        value = candidate;
+        return true;
     }
 
     private static TerminalSize ReadSize(JsonElement root)
