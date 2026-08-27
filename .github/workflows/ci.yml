@@ -53,6 +53,7 @@ jobs:
     env:
       SERVERDESK_SSH_HOST: 127.0.0.1
       SERVERDESK_SSH_PORT: 2222
+      SERVERDESK_SSH_TARGET_PORT: 2223
       SERVERDESK_SSH_USER: serverdesk_ci
       SERVERDESK_SSH_PASSWORD: serverdesk-password
       SERVERDESK_SSH_KEY: /tmp/serverdesk_ci_key
@@ -60,6 +61,9 @@ jobs:
       SERVERDESK_SFTP_HOME: /home/serverdesk_ci
       SERVERDESK_SFTP_DENIED_PATH: /tmp/serverdesk-sftp-denied
       SERVERDESK_FORWARD_HTTP_PORT: 18080
+      SERVERDESK_HTTP_PROXY_PORT: 18081
+      SERVERDESK_SOCKS4_PROXY_PORT: 18082
+      SERVERDESK_SOCKS5_PROXY_PORT: 18083
 
     steps:
       - name: Checkout
@@ -70,7 +74,7 @@ jobs:
         with:
           dotnet-version: 10.0.x
 
-      - name: Configure disposable OpenSSH server
+      - name: Configure disposable OpenSSH server and proxy fixtures
         shell: bash
         run: |
           set -euo pipefail
@@ -93,10 +97,18 @@ jobs:
             --bind 127.0.0.1 --directory /tmp/serverdesk-forward-http \
             >/tmp/serverdesk-forward-http.log 2>&1 &
 
+          nohup python3 tests/ServerDesk.Ssh.IntegrationTests/Fixtures/tcp_proxy_fixture.py \
+            --mode http --port 18081 >/tmp/serverdesk-http-proxy.log 2>&1 &
+          nohup python3 tests/ServerDesk.Ssh.IntegrationTests/Fixtures/tcp_proxy_fixture.py \
+            --mode socks4 --port 18082 >/tmp/serverdesk-socks4-proxy.log 2>&1 &
+          nohup python3 tests/ServerDesk.Ssh.IntegrationTests/Fixtures/tcp_proxy_fixture.py \
+            --mode socks5 --port 18083 >/tmp/serverdesk-socks5-proxy.log 2>&1 &
+
           sudo mkdir -p /run/sshd
           sudo ssh-keygen -A
           cat <<'EOF' | sudo tee /tmp/serverdesk-sshd_config >/dev/null
           Port 2222
+          Port 2223
           ListenAddress 127.0.0.1
           HostKey /etc/ssh/ssh_host_ed25519_key
           PasswordAuthentication yes
@@ -113,26 +125,40 @@ jobs:
           EOF
 
           sudo /usr/sbin/sshd -f /tmp/serverdesk-sshd_config -E /tmp/serverdesk-sshd.log
-          for attempt in {1..20}; do
+          for attempt in {1..30}; do
             if ssh-keyscan -p 2222 127.0.0.1 >/dev/null 2>&1 && \
-               curl -fsS http://127.0.0.1:18080/ >/dev/null 2>&1; then
+               ssh-keyscan -p 2223 127.0.0.1 >/dev/null 2>&1 && \
+               curl -fsS http://127.0.0.1:18080/ >/dev/null 2>&1 && \
+               python3 - <<'PY'
+          import socket
+          for port in (18081, 18082, 18083):
+              with socket.create_connection(("127.0.0.1", port), timeout=1):
+                  pass
+          PY
+            then
               exit 0
             fi
             sleep 0.25
           done
 
-          cat /tmp/serverdesk-sshd.log
+          cat /tmp/serverdesk-sshd.log || true
           cat /tmp/serverdesk-forward-http.log || true
+          cat /tmp/serverdesk-http-proxy.log || true
+          cat /tmp/serverdesk-socks4-proxy.log || true
+          cat /tmp/serverdesk-socks5-proxy.log || true
           exit 1
 
       - name: Restore integration tests
         run: dotnet restore tests/ServerDesk.Ssh.IntegrationTests/ServerDesk.Ssh.IntegrationTests.csproj
 
-      - name: Run SSH, SFTP, PTY and forwarding integration tests
+      - name: Run SSH, SFTP, PTY, forwarding and routing integration tests
         run: dotnet test tests/ServerDesk.Ssh.IntegrationTests/ServerDesk.Ssh.IntegrationTests.csproj --configuration Release --no-restore
 
-      - name: Show SSH server log on failure
+      - name: Show fixture logs on failure
         if: failure()
         run: |
           sudo cat /tmp/serverdesk-sshd.log || true
           cat /tmp/serverdesk-forward-http.log || true
+          cat /tmp/serverdesk-http-proxy.log || true
+          cat /tmp/serverdesk-socks4-proxy.log || true
+          cat /tmp/serverdesk-socks5-proxy.log || true
