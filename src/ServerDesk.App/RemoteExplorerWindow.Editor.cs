@@ -1,9 +1,12 @@
 using System.Windows;
+using ServerDesk.Application.RemoteEditing;
 
 namespace ServerDesk.App;
 
 public partial class RemoteExplorerWindow
 {
+    internal IRemoteFileEditorService? EditorService { get; set; }
+
     private void EditOnClick(object sender, RoutedEventArgs e)
     {
         if (SelectedRow is not { IsDownloadable: true } row)
@@ -12,7 +15,7 @@ public partial class RemoteExplorerWindow
             return;
         }
 
-        if (RemoteEditorWindow.EditorService is not { } editorService)
+        if (EditorService is not { } editorService)
         {
             SetState(ServerDesk.Application.RemoteFiles.RemoteExplorerUiState.Error, "Remote editor service is unavailable.");
             return;
