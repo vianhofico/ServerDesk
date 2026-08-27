@@ -1,0 +1,163 @@
+<Window x:Class="ServerDesk.App.HostTrustDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="SSH Host Verification"
+        Width="680"
+        Height="560"
+        MinWidth="600"
+        MinHeight="500"
+        ResizeMode="CanMinimize"
+        WindowStartupLocation="CenterOwner"
+        ShowInTaskbar="False">
+    <Window.Resources>
+        <Style x:Key="DialogButton" TargetType="Button">
+            <Setter Property="MinHeight" Value="36" />
+            <Setter Property="Padding" Value="14,7" />
+            <Setter Property="Margin" Value="8,0,0,0" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+    </Window.Resources>
+
+    <Grid Background="{DynamicResource WindowBackgroundBrush}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <StackPanel Margin="28">
+                <Border Width="48"
+                        Height="48"
+                        HorizontalAlignment="Left"
+                        CornerRadius="12"
+                        Background="{DynamicResource AccentSoftBrush}">
+                    <TextBlock Text="🔐"
+                               FontSize="22"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center" />
+                </Border>
+
+                <TextBlock x:Name="HeadingText"
+                           Margin="0,16,0,0"
+                           FontSize="24"
+                           FontWeight="SemiBold" />
+                <TextBlock x:Name="ExplanationText"
+                           Margin="0,7,0,0"
+                           MaxWidth="600"
+                           HorizontalAlignment="Left"
+                           TextWrapping="Wrap"
+                           Foreground="{DynamicResource MutedTextBrush}" />
+
+                <Border Margin="0,22,0,0"
+                        Padding="16"
+                        CornerRadius="10"
+                        Background="{DynamicResource SurfaceBrush}"
+                        BorderBrush="{DynamicResource BorderBrush}"
+                        BorderThickness="1">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="140" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Grid.Row="0" Text="Endpoint" Foreground="{DynamicResource MutedTextBrush}" />
+                        <TextBlock Grid.Row="0" Grid.Column="1" x:Name="EndpointText" FontWeight="SemiBold" />
+
+                        <TextBlock Grid.Row="1" Margin="0,10,0,0" Text="Key algorithm" Foreground="{DynamicResource MutedTextBrush}" />
+                        <TextBlock Grid.Row="1" Grid.Column="1" Margin="0,10,0,0" x:Name="AlgorithmText" FontFamily="Consolas" />
+
+                        <TextBlock Grid.Row="2" Margin="0,10,0,0" Text="SHA256 fingerprint" Foreground="{DynamicResource MutedTextBrush}" />
+                        <TextBox Grid.Row="2"
+                                 Grid.Column="1"
+                                 Margin="0,10,0,0"
+                                 x:Name="FingerprintText"
+                                 IsReadOnly="True"
+                                 BorderThickness="0"
+                                 Background="Transparent"
+                                 FontFamily="Consolas"
+                                 TextWrapping="Wrap" />
+                    </Grid>
+                </Border>
+
+                <Border x:Name="ChangedKeyWarning"
+                        Margin="0,16,0,0"
+                        Padding="14"
+                        CornerRadius="9"
+                        BorderBrush="{DynamicResource DangerBrush}"
+                        BorderThickness="1"
+                        Visibility="Collapsed">
+                    <StackPanel>
+                        <TextBlock Text="The server identity does not match the saved host key."
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource DangerBrush}" />
+                        <TextBlock Margin="0,5,0,0"
+                                   Text="This can indicate a legitimate server rebuild, DNS/IP reuse, or a man-in-the-middle attack. ServerDesk will block this connection even if you choose to forget the old key."
+                                   TextWrapping="Wrap" />
+                        <TextBlock Margin="0,14,0,5"
+                                   Text="Previously trusted keys"
+                                   FontWeight="SemiBold" />
+                        <ItemsControl x:Name="KnownKeysList">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Margin="0,3,0,0"
+                                            Padding="10"
+                                            CornerRadius="7"
+                                            Background="{DynamicResource SurfaceSecondaryBrush}">
+                                        <TextBlock Text="{Binding}"
+                                                   FontFamily="Consolas"
+                                                   TextWrapping="Wrap" />
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+
+                <Border x:Name="UnknownHostNotice"
+                        Margin="0,16,0,0"
+                        Padding="14"
+                        CornerRadius="9"
+                        Background="{DynamicResource SurfaceSecondaryBrush}">
+                    <TextBlock Text="Verify this fingerprint using a trusted channel or your hosting provider before saving it. Trust once allows only the current connection attempt and does not persist the key."
+                               TextWrapping="Wrap" />
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+
+        <Border Grid.Row="1"
+                Padding="20,14"
+                Background="{DynamicResource SurfaceBrush}"
+                BorderBrush="{DynamicResource BorderBrush}"
+                BorderThickness="0,1,0,0">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button x:Name="TrustOnceButton"
+                        Content="Trust once"
+                        Click="TrustOnceButtonOnClick"
+                        Style="{StaticResource DialogButton}" />
+                <Button x:Name="TrustAndSaveButton"
+                        Content="Trust &amp; save"
+                        Click="TrustAndSaveButtonOnClick"
+                        Background="{DynamicResource AccentBrush}"
+                        Foreground="White"
+                        BorderThickness="0"
+                        Style="{StaticResource DialogButton}" />
+                <Button x:Name="ForgetKnownKeyButton"
+                        Content="Forget saved key"
+                        Click="ForgetKnownKeyButtonOnClick"
+                        Visibility="Collapsed"
+                        BorderBrush="{DynamicResource DangerBrush}"
+                        Foreground="{DynamicResource DangerBrush}"
+                        Style="{StaticResource DialogButton}" />
+                <Button Content="Cancel"
+                        IsCancel="True"
+                        Click="CancelButtonOnClick"
+                        Style="{StaticResource DialogButton}" />
+            </StackPanel>
+        </Border>
+    </Grid>
+</Window>

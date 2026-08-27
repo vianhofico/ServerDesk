@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using ServerDesk.App.Presentation;
 using ServerDesk.Application.Abstractions;
 using ServerDesk.Application.Audit;
+using ServerDesk.Application.HostTrust;
 using ServerDesk.Application.Profiles;
 using ServerDesk.Application.Secrets;
 using ServerDesk.Application.Settings;
@@ -67,8 +68,12 @@ public partial class App : System.Windows.Application
         services.AddSingleton<SqliteConnectionFactory>();
         services.AddSingleton<SqliteDatabaseInitializer>();
         services.AddSingleton<IProfileRepository, SqliteProfileRepository>();
+        services.AddSingleton<IKnownHostRepository, SqliteKnownHostRepository>();
         services.AddSingleton<IOperationAudit, SqliteOperationAudit>();
+
         services.AddSingleton<IServerProfileService, ServerProfileService>();
+        services.AddSingleton<IHostTrustPrompt, WpfHostTrustPrompt>();
+        services.AddSingleton<IHostTrustService, HostTrustService>();
 
         services.AddSingleton<INavigationService, NavigationService>();
         services.AddSingleton<IThemeService, WpfThemeService>();
