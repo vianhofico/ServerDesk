@@ -27,7 +27,7 @@ public sealed class SqliteConnectionFactory
 
 public sealed class SqliteDatabaseInitializer
 {
-    public const int CurrentSchemaVersion = 1;
+    public const int CurrentSchemaVersion = 2;
 
     private readonly SqliteConnectionFactory _connectionFactory;
 
@@ -100,6 +100,27 @@ public sealed class SqliteDatabaseInitializer
                     ON operation_audit(occurred_utc DESC);
 
                 UPDATE schema_info SET version = 1 WHERE singleton_id = 1;
+                """;
+
+            await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+            transaction.Commit();
+            version = 1;
+        }
+
+        if (version < 2)
+        {
+            using var transaction = connection.BeginTransaction();
+            await using var command = connection.CreateCommand();
+            command.Transaction = transaction;
+            command.CommandText =
+                """
+                ALTER TABLE server_profiles
+                    ADD COLUMN authentication_kind INTEGER NOT NULL DEFAULT 0;
+
+                ALTER TABLE server_profiles
+                    ADD COLUMN private_key_path TEXT NULL;
+
+                UPDATE schema_info SET version = 2 WHERE singleton_id = 1;
                 """;
 
             await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);

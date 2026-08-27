@@ -23,14 +23,16 @@ public sealed class PersistenceFoundationTests
         await initializer.InitializeAsync(cancellationToken);
 
         var repository = new SqliteProfileRepository(factory);
-        var reference = SecretReference.Create("ssh-password");
+        var reference = SecretReference.Create("ssh-key-passphrase");
         var profile = ServerProfile.Create(
             "Production",
             "prod.example.com",
             22,
             "deploy",
             "production",
-            reference);
+            reference,
+            ServerAuthenticationKind.PrivateKey,
+            @"C:\Users\dev\.ssh\id_ed25519");
 
         await repository.UpsertAsync(profile, cancellationToken);
         var loaded = await repository.GetAsync(profile.Id, cancellationToken);
@@ -64,9 +66,11 @@ public sealed class PersistenceFoundationTests
         }
 
         Assert.Contains("credential_reference", columns);
-        Assert.DoesNotContain(columns, column => column.Contains("password", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains("authentication_kind", columns);
+        Assert.Contains("private_key_path", columns);
+        Assert.DoesNotContain(columns, column => column.Equals("password", StringComparison.OrdinalIgnoreCase));
         Assert.DoesNotContain(columns, column => column.Contains("passphrase", StringComparison.OrdinalIgnoreCase));
-        Assert.DoesNotContain(columns, column => column.Contains("private_key", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(columns, column => column.Contains("private_key_secret", StringComparison.OrdinalIgnoreCase));
         Assert.DoesNotContain(columns, column => column.Contains("sudo_secret", StringComparison.OrdinalIgnoreCase));
     }
 
