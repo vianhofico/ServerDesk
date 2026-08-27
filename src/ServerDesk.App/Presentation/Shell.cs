@@ -145,7 +145,7 @@ public sealed class ShellViewModel : ObservableObject
             await _settingsStore.SaveAsync(new AppSettings(preference)).ConfigureAwait(true);
             SettingsMessage = null;
         }
-        catch (IOException)
+        catch (System.IO.IOException)
         {
             SettingsMessage = "Theme changed for this session, but the preference could not be saved.";
         }
