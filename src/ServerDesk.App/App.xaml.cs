@@ -4,6 +4,7 @@ using ServerDesk.App.Presentation;
 using ServerDesk.Application.Abstractions;
 using ServerDesk.Application.Audit;
 using ServerDesk.Application.Capabilities;
+using ServerDesk.Application.History;
 using ServerDesk.Application.HostTrust;
 using ServerDesk.Application.PortForwarding;
 using ServerDesk.Application.Profiles;
@@ -114,15 +115,24 @@ public partial class App : System.Windows.Application
         services.AddSingleton<IKnownHostRepository, SqliteKnownHostRepository>();
         services.AddSingleton<IPortForwardProfileRepository, SqlitePortForwardProfileRepository>();
         services.AddSingleton<IConnectionRouteRepository, SqliteConnectionRouteRepository>();
+        services.AddSingleton<IServerProfileOrganizationRepository, SqliteServerProfileOrganizationRepository>();
+        services.AddSingleton<IConnectionHistoryRepository, SqliteConnectionHistoryRepository>();
         services.AddSingleton<IOperationAudit, SqliteOperationAudit>();
 
         services.AddSingleton<IServerProfileService, ServerProfileService>();
         services.AddSingleton<IServerConnectionRouteService, ServerConnectionRouteService>();
+        services.AddSingleton<IServerProfileOrganizationService, ServerProfileOrganizationService>();
         services.AddSingleton<IHostTrustPrompt, WpfHostTrustPrompt>();
         services.AddSingleton<IHostTrustService, HostTrustService>();
         services.AddSingleton<IInteractiveAuthenticationPrompt, WpfInteractiveAuthenticationPrompt>();
         services.AddSingleton(SshSessionOptions.Default);
-        services.AddSingleton<IRemoteSessionFactory, RouteAwareRemoteSessionFactory>();
+        services.AddSingleton<RouteAwareRemoteSessionFactory>();
+        services.AddSingleton<IRemoteSessionFactory>(provider =>
+            new ConnectionHistoryRemoteSessionFactory(
+                provider.GetRequiredService<RouteAwareRemoteSessionFactory>(),
+                provider.GetRequiredService<IConnectionHistoryRepository>(),
+                provider.GetRequiredService<IConnectionRouteRepository>(),
+                provider.GetRequiredService<IProfileRepository>()));
         services.AddSingleton<IRemoteCommandExecutorFactory, RouteAwareRemoteCommandExecutorFactory>();
         services.AddSingleton<IRemoteFileSystemFactory, RouteAwareSftpRemoteFileSystemFactory>();
         services.AddSingleton<IRemoteTerminalSessionFactory, RouteAwareRemoteTerminalSessionFactory>();
