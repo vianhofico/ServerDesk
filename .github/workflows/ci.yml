@@ -59,6 +59,7 @@ jobs:
       SERVERDESK_SSH_KEY_PASSPHRASE: serverdesk-key-pass
       SERVERDESK_SFTP_HOME: /home/serverdesk_ci
       SERVERDESK_SFTP_DENIED_PATH: /tmp/serverdesk-sftp-denied
+      SERVERDESK_FORWARD_HTTP_PORT: 18080
 
     steps:
       - name: Checkout
@@ -85,6 +86,12 @@ jobs:
 
           sudo -u serverdesk_ci ln -s /etc/hosts /home/serverdesk_ci/serverdesk-fixture-link
           sudo install -d -m 700 -o root -g root /tmp/serverdesk-sftp-denied
+          sudo install -d -m 755 -o serverdesk_ci -g serverdesk_ci /tmp/serverdesk-forward-http
+          echo 'serverdesk-forward-ok' | sudo tee /tmp/serverdesk-forward-http/index.html >/dev/null
+          sudo chown serverdesk_ci:serverdesk_ci /tmp/serverdesk-forward-http/index.html
+          sudo -u serverdesk_ci nohup python3 -m http.server 18080 \
+            --bind 127.0.0.1 --directory /tmp/serverdesk-forward-http \
+            >/tmp/serverdesk-forward-http.log 2>&1 &
 
           sudo mkdir -p /run/sshd
           sudo ssh-keygen -A
@@ -98,6 +105,8 @@ jobs:
           UsePAM yes
           PermitRootLogin no
           AllowUsers serverdesk_ci
+          AllowTcpForwarding yes
+          GatewayPorts no
           Subsystem sftp internal-sftp
           PidFile /tmp/serverdesk-sshd.pid
           LogLevel VERBOSE
@@ -105,21 +114,25 @@ jobs:
 
           sudo /usr/sbin/sshd -f /tmp/serverdesk-sshd_config -E /tmp/serverdesk-sshd.log
           for attempt in {1..20}; do
-            if ssh-keyscan -p 2222 127.0.0.1 >/dev/null 2>&1; then
+            if ssh-keyscan -p 2222 127.0.0.1 >/dev/null 2>&1 && \
+               curl -fsS http://127.0.0.1:18080/ >/dev/null 2>&1; then
               exit 0
             fi
             sleep 0.25
           done
 
           cat /tmp/serverdesk-sshd.log
+          cat /tmp/serverdesk-forward-http.log || true
           exit 1
 
       - name: Restore integration tests
         run: dotnet restore tests/ServerDesk.Ssh.IntegrationTests/ServerDesk.Ssh.IntegrationTests.csproj
 
-      - name: Run SSH and SFTP integration tests
+      - name: Run SSH, SFTP, PTY and forwarding integration tests
         run: dotnet test tests/ServerDesk.Ssh.IntegrationTests/ServerDesk.Ssh.IntegrationTests.csproj --configuration Release --no-restore
 
       - name: Show SSH server log on failure
         if: failure()
-        run: sudo cat /tmp/serverdesk-sshd.log || true
+        run: |
+          sudo cat /tmp/serverdesk-sshd.log || true
+          cat /tmp/serverdesk-forward-http.log || true
