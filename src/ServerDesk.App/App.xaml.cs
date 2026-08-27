@@ -9,6 +9,7 @@ using ServerDesk.Application.RemoteFiles;
 using ServerDesk.Application.Secrets;
 using ServerDesk.Application.Sessions;
 using ServerDesk.Application.Settings;
+using ServerDesk.Application.Terminal;
 using ServerDesk.Infrastructure.Persistence.Sqlite;
 using ServerDesk.Infrastructure.Ssh;
 using ServerDesk.Platform.Windows;
@@ -93,6 +94,7 @@ public partial class App : System.Windows.Application
         services.AddSingleton(SshSessionOptions.Default);
         services.AddSingleton<IRemoteSessionFactory, SshRemoteSessionFactory>();
         services.AddSingleton<IRemoteFileSystemFactory, SftpRemoteFileSystemFactory>();
+        services.AddSingleton<IRemoteTerminalSessionFactory, SshRemoteTerminalSessionFactory>();
 
         services.AddSingleton<INavigationService, NavigationService>();
         services.AddSingleton<IThemeService, WpfThemeService>();
