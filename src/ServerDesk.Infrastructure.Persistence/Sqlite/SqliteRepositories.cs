@@ -25,10 +25,13 @@ public sealed class SqliteProfileRepository : IProfileRepository
         await using var command = connection.CreateCommand();
         command.CommandText =
             """
-            SELECT id, name, host, port, username, environment, credential_reference,
-                   authentication_kind, private_key_path
-            FROM server_profiles
-            ORDER BY name COLLATE NOCASE, id;
+            SELECT p.id, p.name, p.host, p.port, p.username, p.environment, p.credential_reference,
+                   p.authentication_kind, p.private_key_path,
+                   COALESCE(r.kind, 0), r.proxy_host, r.proxy_port, r.proxy_username,
+                   r.proxy_credential_reference, r.bastion_profile_id
+            FROM server_profiles p
+            LEFT JOIN server_profile_routes r ON r.server_profile_id = p.id
+            ORDER BY p.name COLLATE NOCASE, p.id;
             """;
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
@@ -55,10 +58,13 @@ public sealed class SqliteProfileRepository : IProfileRepository
         await using var command = connection.CreateCommand();
         command.CommandText =
             """
-            SELECT id, name, host, port, username, environment, credential_reference,
-                   authentication_kind, private_key_path
-            FROM server_profiles
-            WHERE id = @id;
+            SELECT p.id, p.name, p.host, p.port, p.username, p.environment, p.credential_reference,
+                   p.authentication_kind, p.private_key_path,
+                   COALESCE(r.kind, 0), r.proxy_host, r.proxy_port, r.proxy_username,
+                   r.proxy_credential_reference, r.bastion_profile_id
+            FROM server_profiles p
+            LEFT JOIN server_profile_routes r ON r.server_profile_id = p.id
+            WHERE p.id = @id;
             """;
         command.Parameters.AddWithValue("@id", id.ToString("D"));
 
@@ -76,42 +82,81 @@ public sealed class SqliteProfileRepository : IProfileRepository
 
         await using var connection = _connectionFactory.Create();
         await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
-        await using var command = connection.CreateCommand();
-        command.CommandText =
-            """
-            INSERT INTO server_profiles (
-                id, name, host, port, username, environment, credential_reference,
-                authentication_kind, private_key_path, created_utc, updated_utc)
-            VALUES (
-                @id, @name, @host, @port, @username, @environment, @credential_reference,
-                @authentication_kind, @private_key_path, @now, @now)
-            ON CONFLICT(id) DO UPDATE SET
-                name = excluded.name,
-                host = excluded.host,
-                port = excluded.port,
-                username = excluded.username,
-                environment = excluded.environment,
-                credential_reference = excluded.credential_reference,
-                authentication_kind = excluded.authentication_kind,
-                private_key_path = excluded.private_key_path,
-                updated_utc = excluded.updated_utc;
-            """;
-
+        using var transaction = connection.BeginTransaction();
         var now = DateTimeOffset.UtcNow.ToString("O", System.Globalization.CultureInfo.InvariantCulture);
-        command.Parameters.AddWithValue("@id", profile.Id.ToString("D"));
-        command.Parameters.AddWithValue("@name", profile.Name);
-        command.Parameters.AddWithValue("@host", profile.Host);
-        command.Parameters.AddWithValue("@port", profile.Port);
-        command.Parameters.AddWithValue("@username", profile.Username);
-        command.Parameters.AddWithValue("@environment", (object?)profile.Environment ?? DBNull.Value);
-        command.Parameters.AddWithValue(
-            "@credential_reference",
-            (object?)profile.CredentialReference?.Value ?? DBNull.Value);
-        command.Parameters.AddWithValue("@authentication_kind", (int)profile.AuthenticationKind);
-        command.Parameters.AddWithValue("@private_key_path", (object?)profile.PrivateKeyPath ?? DBNull.Value);
-        command.Parameters.AddWithValue("@now", now);
 
-        await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+        await using (var command = connection.CreateCommand())
+        {
+            command.Transaction = transaction;
+            command.CommandText =
+                """
+                INSERT INTO server_profiles (
+                    id, name, host, port, username, environment, credential_reference,
+                    authentication_kind, private_key_path, created_utc, updated_utc)
+                VALUES (
+                    @id, @name, @host, @port, @username, @environment, @credential_reference,
+                    @authentication_kind, @private_key_path, @now, @now)
+                ON CONFLICT(id) DO UPDATE SET
+                    name = excluded.name,
+                    host = excluded.host,
+                    port = excluded.port,
+                    username = excluded.username,
+                    environment = excluded.environment,
+                    credential_reference = excluded.credential_reference,
+                    authentication_kind = excluded.authentication_kind,
+                    private_key_path = excluded.private_key_path,
+                    updated_utc = excluded.updated_utc;
+                """;
+
+            command.Parameters.AddWithValue("@id", profile.Id.ToString("D"));
+            command.Parameters.AddWithValue("@name", profile.Name);
+            command.Parameters.AddWithValue("@host", profile.Host);
+            command.Parameters.AddWithValue("@port", profile.Port);
+            command.Parameters.AddWithValue("@username", profile.Username);
+            command.Parameters.AddWithValue("@environment", (object?)profile.Environment ?? DBNull.Value);
+            command.Parameters.AddWithValue(
+                "@credential_reference",
+                (object?)profile.CredentialReference?.Value ?? DBNull.Value);
+            command.Parameters.AddWithValue("@authentication_kind", (int)profile.AuthenticationKind);
+            command.Parameters.AddWithValue("@private_key_path", (object?)profile.PrivateKeyPath ?? DBNull.Value);
+            command.Parameters.AddWithValue("@now", now);
+            await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+        }
+
+        await using (var command = connection.CreateCommand())
+        {
+            command.Transaction = transaction;
+            command.CommandText =
+                """
+                INSERT INTO server_profile_routes (
+                    server_profile_id, kind, proxy_host, proxy_port, proxy_username,
+                    proxy_credential_reference, bastion_profile_id)
+                VALUES (
+                    @server_profile_id, @kind, @proxy_host, @proxy_port, @proxy_username,
+                    @proxy_credential_reference, @bastion_profile_id)
+                ON CONFLICT(server_profile_id) DO UPDATE SET
+                    kind = excluded.kind,
+                    proxy_host = excluded.proxy_host,
+                    proxy_port = excluded.proxy_port,
+                    proxy_username = excluded.proxy_username,
+                    proxy_credential_reference = excluded.proxy_credential_reference,
+                    bastion_profile_id = excluded.bastion_profile_id;
+                """;
+            command.Parameters.AddWithValue("@server_profile_id", profile.Id.ToString("D"));
+            command.Parameters.AddWithValue("@kind", (int)profile.Route.Kind);
+            command.Parameters.AddWithValue("@proxy_host", (object?)profile.Route.ProxyHost ?? DBNull.Value);
+            command.Parameters.AddWithValue("@proxy_port", (object?)profile.Route.ProxyPort ?? DBNull.Value);
+            command.Parameters.AddWithValue("@proxy_username", (object?)profile.Route.ProxyUsername ?? DBNull.Value);
+            command.Parameters.AddWithValue(
+                "@proxy_credential_reference",
+                (object?)profile.Route.ProxyCredentialReference?.Value ?? DBNull.Value);
+            command.Parameters.AddWithValue(
+                "@bastion_profile_id",
+                profile.Route.BastionProfileId is { } bastionId ? bastionId.ToString("D") : DBNull.Value);
+            await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+        }
+
+        transaction.Commit();
     }
 
     public async ValueTask DeleteAsync(Guid id, CancellationToken cancellationToken = default)
@@ -134,6 +179,16 @@ public sealed class SqliteProfileRepository : IProfileRepository
         var credentialReference = reader.IsDBNull(6)
             ? (SecretReference?)null
             : SecretReference.Parse(reader.GetString(6));
+        var proxyCredentialReference = reader.IsDBNull(13)
+            ? (SecretReference?)null
+            : SecretReference.Parse(reader.GetString(13));
+        var route = ServerConnectionRoute.Rehydrate(
+            (ServerRouteKind)reader.GetInt32(9),
+            reader.IsDBNull(10) ? null : reader.GetString(10),
+            reader.IsDBNull(11) ? null : reader.GetInt32(11),
+            reader.IsDBNull(12) ? null : reader.GetString(12),
+            proxyCredentialReference,
+            reader.IsDBNull(14) ? null : Guid.Parse(reader.GetString(14)));
 
         return ServerProfile.Rehydrate(
             Guid.Parse(reader.GetString(0)),
@@ -144,7 +199,8 @@ public sealed class SqliteProfileRepository : IProfileRepository
             reader.IsDBNull(5) ? null : reader.GetString(5),
             credentialReference,
             (ServerAuthenticationKind)reader.GetInt32(7),
-            reader.IsDBNull(8) ? null : reader.GetString(8));
+            reader.IsDBNull(8) ? null : reader.GetString(8),
+            route);
     }
 }
 
