@@ -1,0 +1,141 @@
+<Window x:Class="ServerDesk.App.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="ServerDesk"
+        Width="1280"
+        Height="800"
+        MinWidth="960"
+        MinHeight="640"
+        WindowStartupLocation="CenterScreen"
+        Background="{StaticResource WindowBackgroundBrush}">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="56" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0"
+                Background="{StaticResource SurfaceBrush}"
+                BorderBrush="{StaticResource BorderBrush}"
+                BorderThickness="0,0,0,1">
+            <Grid Margin="20,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Border Width="30" Height="30" CornerRadius="8" Background="{StaticResource AccentBrush}">
+                        <TextBlock Text="S" Foreground="White" FontWeight="SemiBold"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <TextBlock Text="ServerDesk" Margin="10,0,0,0" FontSize="18" FontWeight="SemiBold"
+                               VerticalAlignment="Center" />
+                </StackPanel>
+
+                <TextBlock Grid.Column="2"
+                           Text="Foundation workspace"
+                           Foreground="{StaticResource MutedTextBrush}"
+                           VerticalAlignment="Center" />
+            </Grid>
+        </Border>
+
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="240" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <Border Grid.Column="0"
+                    Background="{StaticResource SurfaceBrush}"
+                    BorderBrush="{StaticResource BorderBrush}"
+                    BorderThickness="0,0,1,0">
+                <DockPanel Margin="14">
+                    <StackPanel DockPanel.Dock="Top">
+                        <TextBlock Text="SERVERS" FontSize="11" FontWeight="SemiBold"
+                                   Foreground="{StaticResource MutedTextBrush}" Margin="8,4,8,8" />
+                        <Border Background="#EEF4FF" CornerRadius="8" Padding="10,8" Margin="0,0,0,16">
+                            <StackPanel>
+                                <TextBlock Text="No server connected" FontWeight="SemiBold" />
+                                <TextBlock Text="Remote profiles arrive in M1" FontSize="12"
+                                           Foreground="{StaticResource MutedTextBrush}" Margin="0,3,0,0" />
+                            </StackPanel>
+                        </Border>
+
+                        <TextBlock Text="WORKSPACE" FontSize="11" FontWeight="SemiBold"
+                                   Foreground="{StaticResource MutedTextBrush}" Margin="8,0,8,6" />
+                        <ListBox BorderThickness="0" Background="Transparent" SelectedIndex="0">
+                            <ListBoxItem Padding="10,8">Dashboard</ListBoxItem>
+                            <ListBoxItem Padding="10,8" IsEnabled="False">Explorer</ListBoxItem>
+                            <ListBoxItem Padding="10,8" IsEnabled="False">Terminal</ListBoxItem>
+                            <ListBoxItem Padding="10,8" IsEnabled="False">Processes</ListBoxItem>
+                            <ListBoxItem Padding="10,8" IsEnabled="False">Services</ListBoxItem>
+                            <ListBoxItem Padding="10,8" IsEnabled="False">Docker</ListBoxItem>
+                            <ListBoxItem Padding="10,8" IsEnabled="False">Storage</ListBoxItem>
+                            <ListBoxItem Padding="10,8" IsEnabled="False">Network</ListBoxItem>
+                            <ListBoxItem Padding="10,8" IsEnabled="False">Logs</ListBoxItem>
+                        </ListBox>
+                    </StackPanel>
+                </DockPanel>
+            </Border>
+
+            <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto">
+                <Grid Margin="32">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <StackPanel Grid.Row="0">
+                        <TextBlock Text="Server administration, visually." FontSize="30" FontWeight="SemiBold" />
+                        <TextBlock Margin="0,8,0,0"
+                                   MaxWidth="760"
+                                   HorizontalAlignment="Left"
+                                   TextWrapping="Wrap"
+                                   Foreground="{StaticResource MutedTextBrush}"
+                                   FontSize="14"
+                                   Text="This bootstrap shell establishes the Windows-first workspace. Secure SSH/SFTP connections, terminal, Explorer and capability detection are implemented in M1 according to the repository roadmap." />
+                    </StackPanel>
+
+                    <UniformGrid Grid.Row="1" Columns="3" Margin="0,28,0,0">
+                        <Border Margin="0,0,12,0" Padding="18" CornerRadius="10"
+                                Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
+                            <StackPanel>
+                                <TextBlock Text="Secure remote core" FontWeight="SemiBold" FontSize="16" />
+                                <TextBlock Margin="0,8,0,0" TextWrapping="Wrap" Foreground="{StaticResource MutedTextBrush}"
+                                           Text="SSH host verification, secure credentials, SFTP, PTY terminal, tunnels and reconnect." />
+                            </StackPanel>
+                        </Border>
+                        <Border Margin="6,0" Padding="18" CornerRadius="10"
+                                Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
+                            <StackPanel>
+                                <TextBlock Text="Windows-like controls" FontWeight="SemiBold" FontSize="16" />
+                                <TextBlock Margin="0,8,0,0" TextWrapping="Wrap" Foreground="{StaticResource MutedTextBrush}"
+                                           Text="Explorer, Task-Manager-like processes, Services, logs, storage and network." />
+                            </StackPanel>
+                        </Border>
+                        <Border Margin="12,0,0,0" Padding="18" CornerRadius="10"
+                                Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
+                            <StackPanel>
+                                <TextBlock Text="DevOps workspace" FontWeight="SemiBold" FontSize="16" />
+                                <TextBlock Margin="0,8,0,0" TextWrapping="Wrap" Foreground="{StaticResource MutedTextBrush}"
+                                           Text="Docker, Compose, Git, nginx, SSL and deployment workflows without exposing admin sockets." />
+                            </StackPanel>
+                        </Border>
+                    </UniformGrid>
+
+                    <Border Grid.Row="2" Margin="0,28,0,0" Padding="18" CornerRadius="10"
+                            Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
+                        <StackPanel>
+                            <TextBlock Text="Implementation contract" FontWeight="SemiBold" FontSize="16" />
+                            <TextBlock Margin="0,8,0,0" TextWrapping="Wrap" Foreground="{StaticResource MutedTextBrush}"
+                                       Text="Agents must follow AGENTS.md, the architecture boundaries, security invariants, support matrix and milestone gates before a feature is considered complete." />
+                        </StackPanel>
+                    </Border>
+                </Grid>
+            </ScrollViewer>
+        </Grid>
+    </Grid>
+</Window>

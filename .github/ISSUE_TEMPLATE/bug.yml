@@ -1,0 +1,63 @@
+name: Bug report
+description: Report incorrect, unsafe, incompatible, or confusing ServerDesk behavior.
+title: "[Bug] "
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What happened and what should have happened?
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      placeholder: |
+        ServerDesk version/commit:
+        Windows version:
+        Linux distro/version:
+        SSH authentication type:
+        Relevant tool/version (Docker/nginx/systemd/etc.):
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Reproduction steps
+      placeholder: |
+        1. ...
+        2. ...
+        3. ...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: impact
+    attributes:
+      label: Impact
+      options:
+        - UI / usability only
+        - Read-only remote data incorrect
+        - Operation failed safely
+        - Remote state may be incorrect / ambiguous
+        - Security-sensitive
+        - Data loss / destructive
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Safe logs/screenshots/details
+      description: Remove passwords, tokens, private keys, database credentials, environment secrets, and sensitive file contents before posting.
+
+  - type: checkboxes
+    id: secrets
+    attributes:
+      label: Secret check
+      options:
+        - label: I verified that the report does not contain credentials, private keys, tokens, or other secrets.
+          required: true
