@@ -96,19 +96,13 @@ terminal.attachCustomKeyEventHandler(event => {
 
   if (key === 'c' && terminal.hasSelection()) {
     event.preventDefault();
-    navigator.clipboard.writeText(terminal.getSelection()).catch(() => {});
+    post({ type: 'copy', data: terminal.getSelection() });
     return false;
   }
 
   if (key === 'v') {
     event.preventDefault();
-    navigator.clipboard.readText()
-      .then(text => {
-        if (text) {
-          terminal.paste(text);
-        }
-      })
-      .catch(() => {});
+    post({ type: 'pasteRequest' });
     return false;
   }
 
@@ -147,6 +141,11 @@ bridge.addEventListener('message', event => {
   switch (message.type) {
     case 'output':
       terminal.write(message.data ?? '');
+      break;
+    case 'paste':
+      if (typeof message.data === 'string' && message.data.length > 0) {
+        terminal.paste(message.data);
+      }
       break;
     case 'focus':
       terminal.focus();
