@@ -13,7 +13,8 @@ public sealed record ServerProfile
         string? environment,
         SecretReference? credentialReference,
         ServerAuthenticationKind authenticationKind,
-        string? privateKeyPath)
+        string? privateKeyPath,
+        ServerConnectionRoute? route)
     {
         if (id == Guid.Empty)
         {
@@ -45,6 +46,12 @@ public sealed record ServerProfile
         PrivateKeyPath = authenticationKind == ServerAuthenticationKind.PrivateKey && !string.IsNullOrWhiteSpace(privateKeyPath)
             ? privateKeyPath.Trim()
             : null;
+        Route = route ?? ServerConnectionRoute.Direct;
+
+        if (Route.Kind == ServerRouteKind.Bastion && Route.BastionProfileId == id)
+        {
+            throw new ArgumentException("A server profile cannot use itself as its bastion.", nameof(route));
+        }
     }
 
     public Guid Id { get; }
@@ -65,6 +72,8 @@ public sealed record ServerProfile
 
     public string? PrivateKeyPath { get; }
 
+    public ServerConnectionRoute Route { get; }
+
     public static ServerProfile Create(
         string name,
         string host,
@@ -73,7 +82,8 @@ public sealed record ServerProfile
         string? environment = null,
         SecretReference? credentialReference = null,
         ServerAuthenticationKind authenticationKind = ServerAuthenticationKind.Password,
-        string? privateKeyPath = null) =>
+        string? privateKeyPath = null,
+        ServerConnectionRoute? route = null) =>
         Create(
             Guid.NewGuid(),
             name,
@@ -83,7 +93,8 @@ public sealed record ServerProfile
             environment,
             credentialReference,
             authenticationKind,
-            privateKeyPath);
+            privateKeyPath,
+            route);
 
     public static ServerProfile Create(
         Guid id,
@@ -94,7 +105,8 @@ public sealed record ServerProfile
         string? environment = null,
         SecretReference? credentialReference = null,
         ServerAuthenticationKind authenticationKind = ServerAuthenticationKind.Password,
-        string? privateKeyPath = null) =>
+        string? privateKeyPath = null,
+        ServerConnectionRoute? route = null) =>
         new(
             id,
             name,
@@ -104,7 +116,8 @@ public sealed record ServerProfile
             environment,
             credentialReference,
             authenticationKind,
-            privateKeyPath);
+            privateKeyPath,
+            route);
 
     public static ServerProfile Rehydrate(
         Guid id,
@@ -115,7 +128,8 @@ public sealed record ServerProfile
         string? environment,
         SecretReference? credentialReference,
         ServerAuthenticationKind authenticationKind = ServerAuthenticationKind.Password,
-        string? privateKeyPath = null) =>
+        string? privateKeyPath = null,
+        ServerConnectionRoute? route = null) =>
         new(
             id,
             name,
@@ -125,5 +139,6 @@ public sealed record ServerProfile
             environment,
             credentialReference,
             authenticationKind,
-            privateKeyPath);
+            privateKeyPath,
+            route);
 }
