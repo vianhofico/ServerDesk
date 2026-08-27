@@ -8,6 +8,7 @@ using ServerDesk.Application.Dashboard;
 using ServerDesk.Application.History;
 using ServerDesk.Application.PortForwarding;
 using ServerDesk.Application.Profiles;
+using ServerDesk.Application.RemoteEditing;
 using ServerDesk.Application.RemoteFiles;
 using ServerDesk.Application.Routing;
 using ServerDesk.Application.Sessions;
@@ -20,6 +21,7 @@ public partial class MainWindow : Window
     private readonly ShellViewModel _viewModel;
     private readonly IRemoteTerminalSessionFactory _terminalFactory;
     private readonly IRemoteFileSystemFactory _remoteFileSystemFactory;
+    private readonly IRemoteFileEditorService _remoteFileEditorService;
     private readonly PortForwardManager _portForwardManager;
     private readonly IServerCapabilityService _capabilityService;
     private readonly IServerDashboardService _dashboardService;
@@ -34,6 +36,7 @@ public partial class MainWindow : Window
         ShellViewModel viewModel,
         IRemoteTerminalSessionFactory terminalFactory,
         IRemoteFileSystemFactory remoteFileSystemFactory,
+        IRemoteFileEditorService remoteFileEditorService,
         PortForwardManager portForwardManager,
         IServerCapabilityService capabilityService,
         IServerDashboardService dashboardService,
@@ -45,6 +48,7 @@ public partial class MainWindow : Window
         _viewModel = viewModel;
         _terminalFactory = terminalFactory;
         _remoteFileSystemFactory = remoteFileSystemFactory;
+        _remoteFileEditorService = remoteFileEditorService;
         _portForwardManager = portForwardManager;
         _capabilityService = capabilityService;
         _dashboardService = dashboardService;
@@ -178,6 +182,7 @@ public partial class MainWindow : Window
             selected.Profile,
             selected.ConnectionState == RemoteSessionState.Connected)
         {
+            EditorService = _remoteFileEditorService,
             Owner = this,
         };
         window.Show();
