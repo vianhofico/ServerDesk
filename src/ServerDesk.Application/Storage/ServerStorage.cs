@@ -189,13 +189,14 @@ public sealed class ServerStorageService : IServerStorageService
         }
 
         var detail = FirstUseful(command.StandardError, command.StandardOutput, fallback);
-        var code = detail.Contains("not found", StringComparison.OrdinalIgnoreCase) ||
-                   detail.Contains("No such file", StringComparison.OrdinalIgnoreCase)
-            ? RemoteErrorCode.PathNotFound
-            : detail.Contains("permission denied", StringComparison.OrdinalIgnoreCase)
-                ? RemoteErrorCode.PermissionDenied
-                : detail.Contains("command not found", StringComparison.OrdinalIgnoreCase)
-                    ? RemoteErrorCode.CommandNotFound
+        var code = detail.Contains("command not found", StringComparison.OrdinalIgnoreCase) ||
+                   detail.Contains("not recognized as a command", StringComparison.OrdinalIgnoreCase)
+            ? RemoteErrorCode.CommandNotFound
+            : detail.Contains("No such file", StringComparison.OrdinalIgnoreCase) ||
+              detail.Contains("No such directory", StringComparison.OrdinalIgnoreCase)
+                ? RemoteErrorCode.PathNotFound
+                : detail.Contains("permission denied", StringComparison.OrdinalIgnoreCase)
+                    ? RemoteErrorCode.PermissionDenied
                     : RemoteErrorCode.CommandFailed;
         return new RemoteError(code, detail);
     }
