@@ -146,7 +146,11 @@ public partial class App : System.Windows.Application
         services.AddSingleton<IServerCapabilityService, ServerCapabilityService>();
         services.AddSingleton(ServerDashboardOptions.Default);
         services.AddSingleton<IServerDashboardService, ServerDashboardService>();
-        services.AddSingleton<IServerProcessService, ServerProcessService>();
+        services.AddSingleton<ServerProcessService>();
+        services.AddSingleton<IServerProcessService>(provider =>
+            new AuditedServerProcessService(
+                provider.GetRequiredService<ServerProcessService>(),
+                provider.GetRequiredService<IOperationAudit>()));
 
         services.AddSingleton<INavigationService, NavigationService>();
         services.AddSingleton<IThemeService, WpfThemeService>();
