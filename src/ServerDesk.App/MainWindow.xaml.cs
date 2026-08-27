@@ -3,7 +3,9 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using ServerDesk.App.Presentation;
+using ServerDesk.Application.Capabilities;
 using ServerDesk.Application.PortForwarding;
+using ServerDesk.Application.Sessions;
 using ServerDesk.Application.Terminal;
 
 namespace ServerDesk.App;
@@ -13,21 +15,27 @@ public partial class MainWindow : Window
     private readonly ShellViewModel _viewModel;
     private readonly IRemoteTerminalSessionFactory _terminalFactory;
     private readonly PortForwardManager _portForwardManager;
+    private readonly IServerCapabilityService _capabilityService;
     private ProfileEditorViewModel? _observedEditor;
+    private ServerProfileListItemViewModel? _observedServer;
+    private CapabilitySummaryControl? _capabilitySummary;
 
     public MainWindow(
         ShellViewModel viewModel,
         IRemoteTerminalSessionFactory terminalFactory,
-        PortForwardManager portForwardManager)
+        PortForwardManager portForwardManager,
+        IServerCapabilityService capabilityService)
     {
         InitializeComponent();
         _viewModel = viewModel;
         _terminalFactory = terminalFactory;
         _portForwardManager = portForwardManager;
+        _capabilityService = capabilityService;
         DataContext = viewModel;
         _viewModel.PropertyChanged += ViewModelOnPropertyChanged;
         Loaded += AddRemoteActionsOnLoaded;
         ObserveEditor(_viewModel.Editor);
+        ObserveSelectedServer(_viewModel.SelectedServer);
     }
 
     protected override void OnClosed(EventArgs e)
@@ -35,6 +43,9 @@ public partial class MainWindow : Window
         Loaded -= AddRemoteActionsOnLoaded;
         _viewModel.PropertyChanged -= ViewModelOnPropertyChanged;
         ObserveEditor(null);
+        ObserveSelectedServer(null);
+        _capabilitySummary?.Dispose();
+        _capabilitySummary = null;
         CredentialSecretBox.Password = string.Empty;
         base.OnClosed(e);
     }
@@ -67,6 +78,17 @@ public partial class MainWindow : Window
             OpenPortForwardingOnClick);
         actionPanel.Children.Insert(editIndex, terminalButton);
         actionPanel.Children.Insert(editIndex + 1, tunnelsButton);
+
+        if (VisualTreeHelper.GetParent(actionPanel) is Grid headerGrid &&
+            VisualTreeHelper.GetParent(headerGrid) is StackPanel serverCardPanel)
+        {
+            _capabilitySummary = new CapabilitySummaryControl(_capabilityService)
+            {
+                Margin = new Thickness(0, 14, 0, 0),
+            };
+            serverCardPanel.Children.Insert(Math.Min(3, serverCardPanel.Children.Count), _capabilitySummary);
+            UpdateCapabilitySummary();
+        }
     }
 
     private Button CreateActionButton(string label, string toolTip, RoutedEventHandler handler)
@@ -118,6 +140,11 @@ public partial class MainWindow : Window
             ObserveEditor(_viewModel.Editor);
             CredentialSecretBox.Password = string.Empty;
         }
+        else if (e.PropertyName == nameof(ShellViewModel.SelectedServer))
+        {
+            ObserveSelectedServer(_viewModel.SelectedServer);
+            UpdateCapabilitySummary();
+        }
     }
 
     private void EditorOnPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -128,6 +155,14 @@ public partial class MainWindow : Window
             !string.IsNullOrEmpty(CredentialSecretBox.Password))
         {
             CredentialSecretBox.Password = string.Empty;
+        }
+    }
+
+    private void SelectedServerOnPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(ServerProfileListItemViewModel.ConnectionState))
+        {
+            UpdateCapabilitySummary();
         }
     }
 
@@ -143,6 +178,33 @@ public partial class MainWindow : Window
         {
             _observedEditor.PropertyChanged += EditorOnPropertyChanged;
         }
+    }
+
+    private void ObserveSelectedServer(ServerProfileListItemViewModel? server)
+    {
+        if (_observedServer is not null)
+        {
+            _observedServer.PropertyChanged -= SelectedServerOnPropertyChanged;
+        }
+
+        _observedServer = server;
+        if (_observedServer is not null)
+        {
+            _observedServer.PropertyChanged += SelectedServerOnPropertyChanged;
+        }
+    }
+
+    private void UpdateCapabilitySummary()
+    {
+        if (_capabilitySummary is null)
+        {
+            return;
+        }
+
+        var selected = _viewModel.SelectedServer;
+        _capabilitySummary.SetServer(
+            selected?.Profile,
+            selected?.ConnectionState == RemoteSessionState.Connected);
     }
 
     private static T? FindDescendant<T>(DependencyObject root, Func<T, bool> predicate)
