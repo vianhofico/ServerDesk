@@ -1,5 +1,6 @@
 using ServerDesk.Domain.Errors;
 using ServerDesk.Domain.Operations;
+using ServerDesk.Domain.Servers;
 
 namespace ServerDesk.Application.Remote;
 
@@ -34,9 +35,16 @@ public sealed record RemoteExecutionResult(
     public static RemoteExecutionResult Failure(RemoteError error) => new(null, error);
 }
 
-public interface IRemoteCommandExecutor
+public interface IRemoteCommandExecutor : IAsyncDisposable
 {
+    Guid ServerProfileId { get; }
+
     Task<RemoteExecutionResult> ExecuteAsync(
         RemoteCommandSpec command,
         CancellationToken cancellationToken = default);
+}
+
+public interface IRemoteCommandExecutorFactory
+{
+    IRemoteCommandExecutor Create(ServerProfile profile);
 }
