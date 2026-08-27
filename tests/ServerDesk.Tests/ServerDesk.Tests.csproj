@@ -19,5 +19,8 @@
     <None Include="Fixtures\Capabilities\**\*"
           CopyToOutputDirectory="PreserveNewest"
           CopyToPublishDirectory="Never" />
+    <None Include="Fixtures\Dashboard\**\*"
+          CopyToOutputDirectory="PreserveNewest"
+          CopyToPublishDirectory="Never" />
   </ItemGroup>
 </Project>

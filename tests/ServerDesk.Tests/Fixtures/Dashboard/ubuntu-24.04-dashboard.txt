@@ -1,0 +1,35 @@
+# distro=ubuntu-24.04
+cpu  100 0 50 850 0 0 0 0 0 0
+cpu0 50 0 25 425 0 0 0 0 0 0
+cpu1 50 0 25 425 0 0 0 0 0 0
+__SD_NET__
+Inter-|   Receive                                                |  Transmit
+ face |bytes    packets errs drop fifo frame compressed multicast|bytes    packets errs drop fifo colls carrier compressed
+    lo: 100 1 0 0 0 0 0 0 100 1 0 0 0 0 0 0
+  eth0: 1000 10 0 0 0 0 0 0 500 8 0 0 0 0 0 0
+__SD_SAMPLE_2__
+# distro=ubuntu-24.04
+cpu  120 0 60 920 0 0 0 0 0 0
+cpu0 60 0 30 460 0 0 0 0 0 0
+cpu1 60 0 30 460 0 0 0 0 0 0
+__SD_NET__
+Inter-|   Receive                                                |  Transmit
+ face |bytes    packets errs drop fifo frame compressed multicast|bytes    packets errs drop fifo colls carrier compressed
+    lo: 150 2 0 0 0 0 0 0 150 2 0 0 0 0 0 0
+  eth0: 1600 15 0 0 0 0 0 0 800 12 0 0 0 0 0 0
+__SD_LOAD__
+0.25 0.40 0.55 1/200 1234
+__SD_UPTIME__
+90061.50 12345.00
+__SD_MEM__
+MemTotal:        8388608 kB
+MemFree:         1048576 kB
+MemAvailable:    2097152 kB
+Buffers:          131072 kB
+Cached:           524288 kB
+SwapTotal:       2097152 kB
+SwapFree:        1572864 kB
+__SD_DF__
+Filesystem     Type  1B-blocks       Used  Available Capacity Mounted on
+/dev/sda2      ext4 107374182400 42949672960 64424509440      40% /
+/dev/sda1      vfat   1073741824   268435456   805306368      25% /boot/efi
