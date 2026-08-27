@@ -96,7 +96,7 @@ public sealed class WindowsCredentialSecretStore : ISecretStore
             var value = characterCount == 0
                 ? string.Empty
                 : Marshal.PtrToStringUni(credential.CredentialBlob, characterCount);
-            return ValueTask.FromResult(value);
+            return ValueTask.FromResult<string?>(value);
         }
         finally
         {
