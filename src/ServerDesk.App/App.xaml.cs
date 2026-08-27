@@ -3,9 +3,11 @@ using Microsoft.Extensions.DependencyInjection;
 using ServerDesk.App.Presentation;
 using ServerDesk.Application.Abstractions;
 using ServerDesk.Application.Audit;
+using ServerDesk.Application.Capabilities;
 using ServerDesk.Application.HostTrust;
 using ServerDesk.Application.PortForwarding;
 using ServerDesk.Application.Profiles;
+using ServerDesk.Application.Remote;
 using ServerDesk.Application.RemoteFiles;
 using ServerDesk.Application.Secrets;
 using ServerDesk.Application.Sessions;
@@ -118,10 +120,13 @@ public partial class App : System.Windows.Application
         services.AddSingleton<IInteractiveAuthenticationPrompt, WpfInteractiveAuthenticationPrompt>();
         services.AddSingleton(SshSessionOptions.Default);
         services.AddSingleton<IRemoteSessionFactory, SshRemoteSessionFactory>();
+        services.AddSingleton<IRemoteCommandExecutorFactory, SshRemoteCommandExecutorFactory>();
         services.AddSingleton<IRemoteFileSystemFactory, SftpRemoteFileSystemFactory>();
         services.AddSingleton<IRemoteTerminalSessionFactory, SshRemoteTerminalSessionFactory>();
         services.AddSingleton<IPortForwardSessionFactory, SshPortForwardSessionFactory>();
         services.AddSingleton<PortForwardManager>();
+        services.AddSingleton(ServerCapabilityOptions.Default);
+        services.AddSingleton<IServerCapabilityService, ServerCapabilityService>();
 
         services.AddSingleton<INavigationService, NavigationService>();
         services.AddSingleton<IThemeService, WpfThemeService>();
