@@ -173,7 +173,6 @@ public partial class ConnectionRouteWindow : Window
                 .ConfigureAwait(true);
             ProxyPasswordBox.Password = string.Empty;
             DialogResult = true;
-            Close();
         }
         catch (ServerConnectionRouteValidationException exception)
         {
@@ -196,7 +195,6 @@ public partial class ConnectionRouteWindow : Window
     {
         ProxyPasswordBox.Password = string.Empty;
         DialogResult = false;
-        Close();
     }
 
     protected override void OnClosed(EventArgs e)
