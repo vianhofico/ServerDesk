@@ -8,6 +8,9 @@ namespace ServerDesk.Application.PortForwarding;
 
 public interface IPortForwardProfileRepository
 {
+    ValueTask<IReadOnlyList<PortForwardProfile>> ListAsync(
+        CancellationToken cancellationToken = default);
+
     ValueTask<IReadOnlyList<PortForwardProfile>> ListForServerAsync(
         Guid serverProfileId,
         CancellationToken cancellationToken = default);
@@ -109,14 +112,42 @@ public sealed class PortForwardManager : IAsyncDisposable
     {
         ThrowIfDisposed();
         ArgumentNullException.ThrowIfNull(profile);
-        var server = await _serverRepository.GetAsync(profile.ServerProfileId, cancellationToken).ConfigureAwait(false);
-        if (server is null)
+        await _lifecycleGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
         {
-            throw new ArgumentException("The selected server profile no longer exists.", nameof(profile));
-        }
+            if (_activeForwards.TryGetValue(profile.Id, out var active) &&
+                active.Session.State is PortForwardSessionState.Starting or PortForwardSessionState.Active or PortForwardSessionState.Stopping)
+            {
+                throw CreateException(
+                    RemoteErrorCode.AmbiguousState,
+                    "Stop this tunnel before changing its saved configuration.");
+            }
 
-        await _forwardRepository.UpsertAsync(profile, cancellationToken).ConfigureAwait(false);
-        Changed?.Invoke(profile.Id);
+            var server = await _serverRepository.GetAsync(profile.ServerProfileId, cancellationToken).ConfigureAwait(false);
+            if (server is null)
+            {
+                throw CreateException(
+                    RemoteErrorCode.InvalidEndpoint,
+                    "The selected server profile no longer exists.");
+            }
+
+            var savedProfiles = await _forwardRepository.ListAsync(cancellationToken).ConfigureAwait(false);
+            var duplicate = savedProfiles.FirstOrDefault(candidate =>
+                candidate.Id != profile.Id && profile.ConflictsWith(candidate));
+            if (duplicate is not null)
+            {
+                throw CreateException(
+                    RemoteErrorCode.PortInUse,
+                    $"Tunnel '{profile.Name}' conflicts with saved tunnel '{duplicate.Name}' on {profile.BindHost}:{profile.BindPort}.");
+            }
+
+            await _forwardRepository.UpsertAsync(profile, cancellationToken).ConfigureAwait(false);
+            Changed?.Invoke(profile.Id);
+        }
+        finally
+        {
+            _lifecycleGate.Release();
+        }
     }
 
     public async ValueTask DeleteProfileAsync(
