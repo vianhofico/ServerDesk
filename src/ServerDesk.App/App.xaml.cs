@@ -5,6 +5,7 @@ using ServerDesk.Application.Abstractions;
 using ServerDesk.Application.Audit;
 using ServerDesk.Application.HostTrust;
 using ServerDesk.Application.Profiles;
+using ServerDesk.Application.RemoteFiles;
 using ServerDesk.Application.Secrets;
 using ServerDesk.Application.Sessions;
 using ServerDesk.Application.Settings;
@@ -91,6 +92,7 @@ public partial class App : System.Windows.Application
         services.AddSingleton<IInteractiveAuthenticationPrompt, WpfInteractiveAuthenticationPrompt>();
         services.AddSingleton(SshSessionOptions.Default);
         services.AddSingleton<IRemoteSessionFactory, SshRemoteSessionFactory>();
+        services.AddSingleton<IRemoteFileSystemFactory, SftpRemoteFileSystemFactory>();
 
         services.AddSingleton<INavigationService, NavigationService>();
         services.AddSingleton<IThemeService, WpfThemeService>();

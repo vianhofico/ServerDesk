@@ -57,6 +57,8 @@ jobs:
       SERVERDESK_SSH_PASSWORD: serverdesk-password
       SERVERDESK_SSH_KEY: /tmp/serverdesk_ci_key
       SERVERDESK_SSH_KEY_PASSPHRASE: serverdesk-key-pass
+      SERVERDESK_SFTP_HOME: /home/serverdesk_ci
+      SERVERDESK_SFTP_DENIED_PATH: /tmp/serverdesk-sftp-denied
 
     steps:
       - name: Checkout
@@ -81,6 +83,9 @@ jobs:
           sudo install -d -m 700 -o serverdesk_ci -g serverdesk_ci /home/serverdesk_ci/.ssh
           sudo install -m 600 -o serverdesk_ci -g serverdesk_ci /tmp/serverdesk_ci_key.pub /home/serverdesk_ci/.ssh/authorized_keys
 
+          sudo -u serverdesk_ci ln -s /etc/hosts /home/serverdesk_ci/serverdesk-fixture-link
+          sudo install -d -m 700 -o root -g root /tmp/serverdesk-sftp-denied
+
           sudo mkdir -p /run/sshd
           sudo ssh-keygen -A
           cat <<'EOF' | sudo tee /tmp/serverdesk-sshd_config >/dev/null
@@ -93,6 +98,7 @@ jobs:
           UsePAM yes
           PermitRootLogin no
           AllowUsers serverdesk_ci
+          Subsystem sftp internal-sftp
           PidFile /tmp/serverdesk-sshd.pid
           LogLevel VERBOSE
           EOF
@@ -111,7 +117,7 @@ jobs:
       - name: Restore integration tests
         run: dotnet restore tests/ServerDesk.Ssh.IntegrationTests/ServerDesk.Ssh.IntegrationTests.csproj
 
-      - name: Run SSH integration tests
+      - name: Run SSH and SFTP integration tests
         run: dotnet test tests/ServerDesk.Ssh.IntegrationTests/ServerDesk.Ssh.IntegrationTests.csproj --configuration Release --no-restore
 
       - name: Show SSH server log on failure
