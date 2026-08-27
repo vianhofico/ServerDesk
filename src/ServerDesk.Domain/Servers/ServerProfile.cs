@@ -11,7 +11,9 @@ public sealed record ServerProfile
         int port,
         string username,
         string? environment,
-        SecretReference? credentialReference)
+        SecretReference? credentialReference,
+        ServerAuthenticationKind authenticationKind,
+        string? privateKeyPath)
     {
         if (id == Guid.Empty)
         {
@@ -27,6 +29,11 @@ public sealed record ServerProfile
             throw new ArgumentOutOfRangeException(nameof(port), "Port must be between 1 and 65535.");
         }
 
+        if (!Enum.IsDefined(authenticationKind))
+        {
+            throw new ArgumentOutOfRangeException(nameof(authenticationKind));
+        }
+
         Id = id;
         Name = name.Trim();
         Host = host.Trim();
@@ -34,6 +41,10 @@ public sealed record ServerProfile
         Username = username.Trim();
         Environment = string.IsNullOrWhiteSpace(environment) ? null : environment.Trim();
         CredentialReference = credentialReference;
+        AuthenticationKind = authenticationKind;
+        PrivateKeyPath = authenticationKind == ServerAuthenticationKind.PrivateKey && !string.IsNullOrWhiteSpace(privateKeyPath)
+            ? privateKeyPath.Trim()
+            : null;
     }
 
     public Guid Id { get; }
@@ -50,21 +61,50 @@ public sealed record ServerProfile
 
     public SecretReference? CredentialReference { get; }
 
+    public ServerAuthenticationKind AuthenticationKind { get; }
+
+    public string? PrivateKeyPath { get; }
+
     public static ServerProfile Create(
         string name,
         string host,
         int port,
         string username,
         string? environment = null,
-        SecretReference? credentialReference = null) =>
-        new(
+        SecretReference? credentialReference = null,
+        ServerAuthenticationKind authenticationKind = ServerAuthenticationKind.Password,
+        string? privateKeyPath = null) =>
+        Create(
             Guid.NewGuid(),
             name,
             host,
             port,
             username,
             environment,
-            credentialReference);
+            credentialReference,
+            authenticationKind,
+            privateKeyPath);
+
+    public static ServerProfile Create(
+        Guid id,
+        string name,
+        string host,
+        int port,
+        string username,
+        string? environment = null,
+        SecretReference? credentialReference = null,
+        ServerAuthenticationKind authenticationKind = ServerAuthenticationKind.Password,
+        string? privateKeyPath = null) =>
+        new(
+            id,
+            name,
+            host,
+            port,
+            username,
+            environment,
+            credentialReference,
+            authenticationKind,
+            privateKeyPath);
 
     public static ServerProfile Rehydrate(
         Guid id,
@@ -73,6 +113,17 @@ public sealed record ServerProfile
         int port,
         string username,
         string? environment,
-        SecretReference? credentialReference) =>
-        new(id, name, host, port, username, environment, credentialReference);
+        SecretReference? credentialReference,
+        ServerAuthenticationKind authenticationKind = ServerAuthenticationKind.Password,
+        string? privateKeyPath = null) =>
+        new(
+            id,
+            name,
+            host,
+            port,
+            username,
+            environment,
+            credentialReference,
+            authenticationKind,
+            privateKeyPath);
 }

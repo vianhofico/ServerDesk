@@ -1,12 +1,43 @@
 <Window x:Class="ServerDesk.App.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:ServerDesk.App.Presentation"
         Title="ServerDesk"
-        Width="1280"
-        Height="800"
-        MinWidth="980"
-        MinHeight="640"
+        Width="1320"
+        Height="840"
+        MinWidth="1040"
+        MinHeight="680"
         WindowStartupLocation="CenterScreen">
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
+
+        <Style x:Key="PrimaryButton" TargetType="Button">
+            <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="14,8" />
+            <Setter Property="MinHeight" Value="34" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+
+        <Style x:Key="SecondaryButton" TargetType="Button">
+            <Setter Property="Background" Value="{DynamicResource SurfaceSecondaryBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Padding" Value="12,7" />
+            <Setter Property="MinHeight" Value="34" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+
+        <Style x:Key="FieldTextBox" TargetType="TextBox">
+            <Setter Property="MinHeight" Value="36" />
+            <Setter Property="Padding" Value="10,6" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+    </Window.Resources>
+
     <Grid Background="{DynamicResource WindowBackgroundBrush}">
         <Grid.RowDefinitions>
             <RowDefinition Height="60" />
@@ -35,7 +66,7 @@
                     </Border>
                     <StackPanel Margin="10,0,0,0" VerticalAlignment="Center">
                         <TextBlock Text="ServerDesk" FontSize="17" FontWeight="SemiBold" />
-                        <TextBlock Text="Windows-first Linux administration"
+                        <TextBlock Text="Visual Linux server administration"
                                    FontSize="11"
                                    Foreground="{DynamicResource MutedTextBrush}" />
                     </StackPanel>
@@ -51,12 +82,11 @@
                                      Fill="{DynamicResource SuccessBrush}"
                                      VerticalAlignment="Center" />
                             <TextBlock Margin="7,0,0,0"
-                                       Text="M0 Foundation"
+                                       Text="M1 Secure profiles"
                                        FontSize="12"
                                        FontWeight="SemiBold" />
                         </StackPanel>
                     </Border>
-
                     <TextBlock Text="Theme"
                                Margin="0,0,7,0"
                                Foreground="{DynamicResource MutedTextBrush}"
@@ -70,7 +100,7 @@
 
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="248" />
+                <ColumnDefinition Width="292" />
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
 
@@ -81,99 +111,130 @@
                 <Grid Margin="14">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
+                        <RowDefinition Height="220" />
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="*" />
                         <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
 
-                    <TextBlock Grid.Row="0"
-                               Text="SERVERS"
-                               Margin="8,4,8,8"
+                    <Grid Grid.Row="0" Margin="2,2,2,10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="SERVERS" FontSize="11" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource MutedTextBrush}" />
+                            <TextBlock Text="{Binding ServerCountLabel}" FontSize="11"
+                                       Foreground="{DynamicResource MutedTextBrush}" />
+                        </StackPanel>
+                        <Button Grid.Column="1"
+                                Content="+ Add"
+                                Command="{Binding AddServerCommand}"
+                                Style="{StaticResource PrimaryButton}" />
+                    </Grid>
+
+                    <ListBox Grid.Row="1"
+                             ItemsSource="{Binding Servers}"
+                             SelectedItem="{Binding SelectedServer, Mode=TwoWay}"
+                             BorderThickness="0"
+                             Background="Transparent"
+                             ScrollViewer.VerticalScrollBarVisibility="Auto">
+                        <ListBox.ItemContainerStyle>
+                            <Style TargetType="ListBoxItem">
+                                <Setter Property="Padding" Value="0" />
+                                <Setter Property="Margin" Value="0,2" />
+                                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                <Setter Property="Background" Value="Transparent" />
+                                <Setter Property="BorderThickness" Value="0" />
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="ListBoxItem">
+                                            <Border x:Name="Root"
+                                                    Padding="10,9"
+                                                    CornerRadius="8"
+                                                    Background="{TemplateBinding Background}">
+                                                <ContentPresenter />
+                                            </Border>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsSelected" Value="True">
+                                                    <Setter TargetName="Root" Property="Background"
+                                                            Value="{DynamicResource AccentSoftBrush}" />
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </ListBox.ItemContainerStyle>
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="14" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Ellipse Width="7" Height="7"
+                                             Fill="{DynamicResource MutedTextBrush}"
+                                             VerticalAlignment="Center" />
+                                    <StackPanel Grid.Column="1">
+                                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+                                        <TextBlock Text="{Binding Endpoint}"
+                                                   Margin="0,2,0,0"
+                                                   FontSize="11"
+                                                   TextTrimming="CharacterEllipsis"
+                                                   Foreground="{DynamicResource MutedTextBrush}" />
+                                    </StackPanel>
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+
+                    <TextBlock Grid.Row="2"
+                               Text="WORKSPACE"
+                               Margin="8,18,8,6"
                                FontSize="11"
                                FontWeight="SemiBold"
                                Foreground="{DynamicResource MutedTextBrush}" />
 
-                    <Border Grid.Row="1"
-                            Margin="0,0,0,18"
-                            Padding="12,10"
+                    <ListBox Grid.Row="3"
+                             ItemsSource="{Binding NavigationItems}"
+                             SelectedItem="{Binding SelectedNavigationItem, Mode=TwoWay}"
+                             BorderThickness="0"
+                             Background="Transparent">
+                        <ListBox.ItemContainerStyle>
+                            <Style TargetType="ListBoxItem">
+                                <Setter Property="IsEnabled" Value="{Binding IsAvailable}" />
+                                <Setter Property="Padding" Value="10,7" />
+                                <Setter Property="Margin" Value="0,1" />
+                                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                <Setter Property="BorderThickness" Value="0" />
+                                <Style.Triggers>
+                                    <Trigger Property="IsEnabled" Value="False">
+                                        <Setter Property="Opacity" Value="0.45" />
+                                    </Trigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ListBox.ItemContainerStyle>
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Title}" FontSize="13" />
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+
+                    <Border Grid.Row="4"
+                            Margin="0,12,0,0"
+                            Padding="10"
                             CornerRadius="8"
                             Background="{DynamicResource SurfaceSecondaryBrush}">
                         <StackPanel>
-                            <TextBlock Text="No server connected" FontWeight="SemiBold" />
-                            <TextBlock Margin="0,4,0,0"
-                                       Text="Secure profiles and SSH arrive in M1"
-                                       TextWrapping="Wrap"
-                                       FontSize="12"
-                                       Foreground="{DynamicResource MutedTextBrush}" />
-                        </StackPanel>
-                    </Border>
-
-                    <StackPanel Grid.Row="2">
-                        <TextBlock Text="WORKSPACE"
-                                   Margin="8,0,8,7"
-                                   FontSize="11"
-                                   FontWeight="SemiBold"
-                                   Foreground="{DynamicResource MutedTextBrush}" />
-                        <ListBox ItemsSource="{Binding NavigationItems}"
-                                 SelectedItem="{Binding SelectedNavigationItem, Mode=TwoWay}"
-                                 BorderThickness="0"
-                                 Background="Transparent">
-                            <ListBox.ItemContainerStyle>
-                                <Style TargetType="ListBoxItem">
-                                    <Setter Property="IsEnabled" Value="{Binding IsAvailable}" />
-                                    <Setter Property="Padding" Value="0" />
-                                    <Setter Property="Margin" Value="0,1" />
-                                    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-                                    <Setter Property="Background" Value="Transparent" />
-                                    <Setter Property="BorderThickness" Value="0" />
-                                    <Setter Property="Template">
-                                        <Setter.Value>
-                                            <ControlTemplate TargetType="ListBoxItem">
-                                                <Border x:Name="ItemRoot"
-                                                        Padding="10,8"
-                                                        CornerRadius="7"
-                                                        Background="{TemplateBinding Background}">
-                                                    <ContentPresenter />
-                                                </Border>
-                                                <ControlTemplate.Triggers>
-                                                    <Trigger Property="IsSelected" Value="True">
-                                                        <Setter TargetName="ItemRoot"
-                                                                Property="Background"
-                                                                Value="{DynamicResource AccentSoftBrush}" />
-                                                    </Trigger>
-                                                    <Trigger Property="IsEnabled" Value="False">
-                                                        <Setter Property="Opacity" Value="0.48" />
-                                                    </Trigger>
-                                                </ControlTemplate.Triggers>
-                                            </ControlTemplate>
-                                        </Setter.Value>
-                                    </Setter>
-                                </Style>
-                            </ListBox.ItemContainerStyle>
-                            <ListBox.ItemTemplate>
-                                <DataTemplate>
-                                    <TextBlock Text="{Binding Title}" FontSize="13" />
-                                </DataTemplate>
-                            </ListBox.ItemTemplate>
-                        </ListBox>
-                    </StackPanel>
-
-                    <Border Grid.Row="3"
-                            Margin="0,14,0,0"
-                            Padding="10"
-                            CornerRadius="8"
-                            BorderBrush="{DynamicResource BorderBrush}"
-                            BorderThickness="1">
-                        <StackPanel>
-                            <TextBlock Text="Local-only foundation"
-                                       FontSize="12"
-                                       FontWeight="SemiBold" />
+                            <TextBlock Text="Credential policy" FontSize="12" FontWeight="SemiBold" />
                             <TextBlock Margin="0,3,0,0"
-                                       Text="Credentials: Windows Credential Manager"
-                                       TextWrapping="Wrap"
+                                       Text="Secrets → Windows Credential Manager"
                                        FontSize="11"
                                        Foreground="{DynamicResource MutedTextBrush}" />
-                            <TextBlock Text="Metadata: SQLite"
+                            <TextBlock Text="Metadata → SQLite schema v2"
                                        FontSize="11"
                                        Foreground="{DynamicResource MutedTextBrush}" />
                         </StackPanel>
@@ -182,126 +243,289 @@
             </Border>
 
             <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto">
-                <Grid Margin="34,30">
+                <Grid Margin="34,28">
                     <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
 
-                    <StackPanel Grid.Row="0">
-                        <TextBlock Text="{Binding CurrentTitle}"
-                                   FontSize="30"
-                                   FontWeight="SemiBold" />
-                        <TextBlock Margin="0,7,0,0"
-                                   MaxWidth="780"
-                                   HorizontalAlignment="Left"
-                                   Text="{Binding CurrentDescription}"
-                                   TextWrapping="Wrap"
-                                   FontSize="14"
-                                   Foreground="{DynamicResource MutedTextBrush}" />
+                    <Grid Grid.Row="0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel>
+                            <TextBlock Text="{Binding CurrentTitle}" FontSize="29" FontWeight="SemiBold" />
+                            <TextBlock Margin="0,6,0,0"
+                                       Text="{Binding CurrentDescription}"
+                                       Foreground="{DynamicResource MutedTextBrush}" />
+                        </StackPanel>
+                        <ProgressBar Grid.Column="1"
+                                     Width="120"
+                                     Height="4"
+                                     IsIndeterminate="True"
+                                     Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibility}}"
+                                     VerticalAlignment="Center" />
+                    </Grid>
+
+                    <StackPanel Grid.Row="1" Margin="0,18,0,0">
+                        <Border Padding="12"
+                                CornerRadius="8"
+                                Background="{DynamicResource AccentSoftBrush}"
+                                Visibility="{Binding HasStatusMessage, Converter={StaticResource BoolToVisibility}}">
+                            <TextBlock Text="{Binding StatusMessage}" TextWrapping="Wrap" />
+                        </Border>
+                        <Border Margin="0,8,0,0"
+                                Padding="12"
+                                CornerRadius="8"
+                                BorderBrush="{DynamicResource DangerBrush}"
+                                BorderThickness="1"
+                                Visibility="{Binding HasErrorMessage, Converter={StaticResource BoolToVisibility}}">
+                            <TextBlock Text="{Binding ErrorMessage}"
+                                       TextWrapping="Wrap"
+                                       Foreground="{DynamicResource DangerBrush}" />
+                        </Border>
                     </StackPanel>
 
-                    <UniformGrid Grid.Row="1" Columns="3" Margin="0,26,0,0">
-                        <Border Margin="0,0,8,0"
-                                Padding="18"
-                                CornerRadius="10"
+                    <Grid Grid.Row="2" Margin="0,18,0,0">
+                        <Border Padding="24"
+                                CornerRadius="12"
                                 Background="{DynamicResource SurfaceBrush}"
                                 BorderBrush="{DynamicResource BorderBrush}"
-                                BorderThickness="1">
-                            <StackPanel>
-                                <TextBlock Text="Secure secrets" FontSize="15" FontWeight="SemiBold" />
-                                <TextBlock Margin="0,7,0,0"
-                                           Text="Passwords and passphrases are kept outside SQLite in Windows Credential Manager."
-                                           TextWrapping="Wrap"
-                                           Foreground="{DynamicResource MutedTextBrush}" />
-                                <TextBlock Margin="0,12,0,0"
-                                           Text="READY"
-                                           FontSize="11"
-                                           FontWeight="Bold"
-                                           Foreground="{DynamicResource SuccessBrush}" />
+                                BorderThickness="1"
+                                Visibility="{Binding IsEditorOpen, Converter={StaticResource BoolToVisibility}}">
+                            <StackPanel MaxWidth="760" HorizontalAlignment="Left">
+                                <TextBlock Text="Server profile" FontSize="20" FontWeight="SemiBold" />
+                                <TextBlock Margin="0,5,0,20"
+                                           Text="Save connection metadata locally. Existing passwords are never loaded back into this form."
+                                           Foreground="{DynamicResource MutedTextBrush}"
+                                           TextWrapping="Wrap" />
+
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="18" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+
+                                    <StackPanel Grid.Row="0" Grid.Column="0">
+                                        <TextBlock Text="Display name" Margin="0,0,0,5" />
+                                        <TextBox Text="{Binding Editor.Name, UpdateSourceTrigger=PropertyChanged}"
+                                                 Style="{StaticResource FieldTextBox}" />
+                                    </StackPanel>
+                                    <StackPanel Grid.Row="0" Grid.Column="2">
+                                        <TextBlock Text="Environment" Margin="0,0,0,5" />
+                                        <TextBox Text="{Binding Editor.Environment, UpdateSourceTrigger=PropertyChanged}"
+                                                 Style="{StaticResource FieldTextBox}" />
+                                    </StackPanel>
+
+                                    <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,14,0,0">
+                                        <TextBlock Text="Host / IP" Margin="0,0,0,5" />
+                                        <TextBox Text="{Binding Editor.Host, UpdateSourceTrigger=PropertyChanged}"
+                                                 Style="{StaticResource FieldTextBox}" />
+                                    </StackPanel>
+                                    <StackPanel Grid.Row="1" Grid.Column="2" Margin="0,14,0,0">
+                                        <TextBlock Text="Port" Margin="0,0,0,5" />
+                                        <TextBox Text="{Binding Editor.PortText, UpdateSourceTrigger=PropertyChanged}"
+                                                 Style="{StaticResource FieldTextBox}" />
+                                    </StackPanel>
+
+                                    <StackPanel Grid.Row="2" Grid.Column="0" Margin="0,14,0,0">
+                                        <TextBlock Text="Username" Margin="0,0,0,5" />
+                                        <TextBox Text="{Binding Editor.Username, UpdateSourceTrigger=PropertyChanged}"
+                                                 Style="{StaticResource FieldTextBox}" />
+                                    </StackPanel>
+                                    <StackPanel Grid.Row="2" Grid.Column="2" Margin="0,14,0,0">
+                                        <TextBlock Text="Authentication" Margin="0,0,0,5" />
+                                        <ComboBox ItemsSource="{Binding Editor.AuthenticationChoices}"
+                                                  DisplayMemberPath="DisplayName"
+                                                  SelectedValuePath="Kind"
+                                                  SelectedValue="{Binding Editor.AuthenticationKind, Mode=TwoWay}" />
+                                    </StackPanel>
+                                </Grid>
+
+                                <StackPanel Margin="0,16,0,0"
+                                            Visibility="{Binding Editor.IsPrivateKey, Converter={StaticResource BoolToVisibility}}">
+                                    <TextBlock Text="Private key path" Margin="0,0,0,5" />
+                                    <TextBox Text="{Binding Editor.PrivateKeyPath, UpdateSourceTrigger=PropertyChanged}"
+                                             Style="{StaticResource FieldTextBox}" />
+                                    <TextBlock Margin="0,4,0,0"
+                                               Text="Path is metadata only; ServerDesk never copies private-key contents into SQLite."
+                                               FontSize="11"
+                                               Foreground="{DynamicResource MutedTextBrush}" />
+                                </StackPanel>
+
+                                <StackPanel Margin="0,16,0,0"
+                                            Visibility="{Binding Editor.CanStoreSecret, Converter={StaticResource BoolToVisibility}}">
+                                    <TextBlock Text="{Binding Editor.SecretLabel}" Margin="0,0,0,5" />
+                                    <PasswordBox x:Name="CredentialSecretBox"
+                                                 MinHeight="36"
+                                                 Padding="10,6"
+                                                 PasswordChanged="CredentialSecretBoxOnPasswordChanged" />
+                                    <TextBlock Margin="0,4,0,0"
+                                               Text="{Binding Editor.SecretHint}"
+                                               FontSize="11"
+                                               TextWrapping="Wrap"
+                                               Foreground="{DynamicResource MutedTextBrush}" />
+                                </StackPanel>
+
+                                <Border Margin="0,16,0,0"
+                                        Padding="12"
+                                        CornerRadius="8"
+                                        Background="{DynamicResource SurfaceSecondaryBrush}"
+                                        Visibility="{Binding Editor.CanStoreSecret, Converter={StaticResource BoolToVisibility}}">
+                                    <TextBlock Text="Passwords/passphrases are written directly to Windows Credential Manager. The SQLite row contains only an opaque credential reference."
+                                               TextWrapping="Wrap"
+                                               FontSize="12" />
+                                </Border>
+
+                                <StackPanel Orientation="Horizontal" Margin="0,22,0,0">
+                                    <Button Content="Save server"
+                                            Command="{Binding SaveServerCommand}"
+                                            Style="{StaticResource PrimaryButton}" />
+                                    <Button Content="Cancel"
+                                            Margin="10,0,0,0"
+                                            Command="{Binding CancelEditorCommand}"
+                                            Style="{StaticResource SecondaryButton}" />
+                                </StackPanel>
                             </StackPanel>
                         </Border>
 
-                        <Border Margin="4,0"
-                                Padding="18"
-                                CornerRadius="10"
-                                Background="{DynamicResource SurfaceBrush}"
-                                BorderBrush="{DynamicResource BorderBrush}"
-                                BorderThickness="1">
-                            <StackPanel>
-                                <TextBlock Text="Versioned metadata" FontSize="15" FontWeight="SemiBold" />
-                                <TextBlock Margin="0,7,0,0"
-                                           Text="Server profiles and operation history use a versioned SQLite schema with no raw secret columns."
-                                           TextWrapping="Wrap"
-                                           Foreground="{DynamicResource MutedTextBrush}" />
-                                <TextBlock Margin="0,12,0,0"
-                                           Text="SCHEMA V1"
-                                           FontSize="11"
-                                           FontWeight="Bold"
-                                           Foreground="{DynamicResource SuccessBrush}" />
-                            </StackPanel>
-                        </Border>
-
-                        <Border Margin="8,0,0,0"
-                                Padding="18"
-                                CornerRadius="10"
-                                Background="{DynamicResource SurfaceBrush}"
-                                BorderBrush="{DynamicResource BorderBrush}"
-                                BorderThickness="1">
-                            <StackPanel>
-                                <TextBlock Text="Theme &amp; shell" FontSize="15" FontWeight="SemiBold" />
-                                <TextBlock Margin="0,7,0,0"
-                                           Text="MVVM navigation and System/Light/Dark theme preferences are persisted locally."
-                                           TextWrapping="Wrap"
-                                           Foreground="{DynamicResource MutedTextBrush}" />
-                                <TextBlock Margin="0,12,0,0"
-                                           Text="{Binding EffectiveTheme, StringFormat=ACTIVE: {0}}"
-                                           FontSize="11"
-                                           FontWeight="Bold"
-                                           Foreground="{DynamicResource AccentBrush}" />
-                            </StackPanel>
-                        </Border>
-                    </UniformGrid>
-
-                    <Border Grid.Row="2"
-                            Margin="0,24,0,0"
-                            Padding="20"
-                            CornerRadius="10"
-                            Background="{DynamicResource SurfaceBrush}"
-                            BorderBrush="{DynamicResource BorderBrush}"
-                            BorderThickness="1">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-                            <StackPanel>
-                                <TextBlock Text="Next milestone: M1 Remote Core"
-                                           FontSize="16"
-                                           FontWeight="SemiBold" />
-                                <TextBlock Margin="0,6,24,0"
-                                           MaxWidth="720"
-                                           Text="The foundation now exposes stable ports for profiles, secrets, operation audit and remote sessions. M1 can add SSH.NET/SFTP/PTY/tunnels without reversing dependencies."
-                                           TextWrapping="Wrap"
-                                           Foreground="{DynamicResource MutedTextBrush}" />
-                            </StackPanel>
-                            <Border Grid.Column="1"
-                                    Padding="10,5"
+                        <StackPanel Visibility="{Binding IsDashboardVisible, Converter={StaticResource BoolToVisibility}}">
+                            <Border Padding="28"
                                     CornerRadius="12"
-                                    Background="{DynamicResource SurfaceSecondaryBrush}"
-                                    VerticalAlignment="Top">
-                                <TextBlock Text="Agentless first" FontSize="12" FontWeight="SemiBold" />
+                                    Background="{DynamicResource SurfaceBrush}"
+                                    BorderBrush="{DynamicResource BorderBrush}"
+                                    BorderThickness="1"
+                                    Visibility="{Binding HasNoSelectedServer, Converter={StaticResource BoolToVisibility}}">
+                                <StackPanel HorizontalAlignment="Center" MaxWidth="520">
+                                    <Border Width="52" Height="52" CornerRadius="14"
+                                            Background="{DynamicResource AccentSoftBrush}"
+                                            HorizontalAlignment="Center">
+                                        <TextBlock Text="+" FontSize="28" FontWeight="Light"
+                                                   HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                    </Border>
+                                    <TextBlock Margin="0,16,0,0"
+                                               Text="Add your first server"
+                                               FontSize="21"
+                                               FontWeight="SemiBold"
+                                               HorizontalAlignment="Center" />
+                                    <TextBlock Margin="0,7,0,18"
+                                               Text="Create a local profile now. SSH connection and host-key verification are enabled in the next M1 slices."
+                                               TextAlignment="Center"
+                                               TextWrapping="Wrap"
+                                               Foreground="{DynamicResource MutedTextBrush}" />
+                                    <Button Content="Add server"
+                                            Command="{Binding AddServerCommand}"
+                                            Style="{StaticResource PrimaryButton}"
+                                            HorizontalAlignment="Center" />
+                                </StackPanel>
                             </Border>
-                        </Grid>
-                    </Border>
 
-                    <TextBlock Grid.Row="3"
-                               Margin="2,14,0,0"
-                               Text="{Binding SettingsMessage}"
-                               Foreground="{DynamicResource WarningBrush}"
-                               TextWrapping="Wrap" />
+                            <Border Padding="24"
+                                    CornerRadius="12"
+                                    Background="{DynamicResource SurfaceBrush}"
+                                    BorderBrush="{DynamicResource BorderBrush}"
+                                    BorderThickness="1"
+                                    Visibility="{Binding HasSelectedServer, Converter={StaticResource BoolToVisibility}}">
+                                <StackPanel>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding SelectedServer.Name}" FontSize="23" FontWeight="SemiBold" />
+                                            <TextBlock Margin="0,4,0,0"
+                                                       Text="{Binding SelectedServer.Endpoint}"
+                                                       FontSize="14"
+                                                       Foreground="{DynamicResource MutedTextBrush}" />
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Top">
+                                            <Button Content="Edit"
+                                                    Command="{Binding EditServerCommand}"
+                                                    Style="{StaticResource SecondaryButton}" />
+                                            <Button Content="Delete"
+                                                    Margin="8,0,0,0"
+                                                    Command="{Binding RequestDeleteServerCommand}"
+                                                    Style="{StaticResource SecondaryButton}" />
+                                        </StackPanel>
+                                    </Grid>
+
+                                    <UniformGrid Columns="3" Margin="0,22,0,0">
+                                        <Border Padding="14" Margin="0,0,8,0" CornerRadius="9"
+                                                Background="{DynamicResource SurfaceSecondaryBrush}">
+                                            <StackPanel>
+                                                <TextBlock Text="Environment" FontSize="11" Foreground="{DynamicResource MutedTextBrush}" />
+                                                <TextBlock Margin="0,4,0,0" Text="{Binding SelectedServer.Environment}" FontWeight="SemiBold" />
+                                            </StackPanel>
+                                        </Border>
+                                        <Border Padding="14" Margin="4,0" CornerRadius="9"
+                                                Background="{DynamicResource SurfaceSecondaryBrush}">
+                                            <StackPanel>
+                                                <TextBlock Text="Authentication" FontSize="11" Foreground="{DynamicResource MutedTextBrush}" />
+                                                <TextBlock Margin="0,4,0,0" Text="{Binding SelectedServer.AuthenticationLabel}" FontWeight="SemiBold" />
+                                            </StackPanel>
+                                        </Border>
+                                        <Border Padding="14" Margin="8,0,0,0" CornerRadius="9"
+                                                Background="{DynamicResource SurfaceSecondaryBrush}">
+                                            <StackPanel>
+                                                <TextBlock Text="Connection" FontSize="11" Foreground="{DynamicResource MutedTextBrush}" />
+                                                <TextBlock Margin="0,4,0,0" Text="Not connected" FontWeight="SemiBold" />
+                                            </StackPanel>
+                                        </Border>
+                                    </UniformGrid>
+
+                                    <Border Margin="0,20,0,0"
+                                            Padding="14"
+                                            CornerRadius="9"
+                                            Background="{DynamicResource AccentSoftBrush}">
+                                        <TextBlock Text="SSH connect is intentionally disabled until host trust (#13) and session transport (#14) are complete."
+                                                   TextWrapping="Wrap" />
+                                    </Border>
+
+                                    <Border Margin="0,14,0,0"
+                                            Padding="14"
+                                            CornerRadius="9"
+                                            BorderBrush="{DynamicResource DangerBrush}"
+                                            BorderThickness="1"
+                                            Visibility="{Binding IsDeleteConfirmationVisible, Converter={StaticResource BoolToVisibility}}">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel>
+                                                <TextBlock Text="Delete this server profile?" FontWeight="SemiBold" />
+                                                <TextBlock Margin="0,3,12,0"
+                                                           Text="The local profile and its stored Windows credential will both be removed."
+                                                           TextWrapping="Wrap"
+                                                           Foreground="{DynamicResource MutedTextBrush}" />
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                                <Button Content="Cancel"
+                                                        Command="{Binding CancelDeleteServerCommand}"
+                                                        Style="{StaticResource SecondaryButton}" />
+                                                <Button Content="Delete"
+                                                        Margin="8,0,0,0"
+                                                        Command="{Binding ConfirmDeleteServerCommand}"
+                                                        Background="{DynamicResource DangerBrush}"
+                                                        Foreground="White"
+                                                        BorderThickness="0"
+                                                        Padding="12,7" />
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </Grid>
                 </Grid>
             </ScrollViewer>
         </Grid>

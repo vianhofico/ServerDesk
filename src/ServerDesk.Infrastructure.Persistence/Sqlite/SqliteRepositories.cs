@@ -25,7 +25,8 @@ public sealed class SqliteProfileRepository : IProfileRepository
         await using var command = connection.CreateCommand();
         command.CommandText =
             """
-            SELECT id, name, host, port, username, environment, credential_reference
+            SELECT id, name, host, port, username, environment, credential_reference,
+                   authentication_kind, private_key_path
             FROM server_profiles
             ORDER BY name COLLATE NOCASE, id;
             """;
@@ -54,7 +55,8 @@ public sealed class SqliteProfileRepository : IProfileRepository
         await using var command = connection.CreateCommand();
         command.CommandText =
             """
-            SELECT id, name, host, port, username, environment, credential_reference
+            SELECT id, name, host, port, username, environment, credential_reference,
+                   authentication_kind, private_key_path
             FROM server_profiles
             WHERE id = @id;
             """;
@@ -78,9 +80,11 @@ public sealed class SqliteProfileRepository : IProfileRepository
         command.CommandText =
             """
             INSERT INTO server_profiles (
-                id, name, host, port, username, environment, credential_reference, created_utc, updated_utc)
+                id, name, host, port, username, environment, credential_reference,
+                authentication_kind, private_key_path, created_utc, updated_utc)
             VALUES (
-                @id, @name, @host, @port, @username, @environment, @credential_reference, @now, @now)
+                @id, @name, @host, @port, @username, @environment, @credential_reference,
+                @authentication_kind, @private_key_path, @now, @now)
             ON CONFLICT(id) DO UPDATE SET
                 name = excluded.name,
                 host = excluded.host,
@@ -88,6 +92,8 @@ public sealed class SqliteProfileRepository : IProfileRepository
                 username = excluded.username,
                 environment = excluded.environment,
                 credential_reference = excluded.credential_reference,
+                authentication_kind = excluded.authentication_kind,
+                private_key_path = excluded.private_key_path,
                 updated_utc = excluded.updated_utc;
             """;
 
@@ -101,6 +107,8 @@ public sealed class SqliteProfileRepository : IProfileRepository
         command.Parameters.AddWithValue(
             "@credential_reference",
             (object?)profile.CredentialReference?.Value ?? DBNull.Value);
+        command.Parameters.AddWithValue("@authentication_kind", (int)profile.AuthenticationKind);
+        command.Parameters.AddWithValue("@private_key_path", (object?)profile.PrivateKeyPath ?? DBNull.Value);
         command.Parameters.AddWithValue("@now", now);
 
         await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
@@ -134,7 +142,9 @@ public sealed class SqliteProfileRepository : IProfileRepository
             reader.GetInt32(3),
             reader.GetString(4),
             reader.IsDBNull(5) ? null : reader.GetString(5),
-            credentialReference);
+            credentialReference,
+            (ServerAuthenticationKind)reader.GetInt32(7),
+            reader.IsDBNull(8) ? null : reader.GetString(8));
     }
 }
 
