@@ -4,6 +4,7 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using ServerDesk.App.Presentation;
 using ServerDesk.Application.Capabilities;
+using ServerDesk.Application.Dashboard;
 using ServerDesk.Application.History;
 using ServerDesk.Application.PortForwarding;
 using ServerDesk.Application.Profiles;
@@ -19,6 +20,7 @@ public partial class MainWindow : Window
     private readonly IRemoteTerminalSessionFactory _terminalFactory;
     private readonly PortForwardManager _portForwardManager;
     private readonly IServerCapabilityService _capabilityService;
+    private readonly IServerDashboardService _dashboardService;
     private readonly IServerConnectionRouteService _connectionRouteService;
     private readonly IServerProfileOrganizationService _organizationService;
     private readonly IConnectionHistoryRepository _historyRepository;
@@ -31,6 +33,7 @@ public partial class MainWindow : Window
         IRemoteTerminalSessionFactory terminalFactory,
         PortForwardManager portForwardManager,
         IServerCapabilityService capabilityService,
+        IServerDashboardService dashboardService,
         IServerConnectionRouteService connectionRouteService,
         IServerProfileOrganizationService organizationService,
         IConnectionHistoryRepository historyRepository)
@@ -40,6 +43,7 @@ public partial class MainWindow : Window
         _terminalFactory = terminalFactory;
         _portForwardManager = portForwardManager;
         _capabilityService = capabilityService;
+        _dashboardService = dashboardService;
         _connectionRouteService = connectionRouteService;
         _organizationService = organizationService;
         _historyRepository = historyRepository;
@@ -80,6 +84,10 @@ public partial class MainWindow : Window
         }
 
         var editIndex = Math.Max(0, actionPanel.Children.IndexOf(editButton));
+        var dashboardButton = CreateActionButton(
+            "Dashboard",
+            "Open read-only CPU, memory, load, uptime, network and filesystem health metrics.",
+            OpenDashboardOnClick);
         var organizeButton = CreateActionButton(
             "Organize",
             "Manage groups, tags and favorites and search/filter saved servers.",
@@ -100,11 +108,12 @@ public partial class MainWindow : Window
             "Tunnels",
             "Manage local, remote and SOCKS5 SSH port forwarding.",
             OpenPortForwardingOnClick);
-        actionPanel.Children.Insert(editIndex, organizeButton);
-        actionPanel.Children.Insert(editIndex + 1, historyButton);
-        actionPanel.Children.Insert(editIndex + 2, routeButton);
-        actionPanel.Children.Insert(editIndex + 3, terminalButton);
-        actionPanel.Children.Insert(editIndex + 4, tunnelsButton);
+        actionPanel.Children.Insert(editIndex, dashboardButton);
+        actionPanel.Children.Insert(editIndex + 1, organizeButton);
+        actionPanel.Children.Insert(editIndex + 2, historyButton);
+        actionPanel.Children.Insert(editIndex + 3, routeButton);
+        actionPanel.Children.Insert(editIndex + 4, terminalButton);
+        actionPanel.Children.Insert(editIndex + 5, tunnelsButton);
 
         if (VisualTreeHelper.GetParent(actionPanel) is Grid headerGrid &&
             VisualTreeHelper.GetParent(headerGrid) is StackPanel serverCardPanel)
@@ -129,6 +138,23 @@ public partial class MainWindow : Window
         };
         button.Click += handler;
         return button;
+    }
+
+    private void OpenDashboardOnClick(object sender, RoutedEventArgs e)
+    {
+        if (_viewModel.SelectedServer is not { } selected)
+        {
+            return;
+        }
+
+        var window = new ServerDashboardWindow(
+            _dashboardService,
+            selected.Profile,
+            selected.ConnectionState == RemoteSessionState.Connected)
+        {
+            Owner = this,
+        };
+        window.Show();
     }
 
     private void OpenOrganizationOnClick(object sender, RoutedEventArgs e)
