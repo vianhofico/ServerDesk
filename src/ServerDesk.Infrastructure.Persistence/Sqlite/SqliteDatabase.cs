@@ -27,7 +27,7 @@ public sealed class SqliteConnectionFactory
 
 public sealed class SqliteDatabaseInitializer
 {
-    public const int CurrentSchemaVersion = 3;
+    public const int CurrentSchemaVersion = 4;
 
     private readonly SqliteConnectionFactory _connectionFactory;
 
@@ -149,6 +149,38 @@ public sealed class SqliteDatabaseInitializer
                     ON known_hosts(host COLLATE NOCASE, port);
 
                 UPDATE schema_info SET version = 3 WHERE singleton_id = 1;
+                """;
+
+            await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+            transaction.Commit();
+            version = 3;
+        }
+
+        if (version < 4)
+        {
+            using var transaction = connection.BeginTransaction();
+            await using var command = connection.CreateCommand();
+            command.Transaction = transaction;
+            command.CommandText =
+                """
+                CREATE TABLE port_forward_profiles (
+                    id TEXT NOT NULL PRIMARY KEY,
+                    server_profile_id TEXT NOT NULL,
+                    name TEXT NOT NULL,
+                    kind INTEGER NOT NULL CHECK (kind BETWEEN 0 AND 2),
+                    bind_host TEXT NOT NULL,
+                    bind_port INTEGER NOT NULL CHECK (bind_port BETWEEN 0 AND 65535),
+                    destination_host TEXT NULL,
+                    destination_port INTEGER NULL CHECK (destination_port IS NULL OR destination_port BETWEEN 1 AND 65535),
+                    created_utc TEXT NOT NULL,
+                    updated_utc TEXT NOT NULL,
+                    FOREIGN KEY(server_profile_id) REFERENCES server_profiles(id) ON DELETE CASCADE
+                );
+
+                CREATE INDEX ix_port_forward_profiles_server
+                    ON port_forward_profiles(server_profile_id, name COLLATE NOCASE);
+
+                UPDATE schema_info SET version = 4 WHERE singleton_id = 1;
                 """;
 
             await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);

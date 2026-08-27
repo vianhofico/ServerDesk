@@ -9,7 +9,7 @@ namespace ServerDesk.Tests;
 public sealed class KnownHostPersistenceTests
 {
     [Fact]
-    public async Task KnownHostRoundTripUsesSchemaVersionThree()
+    public async Task KnownHostRoundTripSurvivesCurrentSchema()
     {
         var cancellationToken = TestContext.Current.CancellationToken;
         using var paths = new TemporaryAppPaths();
@@ -28,7 +28,6 @@ public sealed class KnownHostPersistenceTests
         var loaded = await repository.ListForEndpointAsync("example.COM", 22, cancellationToken);
 
         Assert.Equal(SqliteDatabaseInitializer.CurrentSchemaVersion, await initializer.GetSchemaVersionAsync(cancellationToken));
-        Assert.Equal(3, SqliteDatabaseInitializer.CurrentSchemaVersion);
         Assert.Equal(record, Assert.Single(loaded));
     }
 

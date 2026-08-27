@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using ServerDesk.App.Presentation;
+using ServerDesk.Application.PortForwarding;
 using ServerDesk.Application.Terminal;
 
 namespace ServerDesk.App;
@@ -11,24 +12,27 @@ public partial class MainWindow : Window
 {
     private readonly ShellViewModel _viewModel;
     private readonly IRemoteTerminalSessionFactory _terminalFactory;
+    private readonly PortForwardManager _portForwardManager;
     private ProfileEditorViewModel? _observedEditor;
 
     public MainWindow(
         ShellViewModel viewModel,
-        IRemoteTerminalSessionFactory terminalFactory)
+        IRemoteTerminalSessionFactory terminalFactory,
+        PortForwardManager portForwardManager)
     {
         InitializeComponent();
         _viewModel = viewModel;
         _terminalFactory = terminalFactory;
+        _portForwardManager = portForwardManager;
         DataContext = viewModel;
         _viewModel.PropertyChanged += ViewModelOnPropertyChanged;
-        Loaded += AddTerminalActionOnLoaded;
+        Loaded += AddRemoteActionsOnLoaded;
         ObserveEditor(_viewModel.Editor);
     }
 
     protected override void OnClosed(EventArgs e)
     {
-        Loaded -= AddTerminalActionOnLoaded;
+        Loaded -= AddRemoteActionsOnLoaded;
         _viewModel.PropertyChanged -= ViewModelOnPropertyChanged;
         ObserveEditor(null);
         CredentialSecretBox.Password = string.Empty;
@@ -43,25 +47,39 @@ public partial class MainWindow : Window
         }
     }
 
-    private void AddTerminalActionOnLoaded(object sender, RoutedEventArgs e)
+    private void AddRemoteActionsOnLoaded(object sender, RoutedEventArgs e)
     {
-        Loaded -= AddTerminalActionOnLoaded;
+        Loaded -= AddRemoteActionsOnLoaded;
         var editButton = FindDescendant<Button>(this, button => string.Equals(button.Content as string, "Edit", StringComparison.Ordinal));
         if (editButton is null || VisualTreeHelper.GetParent(editButton) is not StackPanel actionPanel)
         {
             return;
         }
 
-        var terminalButton = new Button
+        var editIndex = Math.Max(0, actionPanel.Children.IndexOf(editButton));
+        var terminalButton = CreateActionButton(
+            "Terminal",
+            "Open a real SSH PTY terminal (Ctrl+Shift+F searches scrollback).",
+            OpenTerminalOnClick);
+        var tunnelsButton = CreateActionButton(
+            "Tunnels",
+            "Manage local, remote and SOCKS5 SSH port forwarding.",
+            OpenPortForwardingOnClick);
+        actionPanel.Children.Insert(editIndex, terminalButton);
+        actionPanel.Children.Insert(editIndex + 1, tunnelsButton);
+    }
+
+    private Button CreateActionButton(string label, string toolTip, RoutedEventHandler handler)
+    {
+        var button = new Button
         {
-            Content = "Terminal",
+            Content = label,
             Margin = new Thickness(8, 0, 0, 0),
             Style = (Style)FindResource("SecondaryButton"),
-            ToolTip = "Open a real SSH PTY terminal (Ctrl+Shift+F searches scrollback).",
+            ToolTip = toolTip,
         };
-        terminalButton.Click += OpenTerminalOnClick;
-        var editIndex = actionPanel.Children.IndexOf(editButton);
-        actionPanel.Children.Insert(Math.Max(0, editIndex), terminalButton);
+        button.Click += handler;
+        return button;
     }
 
     private void OpenTerminalOnClick(object sender, RoutedEventArgs e)
@@ -73,6 +91,20 @@ public partial class MainWindow : Window
 
         var profiles = _viewModel.Servers.Select(server => server.Profile).ToArray();
         var window = new TerminalWindow(_terminalFactory, profiles, selected.Profile)
+        {
+            Owner = this,
+        };
+        window.Show();
+    }
+
+    private void OpenPortForwardingOnClick(object sender, RoutedEventArgs e)
+    {
+        if (_viewModel.SelectedServer is not { } selected)
+        {
+            return;
+        }
+
+        var window = new PortForwardingWindow(_portForwardManager, selected.Profile)
         {
             Owner = this,
         };

@@ -4,6 +4,7 @@ using ServerDesk.App.Presentation;
 using ServerDesk.Application.Abstractions;
 using ServerDesk.Application.Audit;
 using ServerDesk.Application.HostTrust;
+using ServerDesk.Application.PortForwarding;
 using ServerDesk.Application.Profiles;
 using ServerDesk.Application.RemoteFiles;
 using ServerDesk.Application.Secrets;
@@ -58,6 +59,18 @@ public partial class App : System.Windows.Application
 
     protected override void OnExit(ExitEventArgs e)
     {
+        if (_serviceProvider?.GetService<PortForwardManager>() is { } portForwardManager)
+        {
+            try
+            {
+                portForwardManager.DisposeAsync().AsTask().GetAwaiter().GetResult();
+            }
+            catch
+            {
+                // Process shutdown must continue; tunnel disposal closes SSH/listener resources best-effort.
+            }
+        }
+
         if (_serviceProvider?.GetService<ShellViewModel>() is { } shellViewModel)
         {
             try
@@ -70,7 +83,18 @@ public partial class App : System.Windows.Application
             }
         }
 
-        _serviceProvider?.Dispose();
+        if (_serviceProvider is not null)
+        {
+            try
+            {
+                _serviceProvider.DisposeAsync().AsTask().GetAwaiter().GetResult();
+            }
+            catch
+            {
+                // All critical remote resources were already given an explicit best-effort cleanup path above.
+            }
+        }
+
         base.OnExit(e);
     }
 
@@ -85,6 +109,7 @@ public partial class App : System.Windows.Application
         services.AddSingleton<SqliteDatabaseInitializer>();
         services.AddSingleton<IProfileRepository, SqliteProfileRepository>();
         services.AddSingleton<IKnownHostRepository, SqliteKnownHostRepository>();
+        services.AddSingleton<IPortForwardProfileRepository, SqlitePortForwardProfileRepository>();
         services.AddSingleton<IOperationAudit, SqliteOperationAudit>();
 
         services.AddSingleton<IServerProfileService, ServerProfileService>();
@@ -95,6 +120,8 @@ public partial class App : System.Windows.Application
         services.AddSingleton<IRemoteSessionFactory, SshRemoteSessionFactory>();
         services.AddSingleton<IRemoteFileSystemFactory, SftpRemoteFileSystemFactory>();
         services.AddSingleton<IRemoteTerminalSessionFactory, SshRemoteTerminalSessionFactory>();
+        services.AddSingleton<IPortForwardSessionFactory, SshPortForwardSessionFactory>();
+        services.AddSingleton<PortForwardManager>();
 
         services.AddSingleton<INavigationService, NavigationService>();
         services.AddSingleton<IThemeService, WpfThemeService>();
