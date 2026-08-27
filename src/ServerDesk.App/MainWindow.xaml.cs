@@ -4,7 +4,9 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using ServerDesk.App.Presentation;
 using ServerDesk.Application.Capabilities;
+using ServerDesk.Application.History;
 using ServerDesk.Application.PortForwarding;
+using ServerDesk.Application.Profiles;
 using ServerDesk.Application.Routing;
 using ServerDesk.Application.Sessions;
 using ServerDesk.Application.Terminal;
@@ -18,6 +20,8 @@ public partial class MainWindow : Window
     private readonly PortForwardManager _portForwardManager;
     private readonly IServerCapabilityService _capabilityService;
     private readonly IServerConnectionRouteService _connectionRouteService;
+    private readonly IServerProfileOrganizationService _organizationService;
+    private readonly IConnectionHistoryRepository _historyRepository;
     private ProfileEditorViewModel? _observedEditor;
     private ServerProfileListItemViewModel? _observedServer;
     private CapabilitySummaryControl? _capabilitySummary;
@@ -27,7 +31,9 @@ public partial class MainWindow : Window
         IRemoteTerminalSessionFactory terminalFactory,
         PortForwardManager portForwardManager,
         IServerCapabilityService capabilityService,
-        IServerConnectionRouteService connectionRouteService)
+        IServerConnectionRouteService connectionRouteService,
+        IServerProfileOrganizationService organizationService,
+        IConnectionHistoryRepository historyRepository)
     {
         InitializeComponent();
         _viewModel = viewModel;
@@ -35,6 +41,8 @@ public partial class MainWindow : Window
         _portForwardManager = portForwardManager;
         _capabilityService = capabilityService;
         _connectionRouteService = connectionRouteService;
+        _organizationService = organizationService;
+        _historyRepository = historyRepository;
         DataContext = viewModel;
         _viewModel.PropertyChanged += ViewModelOnPropertyChanged;
         Loaded += AddRemoteActionsOnLoaded;
@@ -72,6 +80,14 @@ public partial class MainWindow : Window
         }
 
         var editIndex = Math.Max(0, actionPanel.Children.IndexOf(editButton));
+        var organizeButton = CreateActionButton(
+            "Organize",
+            "Manage groups, tags and favorites and search/filter saved servers.",
+            OpenOrganizationOnClick);
+        var historyButton = CreateActionButton(
+            "History",
+            "View recent secret-safe SSH connection attempts.",
+            OpenConnectionHistoryOnClick);
         var routeButton = CreateActionButton(
             "Route",
             "Choose Direct, HTTP/SOCKS proxy or an SSH bastion route for this server.",
@@ -84,9 +100,11 @@ public partial class MainWindow : Window
             "Tunnels",
             "Manage local, remote and SOCKS5 SSH port forwarding.",
             OpenPortForwardingOnClick);
-        actionPanel.Children.Insert(editIndex, routeButton);
-        actionPanel.Children.Insert(editIndex + 1, terminalButton);
-        actionPanel.Children.Insert(editIndex + 2, tunnelsButton);
+        actionPanel.Children.Insert(editIndex, organizeButton);
+        actionPanel.Children.Insert(editIndex + 1, historyButton);
+        actionPanel.Children.Insert(editIndex + 2, routeButton);
+        actionPanel.Children.Insert(editIndex + 3, terminalButton);
+        actionPanel.Children.Insert(editIndex + 4, tunnelsButton);
 
         if (VisualTreeHelper.GetParent(actionPanel) is Grid headerGrid &&
             VisualTreeHelper.GetParent(headerGrid) is StackPanel serverCardPanel)
@@ -111,6 +129,24 @@ public partial class MainWindow : Window
         };
         button.Click += handler;
         return button;
+    }
+
+    private void OpenOrganizationOnClick(object sender, RoutedEventArgs e)
+    {
+        var window = new ProfileOrganizationWindow(_organizationService, _viewModel.SelectedServer?.Id)
+        {
+            Owner = this,
+        };
+        _ = window.ShowDialog();
+    }
+
+    private void OpenConnectionHistoryOnClick(object sender, RoutedEventArgs e)
+    {
+        var window = new ConnectionHistoryWindow(_historyRepository)
+        {
+            Owner = this,
+        };
+        _ = window.ShowDialog();
     }
 
     private void OpenConnectionRouteOnClick(object sender, RoutedEventArgs e)
