@@ -7,14 +7,16 @@ namespace ServerDesk.Application.RemoteEditing;
 
 public sealed class GuardedRemoteFileEditorService : IRemoteFileEditorService
 {
+    private readonly IRemoteFileSystemFactory _fileSystemFactory;
     private readonly RemoteFileEditorService _inner;
 
     public GuardedRemoteFileEditorService(
         IRemoteFileSystemFactory fileSystemFactory,
         IRemoteCommandExecutorFactory commandExecutorFactory)
     {
+        _fileSystemFactory = fileSystemFactory ?? throw new ArgumentNullException(nameof(fileSystemFactory));
         _inner = new RemoteFileEditorService(
-            fileSystemFactory ?? throw new ArgumentNullException(nameof(fileSystemFactory)),
+            _fileSystemFactory,
             commandExecutorFactory ?? throw new ArgumentNullException(nameof(commandExecutorFactory)));
     }
 
@@ -41,11 +43,25 @@ public sealed class GuardedRemoteFileEditorService : IRemoteFileEditorService
         ArgumentNullException.ThrowIfNull(profile);
         ArgumentNullException.ThrowIfNull(original);
 
-        if (original.Metadata.Kind == RemoteFileKind.SymbolicLink)
+        var targetIdentity = await InspectTargetIdentityAsync(profile, original.Metadata.Path, cancellationToken)
+            .ConfigureAwait(false);
+        if (targetIdentity.Error is not null)
+        {
+            return new RemoteEditorSaveResult(false, false, targetIdentity.Error.Message, targetIdentity.Error);
+        }
+
+        if (targetIdentity.Entry?.Kind == RemoteFileKind.SymbolicLink)
         {
             return Failure(
                 RemoteErrorCode.CapabilityUnavailable,
                 "Privileged atomic save does not replace symbolic links. Open the resolved target file explicitly before editing.");
+        }
+
+        if (targetIdentity.Entry?.Kind != RemoteFileKind.File)
+        {
+            return Failure(
+                RemoteErrorCode.PathConflict,
+                "Privileged atomic save requires an existing regular-file target.");
         }
 
         var result = await _inner.SavePrivilegedAsync(
@@ -98,6 +114,41 @@ public sealed class GuardedRemoteFileEditorService : IRemoteFileEditorService
         }
     }
 
+    private async ValueTask<TargetIdentityResult> InspectTargetIdentityAsync(
+        ServerProfile profile,
+        RemotePath path,
+        CancellationToken cancellationToken)
+    {
+        if (path.Value is "/" or ".")
+        {
+            return new TargetIdentityResult(
+                null,
+                new RemoteError(RemoteErrorCode.PathConflict, "The remote editor target must identify a file."));
+        }
+
+        await using var fileSystem = _fileSystemFactory.Create(profile);
+        try
+        {
+            await fileSystem.ConnectAsync(cancellationToken).ConfigureAwait(false);
+            var entries = await fileSystem.ListAsync(path.Parent, cancellationToken).ConfigureAwait(false);
+            var entry = entries.FirstOrDefault(candidate =>
+                string.Equals(candidate.Name, path.Name, StringComparison.Ordinal));
+            return entry is null
+                ? new TargetIdentityResult(
+                    null,
+                    new RemoteError(RemoteErrorCode.PathNotFound, $"Remote file '{path.Value}' no longer exists."))
+                : new TargetIdentityResult(entry, null);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (RemoteFileSystemException exception)
+        {
+            return new TargetIdentityResult(null, exception.Error);
+        }
+    }
+
     private static bool IsPotentiallyAmbiguous(RemoteErrorCode? code) =>
         code is RemoteErrorCode.NetworkInterrupted or
             RemoteErrorCode.CommandTimeout or
@@ -108,4 +159,6 @@ public sealed class GuardedRemoteFileEditorService : IRemoteFileEditorService
         var error = new RemoteError(code, message);
         return new RemoteEditorSaveResult(false, false, message, error);
     }
+
+    private sealed record TargetIdentityResult(RemoteFileEntry? Entry, RemoteError? Error);
 }
