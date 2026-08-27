@@ -4,6 +4,13 @@ using ServerDesk.Domain.Servers;
 
 namespace ServerDesk.Application.Profiles;
 
+public sealed record ServerRouteSpec(
+    ServerRouteKind Kind = ServerRouteKind.Direct,
+    string? ProxyHost = null,
+    int? ProxyPort = null,
+    string? ProxyUsername = null,
+    Guid? BastionProfileId = null);
+
 public sealed record ServerProfileSpec(
     string Name,
     string Host,
@@ -11,7 +18,8 @@ public sealed record ServerProfileSpec(
     string Username,
     string? Environment,
     ServerAuthenticationKind AuthenticationKind,
-    string? PrivateKeyPath);
+    string? PrivateKeyPath,
+    ServerRouteSpec? Route = null);
 
 public sealed class ServerProfileValidationException : Exception
 {
@@ -33,11 +41,26 @@ public interface IServerProfileService
         string? initialSecret,
         CancellationToken cancellationToken = default);
 
+    ValueTask<ServerProfile> CreateAsync(
+        ServerProfileSpec spec,
+        string? initialSecret,
+        string? initialProxySecret,
+        CancellationToken cancellationToken = default);
+
     ValueTask<ServerProfile> UpdateAsync(
         Guid id,
         ServerProfileSpec spec,
         string? replacementSecret,
         bool replaceSecret,
+        CancellationToken cancellationToken = default);
+
+    ValueTask<ServerProfile> UpdateAsync(
+        Guid id,
+        ServerProfileSpec spec,
+        string? replacementSecret,
+        bool replaceSecret,
+        string? replacementProxySecret,
+        bool replaceProxySecret,
         CancellationToken cancellationToken = default);
 
     ValueTask DeleteAsync(Guid id, CancellationToken cancellationToken = default);
@@ -57,9 +80,16 @@ public sealed class ServerProfileService : IServerProfileService
     public ValueTask<IReadOnlyList<ServerProfile>> ListAsync(CancellationToken cancellationToken = default) =>
         _profileRepository.ListAsync(cancellationToken);
 
+    public ValueTask<ServerProfile> CreateAsync(
+        ServerProfileSpec spec,
+        string? initialSecret,
+        CancellationToken cancellationToken = default) =>
+        CreateAsync(spec, initialSecret, initialProxySecret: null, cancellationToken);
+
     public async ValueTask<ServerProfile> CreateAsync(
         ServerProfileSpec spec,
         string? initialSecret,
+        string? initialProxySecret,
         CancellationToken cancellationToken = default)
     {
         Validate(spec, existing: null, replaceSecret: !string.IsNullOrEmpty(initialSecret), initialSecret);
@@ -68,35 +98,69 @@ public sealed class ServerProfileService : IServerProfileService
         var credentialReference = NeedsCredentialReference(spec.AuthenticationKind, initialSecret)
             ? SecretReference.ForServerProfile(id)
             : (SecretReference?)null;
+        var route = await BuildRouteAsync(
+                id,
+                spec.Route,
+                existing: null,
+                initialProxySecret,
+                replaceProxySecret: !string.IsNullOrEmpty(initialProxySecret),
+                cancellationToken)
+            .ConfigureAwait(false);
 
-        var profile = CreateProfile(id, spec, credentialReference);
-        if (credentialReference is not null)
-        {
-            await _secretStore.SetAsync(credentialReference.Value, initialSecret!, cancellationToken)
-                .ConfigureAwait(false);
-        }
-
+        var profile = CreateProfile(id, spec, credentialReference, route);
+        var written = new List<SecretReference>();
         try
         {
+            if (credentialReference is not null)
+            {
+                await _secretStore.SetAsync(credentialReference.Value, initialSecret!, cancellationToken)
+                    .ConfigureAwait(false);
+                written.Add(credentialReference.Value);
+            }
+
+            if (route.ProxyCredentialReference is not null)
+            {
+                await _secretStore.SetAsync(route.ProxyCredentialReference.Value, initialProxySecret!, cancellationToken)
+                    .ConfigureAwait(false);
+                written.Add(route.ProxyCredentialReference.Value);
+            }
+
             await _profileRepository.UpsertAsync(profile, cancellationToken).ConfigureAwait(false);
             return profile;
         }
         catch
         {
-            if (credentialReference is not null)
+            foreach (var reference in written)
             {
-                await TryDeleteSecretForCompensationAsync(credentialReference.Value).ConfigureAwait(false);
+                await TryDeleteSecretForCompensationAsync(reference).ConfigureAwait(false);
             }
 
             throw;
         }
     }
 
+    public ValueTask<ServerProfile> UpdateAsync(
+        Guid id,
+        ServerProfileSpec spec,
+        string? replacementSecret,
+        bool replaceSecret,
+        CancellationToken cancellationToken = default) =>
+        UpdateAsync(
+            id,
+            spec,
+            replacementSecret,
+            replaceSecret,
+            replacementProxySecret: null,
+            replaceProxySecret: false,
+            cancellationToken);
+
     public async ValueTask<ServerProfile> UpdateAsync(
         Guid id,
         ServerProfileSpec spec,
         string? replacementSecret,
         bool replaceSecret,
+        string? replacementProxySecret,
+        bool replaceProxySecret,
         CancellationToken cancellationToken = default)
     {
         if (id == Guid.Empty)
@@ -108,6 +172,14 @@ public sealed class ServerProfileService : IServerProfileService
             ?? throw new KeyNotFoundException("Server profile was not found.");
 
         Validate(spec, existing, replaceSecret, replacementSecret);
+        var route = await BuildRouteAsync(
+                id,
+                spec.Route,
+                existing,
+                replacementProxySecret,
+                replaceProxySecret,
+                cancellationToken)
+            .ConfigureAwait(false);
 
         var authenticationChanged = existing.AuthenticationKind != spec.AuthenticationKind;
         var desiredReference = ResolveDesiredReference(
@@ -116,49 +188,42 @@ public sealed class ServerProfileService : IServerProfileService
             replacementSecret,
             replaceSecret,
             authenticationChanged);
+        var updated = CreateProfile(id, spec, desiredReference, route);
 
-        var oldReference = existing.CredentialReference;
-        var secretStateChanged = replaceSecret || oldReference != desiredReference;
-        if (!secretStateChanged)
-        {
-            var unchangedSecretProfile = CreateProfile(id, spec, desiredReference);
-            await _profileRepository.UpsertAsync(unchangedSecretProfile, cancellationToken).ConfigureAwait(false);
-            return unchangedSecretProfile;
-        }
-
-        var oldSecret = oldReference is null
-            ? null
-            : await _secretStore.GetAsync(oldReference.Value, cancellationToken).ConfigureAwait(false);
-        var oldReferenceDeleted = false;
-        var desiredReferenceWritten = false;
+        var oldCredentialSecret = await ReadSecretAsync(existing.CredentialReference, cancellationToken).ConfigureAwait(false);
+        var oldProxySecret = await ReadSecretAsync(existing.Route.ProxyCredentialReference, cancellationToken).ConfigureAwait(false);
 
         try
         {
-            if (oldReference is not null && oldReference != desiredReference)
-            {
-                await _secretStore.DeleteAsync(oldReference.Value, cancellationToken).ConfigureAwait(false);
-                oldReferenceDeleted = true;
-            }
+            await ApplySecretChangeAsync(
+                    existing.CredentialReference,
+                    desiredReference,
+                    replacementSecret,
+                    replaceSecret,
+                    cancellationToken)
+                .ConfigureAwait(false);
+            await ApplySecretChangeAsync(
+                    existing.Route.ProxyCredentialReference,
+                    route.ProxyCredentialReference,
+                    replacementProxySecret,
+                    replaceProxySecret,
+                    cancellationToken)
+                .ConfigureAwait(false);
 
-            if (replaceSecret && desiredReference is not null)
-            {
-                await _secretStore.SetAsync(desiredReference.Value, replacementSecret!, cancellationToken)
-                    .ConfigureAwait(false);
-                desiredReferenceWritten = true;
-            }
-
-            var updated = CreateProfile(id, spec, desiredReference);
             await _profileRepository.UpsertAsync(updated, cancellationToken).ConfigureAwait(false);
             return updated;
         }
         catch
         {
-            await TryRollbackSecretAsync(
-                    oldReference,
-                    oldSecret,
-                    oldReferenceDeleted,
-                    desiredReference,
-                    desiredReferenceWritten)
+            await RestoreSecretStateAsync(
+                    existing.CredentialReference,
+                    oldCredentialSecret,
+                    desiredReference)
+                .ConfigureAwait(false);
+            await RestoreSecretStateAsync(
+                    existing.Route.ProxyCredentialReference,
+                    oldProxySecret,
+                    route.ProxyCredentialReference)
                 .ConfigureAwait(false);
             throw;
         }
@@ -177,14 +242,25 @@ public sealed class ServerProfileService : IServerProfileService
             return;
         }
 
-        var credentialReference = existing.CredentialReference;
-        var previousSecret = credentialReference is null
-            ? null
-            : await _secretStore.GetAsync(credentialReference.Value, cancellationToken).ConfigureAwait(false);
-
-        if (credentialReference is not null)
+        var profiles = await _profileRepository.ListAsync(cancellationToken).ConfigureAwait(false);
+        var dependent = profiles.FirstOrDefault(profile => profile.Route.BastionProfileId == id);
+        if (dependent is not null)
         {
-            await _secretStore.DeleteAsync(credentialReference.Value, cancellationToken).ConfigureAwait(false);
+            throw new InvalidOperationException(
+                $"Server '{existing.Name}' cannot be deleted because '{dependent.Name}' uses it as a bastion. Change the dependent route first.");
+        }
+
+        var credentialSecret = await ReadSecretAsync(existing.CredentialReference, cancellationToken).ConfigureAwait(false);
+        var proxySecret = await ReadSecretAsync(existing.Route.ProxyCredentialReference, cancellationToken).ConfigureAwait(false);
+
+        if (existing.CredentialReference is not null)
+        {
+            await _secretStore.DeleteAsync(existing.CredentialReference.Value, cancellationToken).ConfigureAwait(false);
+        }
+
+        if (existing.Route.ProxyCredentialReference is not null)
+        {
+            await _secretStore.DeleteAsync(existing.Route.ProxyCredentialReference.Value, cancellationToken).ConfigureAwait(false);
         }
 
         try
@@ -193,19 +269,111 @@ public sealed class ServerProfileService : IServerProfileService
         }
         catch
         {
-            if (credentialReference is not null && previousSecret is not null)
+            if (existing.CredentialReference is not null && credentialSecret is not null)
             {
-                await TrySetSecretForCompensationAsync(credentialReference.Value, previousSecret).ConfigureAwait(false);
+                await TrySetSecretForCompensationAsync(existing.CredentialReference.Value, credentialSecret).ConfigureAwait(false);
+            }
+
+            if (existing.Route.ProxyCredentialReference is not null && proxySecret is not null)
+            {
+                await TrySetSecretForCompensationAsync(existing.Route.ProxyCredentialReference.Value, proxySecret).ConfigureAwait(false);
             }
 
             throw;
         }
     }
 
+    private async ValueTask<ServerConnectionRoute> BuildRouteAsync(
+        Guid profileId,
+        ServerRouteSpec? routeSpec,
+        ServerProfile? existing,
+        string? proxySecret,
+        bool replaceProxySecret,
+        CancellationToken cancellationToken)
+    {
+        var spec = routeSpec ?? new ServerRouteSpec();
+        if (!Enum.IsDefined(spec.Kind))
+        {
+            throw Validation(nameof(ServerRouteSpec.Kind), "Connection route type is not supported.");
+        }
+
+        try
+        {
+            switch (spec.Kind)
+            {
+                case ServerRouteKind.Direct:
+                    return ServerConnectionRoute.Direct;
+
+                case ServerRouteKind.HttpProxy:
+                case ServerRouteKind.Socks4Proxy:
+                case ServerRouteKind.Socks5Proxy:
+                    var oldRoute = existing?.Route;
+                    var usernameChanged = oldRoute?.IsProxy == true &&
+                        !string.Equals(oldRoute.ProxyUsername, NormalizeOptional(spec.ProxyUsername), StringComparison.Ordinal);
+                    if (usernameChanged && oldRoute?.ProxyCredentialReference is not null && !replaceProxySecret)
+                    {
+                        throw Validation(
+                            nameof(ServerRouteSpec.ProxyUsername),
+                            "Re-enter or clear the proxy password when changing the proxy username.");
+                    }
+
+                    var proxyReference = ResolveProxyReference(
+                        profileId,
+                        existing,
+                        proxySecret,
+                        replaceProxySecret);
+                    return ServerConnectionRoute.Proxy(
+                        spec.Kind,
+                        spec.ProxyHost ?? string.Empty,
+                        spec.ProxyPort ?? 0,
+                        spec.ProxyUsername,
+                        proxyReference);
+
+                case ServerRouteKind.Bastion:
+                    if (spec.BastionProfileId is not { } bastionId || bastionId == Guid.Empty)
+                    {
+                        throw Validation(nameof(ServerRouteSpec.BastionProfileId), "Select a bastion server profile.");
+                    }
+
+                    if (bastionId == profileId)
+                    {
+                        throw Validation(nameof(ServerRouteSpec.BastionProfileId), "A server cannot use itself as its bastion.");
+                    }
+
+                    var bastion = await _profileRepository.GetAsync(bastionId, cancellationToken).ConfigureAwait(false);
+                    if (bastion is null)
+                    {
+                        throw Validation(nameof(ServerRouteSpec.BastionProfileId), "The selected bastion profile no longer exists.");
+                    }
+
+                    if (bastion.Route.Kind == ServerRouteKind.Bastion)
+                    {
+                        throw Validation(
+                            nameof(ServerRouteSpec.BastionProfileId),
+                            "Nested bastions are not supported in this release. Choose a direct or proxy-routed bastion.");
+                    }
+
+                    return ServerConnectionRoute.Bastion(bastionId);
+
+                default:
+                    throw Validation(nameof(ServerRouteSpec.Kind), "Connection route type is not supported.");
+            }
+        }
+        catch (ServerProfileValidationException)
+        {
+            throw;
+        }
+        catch (ArgumentException exception)
+        {
+            throw Validation("Route", exception.Message);
+        }
+    }
+
     private static ServerProfile CreateProfile(
         Guid id,
         ServerProfileSpec spec,
-        SecretReference? credentialReference) =>
+        SecretReference? credentialReference,
+        ServerConnectionRoute route) =>
         ServerProfile.Create(
             id,
             spec.Name,
@@ -215,7 +383,8 @@ public sealed class ServerProfileService : IServerProfileService
             spec.Environment,
             credentialReference,
             spec.AuthenticationKind,
-            spec.PrivateKeyPath);
+            spec.PrivateKeyPath,
+            route);
 
     private static SecretReference? ResolveDesiredReference(
         ServerProfile existing,
@@ -242,26 +411,66 @@ public sealed class ServerProfileService : IServerProfileService
         return null;
     }
 
+    private static SecretReference? ResolveProxyReference(
+        Guid profileId,
+        ServerProfile? existing,
+        string? replacementSecret,
+        bool replaceSecret)
+    {
+        if (replaceSecret)
+        {
+            return string.IsNullOrEmpty(replacementSecret)
+                ? null
+                : SecretReference.ForServerProxy(profileId);
+        }
+
+        return existing?.Route.IsProxy == true
+            ? existing.Route.ProxyCredentialReference
+            : null;
+    }
+
     private static bool NeedsCredentialReference(
         ServerAuthenticationKind authenticationKind,
         string? secret) =>
         authenticationKind == ServerAuthenticationKind.Password ||
         (authenticationKind == ServerAuthenticationKind.PrivateKey && !string.IsNullOrEmpty(secret));
 
-    private async ValueTask TryRollbackSecretAsync(
+    private async ValueTask<string?> ReadSecretAsync(
+        SecretReference? reference,
+        CancellationToken cancellationToken) =>
+        reference is null
+            ? null
+            : await _secretStore.GetAsync(reference.Value, cancellationToken).ConfigureAwait(false);
+
+    private async ValueTask ApplySecretChangeAsync(
         SecretReference? oldReference,
-        string? oldSecret,
-        bool oldReferenceDeleted,
         SecretReference? desiredReference,
-        bool desiredReferenceWritten)
+        string? replacementSecret,
+        bool replaceSecret,
+        CancellationToken cancellationToken)
     {
-        if (desiredReferenceWritten && desiredReference is not null && desiredReference != oldReference)
+        if (oldReference is not null && oldReference != desiredReference)
         {
-            await TryDeleteSecretForCompensationAsync(desiredReference.Value).ConfigureAwait(false);
+            await _secretStore.DeleteAsync(oldReference.Value, cancellationToken).ConfigureAwait(false);
         }
 
-        if (oldReference is not null && oldSecret is not null &&
-            (oldReferenceDeleted || desiredReference == oldReference))
+        if (replaceSecret && desiredReference is not null)
+        {
+            await _secretStore.SetAsync(desiredReference.Value, replacementSecret!, cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    private async ValueTask RestoreSecretStateAsync(
+        SecretReference? oldReference,
+        string? oldSecret,
+        SecretReference? attemptedReference)
+    {
+        if (attemptedReference is not null)
+        {
+            await TryDeleteSecretForCompensationAsync(attemptedReference.Value).ConfigureAwait(false);
+        }
+
+        if (oldReference is not null && oldSecret is not null)
         {
             await TrySetSecretForCompensationAsync(oldReference.Value, oldSecret).ConfigureAwait(false);
         }
@@ -374,6 +583,12 @@ public sealed class ServerProfileService : IServerProfileService
             throw new ServerProfileValidationException(errors);
         }
     }
+
+    private static ServerProfileValidationException Validation(string key, string message) =>
+        new(new Dictionary<string, string>(StringComparer.Ordinal) { [key] = message });
+
+    private static string? NormalizeOptional(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
     private static void ValidateRequired(
         string value,
