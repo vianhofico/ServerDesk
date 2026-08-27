@@ -85,7 +85,7 @@ public sealed class ServerProfileService : IServerProfileService
         {
             if (credentialReference is not null)
             {
-                await _secretStore.DeleteAsync(credentialReference.Value, cancellationToken).ConfigureAwait(false);
+                await TryDeleteSecretForCompensationAsync(credentialReference.Value).ConfigureAwait(false);
             }
 
             throw;
@@ -153,16 +153,13 @@ public sealed class ServerProfileService : IServerProfileService
         }
         catch
         {
-            if (desiredReferenceWritten && desiredReference is not null && desiredReference != oldReference)
-            {
-                await _secretStore.DeleteAsync(desiredReference.Value, cancellationToken).ConfigureAwait(false);
-            }
-
-            if (oldReference is not null && oldSecret is not null && (oldReferenceDeleted || desiredReference == oldReference))
-            {
-                await _secretStore.SetAsync(oldReference.Value, oldSecret, cancellationToken).ConfigureAwait(false);
-            }
-
+            await TryRollbackSecretAsync(
+                    oldReference,
+                    oldSecret,
+                    oldReferenceDeleted,
+                    desiredReference,
+                    desiredReferenceWritten)
+                .ConfigureAwait(false);
             throw;
         }
     }
@@ -198,8 +195,7 @@ public sealed class ServerProfileService : IServerProfileService
         {
             if (credentialReference is not null && previousSecret is not null)
             {
-                await _secretStore.SetAsync(credentialReference.Value, previousSecret, cancellationToken)
-                    .ConfigureAwait(false);
+                await TrySetSecretForCompensationAsync(credentialReference.Value, previousSecret).ConfigureAwait(false);
             }
 
             throw;
@@ -251,6 +247,49 @@ public sealed class ServerProfileService : IServerProfileService
         string? secret) =>
         authenticationKind == ServerAuthenticationKind.Password ||
         (authenticationKind == ServerAuthenticationKind.PrivateKey && !string.IsNullOrEmpty(secret));
+
+    private async ValueTask TryRollbackSecretAsync(
+        SecretReference? oldReference,
+        string? oldSecret,
+        bool oldReferenceDeleted,
+        SecretReference? desiredReference,
+        bool desiredReferenceWritten)
+    {
+        if (desiredReferenceWritten && desiredReference is not null && desiredReference != oldReference)
+        {
+            await TryDeleteSecretForCompensationAsync(desiredReference.Value).ConfigureAwait(false);
+        }
+
+        if (oldReference is not null && oldSecret is not null &&
+            (oldReferenceDeleted || desiredReference == oldReference))
+        {
+            await TrySetSecretForCompensationAsync(oldReference.Value, oldSecret).ConfigureAwait(false);
+        }
+    }
+
+    private async ValueTask TryDeleteSecretForCompensationAsync(SecretReference reference)
+    {
+        try
+        {
+            await _secretStore.DeleteAsync(reference, CancellationToken.None).ConfigureAwait(false);
+        }
+        catch
+        {
+            // Preserve the original operation failure. A later repair/audit path can surface cleanup failures.
+        }
+    }
+
+    private async ValueTask TrySetSecretForCompensationAsync(SecretReference reference, string secret)
+    {
+        try
+        {
+            await _secretStore.SetAsync(reference, secret, CancellationToken.None).ConfigureAwait(false);
+        }
+        catch
+        {
+            // Preserve the original operation failure. A later repair/audit path can surface cleanup failures.
+        }
+    }
 
     private static void Validate(
         ServerProfileSpec spec,
