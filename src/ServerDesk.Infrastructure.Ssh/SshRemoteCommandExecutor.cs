@@ -69,7 +69,15 @@ internal sealed class SshRemoteCommandExecutor : IRemoteCommandExecutor
         await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            await EnsureConnectedAsync(cancellationToken).ConfigureAwait(false);
+            try
+            {
+                await EnsureConnectedAsync(cancellationToken).ConfigureAwait(false);
+            }
+            catch (RemoteCommandConnectionException exception)
+            {
+                return RemoteExecutionResult.Failure(exception.Error);
+            }
+
             var lease = _lease ?? throw new InvalidOperationException("SSH command connection is unavailable.");
             var commandText = PosixCommandLine.Build(command);
             using var sshCommand = lease.Client.CreateCommand(commandText, Encoding.UTF8);
@@ -185,8 +193,7 @@ internal sealed class SshRemoteCommandExecutor : IRemoteCommandExecutor
             throw new ArgumentException("Remote command executable cannot be empty.", nameof(command));
         }
 
-        if (command.Executable.Contains('\0', StringComparison.Ordinal) ||
-            command.Arguments.Any(argument => argument.Contains('\0', StringComparison.Ordinal)))
+        if (command.Executable.Contains('\0') || command.Arguments.Any(argument => argument.Contains('\0')))
         {
             throw new ArgumentException("Remote command tokens cannot contain NUL characters.", nameof(command));
         }
@@ -220,7 +227,8 @@ internal sealed class SshRemoteCommandExecutor : IRemoteCommandExecutor
             RemoteErrorCode.AuthenticationFailed or
             RemoteErrorCode.HostKeyUnknown or
             RemoteErrorCode.HostKeyMismatch or
-            RemoteErrorCode.OperationCancelled => transport,
+            RemoteErrorCode.OperationCancelled or
+            RemoteErrorCode.NetworkInterrupted => transport,
             _ => new RemoteError(
                 RemoteErrorCode.CommandFailed,
                 "ServerDesk could not execute the remote command.",
