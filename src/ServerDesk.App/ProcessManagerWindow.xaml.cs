@@ -127,6 +127,17 @@ public partial class ProcessManagerWindow : Window
             return;
         }
 
+        if (force && MessageBox.Show(
+                this,
+                $"Final confirmation: send SIGKILL to PID {row.ProcessId} ({row.Command}) now?\n\nThis cannot be undone. ServerDesk will not automatically retry if the connection drops after the signal is sent.",
+                "Final force-kill confirmation",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Error,
+                MessageBoxResult.No) != MessageBoxResult.Yes)
+        {
+            return;
+        }
+
         using var operation = BeginOperation();
         StatusText.Text = force
             ? $"Sending SIGKILL to PID {row.ProcessId}…"
