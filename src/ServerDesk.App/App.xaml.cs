@@ -10,6 +10,7 @@ using ServerDesk.Application.HostTrust;
 using ServerDesk.Application.PortForwarding;
 using ServerDesk.Application.Profiles;
 using ServerDesk.Application.Remote;
+using ServerDesk.Application.RemoteEditing;
 using ServerDesk.Application.RemoteFiles;
 using ServerDesk.Application.Routing;
 using ServerDesk.Application.Secrets;
@@ -40,6 +41,7 @@ public partial class App : System.Windows.Application
                     ValidateOnBuild = true,
                     ValidateScopes = true,
                 });
+            RemoteEditorWindow.EditorService = _serviceProvider.GetRequiredService<IRemoteFileEditorService>();
 
             var databaseInitializer = _serviceProvider.GetRequiredService<SqliteDatabaseInitializer>();
             await databaseInitializer.InitializeAsync().ConfigureAwait(true);
@@ -64,6 +66,7 @@ public partial class App : System.Windows.Application
 
     protected override void OnExit(ExitEventArgs e)
     {
+        RemoteEditorWindow.EditorService = null;
         if (_serviceProvider?.GetService<PortForwardManager>() is { } portForwardManager)
         {
             try
@@ -136,6 +139,7 @@ public partial class App : System.Windows.Application
                 provider.GetRequiredService<IProfileRepository>()));
         services.AddSingleton<IRemoteCommandExecutorFactory, RouteAwareRemoteCommandExecutorFactory>();
         services.AddSingleton<IRemoteFileSystemFactory, RouteAwareSftpRemoteFileSystemFactory>();
+        services.AddSingleton<IRemoteFileEditorService, RemoteFileEditorService>();
         services.AddSingleton<IRemoteTerminalSessionFactory, RouteAwareRemoteTerminalSessionFactory>();
         services.AddSingleton<IPortForwardSessionFactory, RouteAwarePortForwardSessionFactory>();
         services.AddSingleton<PortForwardManager>();

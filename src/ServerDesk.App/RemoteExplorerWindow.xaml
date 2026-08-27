@@ -104,6 +104,7 @@
             </DataGrid.Columns>
             <DataGrid.ContextMenu>
                 <ContextMenu>
+                    <MenuItem Header="Edit text" Click="EditOnClick" />
                     <MenuItem Header="Download" Click="DownloadOnClick" />
                     <MenuItem Header="Rename" Click="RenameOnClick" />
                     <MenuItem Header="Permissions" Click="PermissionsOnClick" />
