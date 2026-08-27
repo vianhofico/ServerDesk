@@ -5,6 +5,7 @@ using ServerDesk.Application.RemoteEditing;
 using ServerDesk.Application.RemoteFiles;
 using ServerDesk.Application.Secrets;
 using ServerDesk.Application.Sessions;
+using ServerDesk.Domain.Errors;
 using ServerDesk.Domain.Secrets;
 using ServerDesk.Domain.Security;
 using ServerDesk.Domain.Servers;
@@ -108,6 +109,26 @@ public sealed class RemoteEditorIntegrationTests
         }
     }
 
+    [Fact]
+    public async Task PrivilegedSaveRejectsSymbolicLinkTarget()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var fixture = CreateFixture();
+        var symlink = RemotePath.Parse($"{Home}/serverdesk-fixture-link");
+        var original = await fixture.Service.LoadAsync(fixture.Profile, symlink, cancellationToken);
+
+        Assert.Equal(RemoteFileKind.SymbolicLink, original.Metadata.Kind);
+        var result = await fixture.Service.SavePrivilegedAsync(
+            fixture.Profile,
+            original,
+            original.Text,
+            validation: null,
+            cancellationToken);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(RemoteErrorCode.CapabilityUnavailable, result.Error?.Code);
+    }
+
     private static EditorFixture CreateFixture()
     {
         var profileId = Guid.NewGuid();
@@ -130,7 +151,7 @@ public sealed class RemoteEditorIntegrationTests
             TimeSpan.FromMilliseconds(250));
         var fileSystemFactory = new SftpRemoteFileSystemFactory(secretStore, trust, prompt, options);
         var commandFactory = new SshRemoteCommandExecutorFactory(secretStore, trust, prompt, options);
-        var service = new RemoteFileEditorService(fileSystemFactory, commandFactory);
+        IRemoteFileEditorService service = new GuardedRemoteFileEditorService(fileSystemFactory, commandFactory);
         return new EditorFixture(profile, fileSystemFactory, service);
     }
 
@@ -187,7 +208,7 @@ public sealed class RemoteEditorIntegrationTests
     private sealed record EditorFixture(
         ServerProfile Profile,
         IRemoteFileSystemFactory FileSystemFactory,
-        RemoteFileEditorService Service);
+        IRemoteFileEditorService Service);
 
     private sealed class MemorySecretStore : ISecretStore
     {
