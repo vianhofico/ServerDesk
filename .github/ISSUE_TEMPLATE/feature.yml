@@ -1,0 +1,93 @@
+name: Feature / milestone task
+description: Implement one reviewable ServerDesk vertical slice.
+title: "[M?] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Read `AGENTS.md` and the relevant architecture/security/UI/testing documents before implementation.
+
+  - type: input
+    id: milestone
+    attributes:
+      label: Milestone
+      description: M0–M8 and prerequisite issue(s).
+      placeholder: "M1 — Remote Core; depends on #..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: outcome
+    attributes:
+      label: User-visible outcome
+      description: Describe what the user can do when this issue is complete.
+    validations:
+      required: true
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: In scope
+      description: Keep this to one reviewable vertical slice.
+    validations:
+      required: true
+
+  - type: textarea
+    id: out-of-scope
+    attributes:
+      label: Explicitly out of scope
+      description: List tempting adjacent work that belongs in follow-up issues.
+
+  - type: dropdown
+    id: risk
+    attributes:
+      label: Highest remote operation risk
+      options:
+        - No remote operation
+        - ReadOnly
+        - ElevatedRead
+        - Mutating
+        - Destructive
+    validations:
+      required: true
+
+  - type: textarea
+    id: capabilities
+    attributes:
+      label: Capability / compatibility impact
+      description: Required tools, permissions, distro adapters, versions, or server state.
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: Concrete observable requirements. Include failure/permission/disconnect states where applicable.
+      placeholder: |
+        - [ ] ...
+        - [ ] ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: tests
+    attributes:
+      label: Required tests
+      description: Unit, parser fixture, adapter, SSH/integration, security negative, and UI tests as applicable.
+      placeholder: |
+        - [ ] Unit: ...
+        - [ ] Integration: ...
+        - [ ] Negative/security: ...
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: contract
+    attributes:
+      label: Contract
+      options:
+        - label: I checked that this task does not require UI code to call concrete SSH infrastructure directly.
+          required: true
+        - label: I checked that secrets/host-key/sudo/destructive-action rules are identified where applicable.
+          required: true
+        - label: This issue is small enough to review coherently, or I will split it before coding.
+          required: true
