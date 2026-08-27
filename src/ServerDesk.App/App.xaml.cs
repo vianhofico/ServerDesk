@@ -137,7 +137,7 @@ public partial class App : System.Windows.Application
                 provider.GetRequiredService<IProfileRepository>()));
         services.AddSingleton<IRemoteCommandExecutorFactory, RouteAwareRemoteCommandExecutorFactory>();
         services.AddSingleton<IRemoteFileSystemFactory, RouteAwareSftpRemoteFileSystemFactory>();
-        services.AddSingleton<IRemoteFileEditorService, RemoteFileEditorService>();
+        services.AddSingleton<IRemoteFileEditorService, GuardedRemoteFileEditorService>();
         services.AddSingleton<IRemoteTerminalSessionFactory, RouteAwareRemoteTerminalSessionFactory>();
         services.AddSingleton<IPortForwardSessionFactory, RouteAwarePortForwardSessionFactory>();
         services.AddSingleton<PortForwardManager>();
