@@ -8,6 +8,7 @@ using ServerDesk.Application.Dashboard;
 using ServerDesk.Application.History;
 using ServerDesk.Application.HostTrust;
 using ServerDesk.Application.PortForwarding;
+using ServerDesk.Application.Processes;
 using ServerDesk.Application.Profiles;
 using ServerDesk.Application.Remote;
 using ServerDesk.Application.RemoteEditing;
@@ -145,6 +146,7 @@ public partial class App : System.Windows.Application
         services.AddSingleton<IServerCapabilityService, ServerCapabilityService>();
         services.AddSingleton(ServerDashboardOptions.Default);
         services.AddSingleton<IServerDashboardService, ServerDashboardService>();
+        services.AddSingleton<IServerProcessService, ServerProcessService>();
 
         services.AddSingleton<INavigationService, NavigationService>();
         services.AddSingleton<IThemeService, WpfThemeService>();
