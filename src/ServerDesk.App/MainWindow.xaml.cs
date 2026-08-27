@@ -12,6 +12,7 @@ using ServerDesk.Application.Profiles;
 using ServerDesk.Application.RemoteEditing;
 using ServerDesk.Application.RemoteFiles;
 using ServerDesk.Application.Routing;
+using ServerDesk.Application.Services;
 using ServerDesk.Application.Sessions;
 using ServerDesk.Application.Terminal;
 
@@ -24,6 +25,7 @@ public partial class MainWindow : Window
     private readonly IRemoteFileSystemFactory _remoteFileSystemFactory;
     private readonly IRemoteFileEditorService _remoteFileEditorService;
     private readonly IServerProcessService _processService;
+    private readonly IServerServiceManager _serviceManager;
     private readonly PortForwardManager _portForwardManager;
     private readonly IServerCapabilityService _capabilityService;
     private readonly IServerDashboardService _dashboardService;
@@ -40,6 +42,7 @@ public partial class MainWindow : Window
         IRemoteFileSystemFactory remoteFileSystemFactory,
         IRemoteFileEditorService remoteFileEditorService,
         IServerProcessService processService,
+        IServerServiceManager serviceManager,
         PortForwardManager portForwardManager,
         IServerCapabilityService capabilityService,
         IServerDashboardService dashboardService,
@@ -53,6 +56,7 @@ public partial class MainWindow : Window
         _remoteFileSystemFactory = remoteFileSystemFactory;
         _remoteFileEditorService = remoteFileEditorService;
         _processService = processService;
+        _serviceManager = serviceManager;
         _portForwardManager = portForwardManager;
         _capabilityService = capabilityService;
         _dashboardService = dashboardService;
@@ -108,6 +112,10 @@ public partial class MainWindow : Window
             "Processes",
             "Inspect processes and send confirmed SIGTERM/SIGKILL actions.",
             OpenProcessesOnClick);
+        var servicesButton = CreateActionButton(
+            "Services",
+            "Inspect systemd services and run confirmed lifecycle actions with verification.",
+            OpenServicesOnClick);
         var organizeButton = CreateActionButton(
             "Organize",
             "Manage groups, tags and favorites and search/filter saved servers.",
@@ -131,11 +139,12 @@ public partial class MainWindow : Window
         actionPanel.Children.Insert(editIndex, dashboardButton);
         actionPanel.Children.Insert(editIndex + 1, explorerButton);
         actionPanel.Children.Insert(editIndex + 2, processesButton);
-        actionPanel.Children.Insert(editIndex + 3, organizeButton);
-        actionPanel.Children.Insert(editIndex + 4, historyButton);
-        actionPanel.Children.Insert(editIndex + 5, routeButton);
-        actionPanel.Children.Insert(editIndex + 6, terminalButton);
-        actionPanel.Children.Insert(editIndex + 7, tunnelsButton);
+        actionPanel.Children.Insert(editIndex + 3, servicesButton);
+        actionPanel.Children.Insert(editIndex + 4, organizeButton);
+        actionPanel.Children.Insert(editIndex + 5, historyButton);
+        actionPanel.Children.Insert(editIndex + 6, routeButton);
+        actionPanel.Children.Insert(editIndex + 7, terminalButton);
+        actionPanel.Children.Insert(editIndex + 8, tunnelsButton);
 
         if (VisualTreeHelper.GetParent(actionPanel) is Grid headerGrid &&
             VisualTreeHelper.GetParent(headerGrid) is StackPanel serverCardPanel)
@@ -206,6 +215,23 @@ public partial class MainWindow : Window
 
         var window = new ProcessManagerWindow(
             _processService,
+            selected.Profile,
+            selected.ConnectionState == RemoteSessionState.Connected)
+        {
+            Owner = this,
+        };
+        window.Show();
+    }
+
+    private void OpenServicesOnClick(object sender, RoutedEventArgs e)
+    {
+        if (_viewModel.SelectedServer is not { } selected)
+        {
+            return;
+        }
+
+        var window = new ServiceManagerWindow(
+            _serviceManager,
             selected.Profile,
             selected.ConnectionState == RemoteSessionState.Connected)
         {
