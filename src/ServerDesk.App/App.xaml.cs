@@ -4,6 +4,7 @@ using ServerDesk.App.Presentation;
 using ServerDesk.Application.Abstractions;
 using ServerDesk.Application.Audit;
 using ServerDesk.Application.Capabilities;
+using ServerDesk.Application.Dashboard;
 using ServerDesk.Application.History;
 using ServerDesk.Application.HostTrust;
 using ServerDesk.Application.PortForwarding;
@@ -140,6 +141,8 @@ public partial class App : System.Windows.Application
         services.AddSingleton<PortForwardManager>();
         services.AddSingleton(ServerCapabilityOptions.Default);
         services.AddSingleton<IServerCapabilityService, ServerCapabilityService>();
+        services.AddSingleton(ServerDashboardOptions.Default);
+        services.AddSingleton<IServerDashboardService, ServerDashboardService>();
 
         services.AddSingleton<INavigationService, NavigationService>();
         services.AddSingleton<IThemeService, WpfThemeService>();
