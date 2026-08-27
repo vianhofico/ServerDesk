@@ -1,3 +1,4 @@
+using ServerDesk.Application.Routing;
 using ServerDesk.Application.Secrets;
 using ServerDesk.Domain.Secrets;
 using ServerDesk.Domain.Servers;
@@ -47,11 +48,16 @@ public sealed class ServerProfileService : IServerProfileService
 {
     private readonly IProfileRepository _profileRepository;
     private readonly ISecretStore _secretStore;
+    private readonly IConnectionRouteRepository? _connectionRouteRepository;
 
-    public ServerProfileService(IProfileRepository profileRepository, ISecretStore secretStore)
+    public ServerProfileService(
+        IProfileRepository profileRepository,
+        ISecretStore secretStore,
+        IConnectionRouteRepository? connectionRouteRepository = null)
     {
         _profileRepository = profileRepository;
         _secretStore = secretStore;
+        _connectionRouteRepository = connectionRouteRepository;
     }
 
     public ValueTask<IReadOnlyList<ServerProfile>> ListAsync(CancellationToken cancellationToken = default) =>
@@ -177,14 +183,24 @@ public sealed class ServerProfileService : IServerProfileService
             return;
         }
 
-        var credentialReference = existing.CredentialReference;
-        var previousSecret = credentialReference is null
+        var route = _connectionRouteRepository is null
             ? null
-            : await _secretStore.GetAsync(credentialReference.Value, cancellationToken).ConfigureAwait(false);
+            : await _connectionRouteRepository.GetAsync(id, cancellationToken).ConfigureAwait(false);
+        var references = new[]
+            {
+                existing.CredentialReference,
+                route?.ProxyCredentialReference,
+            }
+            .Where(reference => reference is not null)
+            .Select(reference => reference!.Value)
+            .Distinct()
+            .ToArray();
+        var previousSecrets = new Dictionary<SecretReference, string?>();
 
-        if (credentialReference is not null)
+        foreach (var reference in references)
         {
-            await _secretStore.DeleteAsync(credentialReference.Value, cancellationToken).ConfigureAwait(false);
+            previousSecrets[reference] = await _secretStore.GetAsync(reference, cancellationToken).ConfigureAwait(false);
+            await _secretStore.DeleteAsync(reference, cancellationToken).ConfigureAwait(false);
         }
 
         try
@@ -193,9 +209,12 @@ public sealed class ServerProfileService : IServerProfileService
         }
         catch
         {
-            if (credentialReference is not null && previousSecret is not null)
+            foreach (var (reference, previousSecret) in previousSecrets)
             {
-                await TrySetSecretForCompensationAsync(credentialReference.Value, previousSecret).ConfigureAwait(false);
+                if (previousSecret is not null)
+                {
+                    await TrySetSecretForCompensationAsync(reference, previousSecret).ConfigureAwait(false);
+                }
             }
 
             throw;
