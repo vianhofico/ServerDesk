@@ -11,6 +11,36 @@ using ServerDesk.Domain.Servers;
 
 namespace ServerDesk.Infrastructure.Ssh;
 
+public sealed class RouteAwareRemoteSessionFactory : IRemoteSessionFactory
+{
+    private readonly SshClientFactory _clientFactory;
+    private readonly SshSessionOptions _options;
+
+    public RouteAwareRemoteSessionFactory(
+        ISecretStore secretStore,
+        IHostTrustService hostTrustService,
+        IInteractiveAuthenticationPrompt interactivePrompt,
+        SshSessionOptions options,
+        IConnectionRouteRepository routeRepository,
+        IProfileRepository profileRepository)
+    {
+        _options = options;
+        _clientFactory = new SshClientFactory(
+            secretStore,
+            hostTrustService,
+            interactivePrompt,
+            options,
+            routeRepository,
+            profileRepository);
+    }
+
+    public IRemoteSession Create(ServerProfile profile)
+    {
+        ArgumentNullException.ThrowIfNull(profile);
+        return new SshRemoteSession(profile, _clientFactory, _options);
+    }
+}
+
 public sealed class RouteAwareRemoteCommandExecutorFactory : IRemoteCommandExecutorFactory
 {
     private readonly SshClientFactory _clientFactory;
