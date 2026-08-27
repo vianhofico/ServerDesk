@@ -5,6 +5,7 @@ using System.Windows.Media;
 using ServerDesk.App.Presentation;
 using ServerDesk.Application.Capabilities;
 using ServerDesk.Application.PortForwarding;
+using ServerDesk.Application.Routing;
 using ServerDesk.Application.Sessions;
 using ServerDesk.Application.Terminal;
 
@@ -16,6 +17,7 @@ public partial class MainWindow : Window
     private readonly IRemoteTerminalSessionFactory _terminalFactory;
     private readonly PortForwardManager _portForwardManager;
     private readonly IServerCapabilityService _capabilityService;
+    private readonly IServerConnectionRouteService _connectionRouteService;
     private ProfileEditorViewModel? _observedEditor;
     private ServerProfileListItemViewModel? _observedServer;
     private CapabilitySummaryControl? _capabilitySummary;
@@ -24,13 +26,15 @@ public partial class MainWindow : Window
         ShellViewModel viewModel,
         IRemoteTerminalSessionFactory terminalFactory,
         PortForwardManager portForwardManager,
-        IServerCapabilityService capabilityService)
+        IServerCapabilityService capabilityService,
+        IServerConnectionRouteService connectionRouteService)
     {
         InitializeComponent();
         _viewModel = viewModel;
         _terminalFactory = terminalFactory;
         _portForwardManager = portForwardManager;
         _capabilityService = capabilityService;
+        _connectionRouteService = connectionRouteService;
         DataContext = viewModel;
         _viewModel.PropertyChanged += ViewModelOnPropertyChanged;
         Loaded += AddRemoteActionsOnLoaded;
@@ -68,6 +72,10 @@ public partial class MainWindow : Window
         }
 
         var editIndex = Math.Max(0, actionPanel.Children.IndexOf(editButton));
+        var routeButton = CreateActionButton(
+            "Route",
+            "Choose Direct, HTTP/SOCKS proxy or an SSH bastion route for this server.",
+            OpenConnectionRouteOnClick);
         var terminalButton = CreateActionButton(
             "Terminal",
             "Open a real SSH PTY terminal (Ctrl+Shift+F searches scrollback).",
@@ -76,8 +84,9 @@ public partial class MainWindow : Window
             "Tunnels",
             "Manage local, remote and SOCKS5 SSH port forwarding.",
             OpenPortForwardingOnClick);
-        actionPanel.Children.Insert(editIndex, terminalButton);
-        actionPanel.Children.Insert(editIndex + 1, tunnelsButton);
+        actionPanel.Children.Insert(editIndex, routeButton);
+        actionPanel.Children.Insert(editIndex + 1, terminalButton);
+        actionPanel.Children.Insert(editIndex + 2, tunnelsButton);
 
         if (VisualTreeHelper.GetParent(actionPanel) is Grid headerGrid &&
             VisualTreeHelper.GetParent(headerGrid) is StackPanel serverCardPanel)
@@ -102,6 +111,21 @@ public partial class MainWindow : Window
         };
         button.Click += handler;
         return button;
+    }
+
+    private void OpenConnectionRouteOnClick(object sender, RoutedEventArgs e)
+    {
+        if (_viewModel.SelectedServer is not { } selected || !selected.CanModifyProfile)
+        {
+            return;
+        }
+
+        var profiles = _viewModel.Servers.Select(server => server.Profile).ToArray();
+        var window = new ConnectionRouteWindow(_connectionRouteService, selected.Profile, profiles)
+        {
+            Owner = this,
+        };
+        _ = window.ShowDialog();
     }
 
     private void OpenTerminalOnClick(object sender, RoutedEventArgs e)

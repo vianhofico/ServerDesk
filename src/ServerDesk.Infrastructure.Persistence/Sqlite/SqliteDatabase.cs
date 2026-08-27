@@ -27,7 +27,7 @@ public sealed class SqliteConnectionFactory
 
 public sealed class SqliteDatabaseInitializer
 {
-    public const int CurrentSchemaVersion = 4;
+    public const int CurrentSchemaVersion = 5;
 
     private readonly SqliteConnectionFactory _connectionFactory;
 
@@ -181,6 +181,37 @@ public sealed class SqliteDatabaseInitializer
                     ON port_forward_profiles(server_profile_id, name COLLATE NOCASE);
 
                 UPDATE schema_info SET version = 4 WHERE singleton_id = 1;
+                """;
+
+            await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+            transaction.Commit();
+            version = 4;
+        }
+
+        if (version < 5)
+        {
+            using var transaction = connection.BeginTransaction();
+            await using var command = connection.CreateCommand();
+            command.Transaction = transaction;
+            command.CommandText =
+                """
+                CREATE TABLE server_connection_routes (
+                    server_profile_id TEXT NOT NULL PRIMARY KEY,
+                    kind INTEGER NOT NULL CHECK (kind BETWEEN 1 AND 4),
+                    proxy_host TEXT NULL,
+                    proxy_port INTEGER NULL CHECK (proxy_port IS NULL OR proxy_port BETWEEN 1 AND 65535),
+                    proxy_username TEXT NULL,
+                    proxy_credential_reference TEXT NULL,
+                    bastion_profile_id TEXT NULL,
+                    created_utc TEXT NOT NULL,
+                    updated_utc TEXT NOT NULL,
+                    FOREIGN KEY(server_profile_id) REFERENCES server_profiles(id) ON DELETE CASCADE
+                );
+
+                CREATE INDEX ix_server_connection_routes_bastion
+                    ON server_connection_routes(bastion_profile_id);
+
+                UPDATE schema_info SET version = 5 WHERE singleton_id = 1;
                 """;
 
             await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
