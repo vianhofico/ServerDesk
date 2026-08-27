@@ -419,7 +419,7 @@ public partial class RemoteExplorerWindow : Window
                 }
             }
 
-            SetState(RemoteExplorerUiState.Ready, $"Uploaded {localPaths.Count:N0} local item(s)." );
+            SetState(RemoteExplorerUiState.Ready, $"Uploaded {localPaths.Count:N0} local item(s).");
             await LoadDirectoryAfterTransferAsync(operation.Token);
         }
         catch (OperationCanceledException)
