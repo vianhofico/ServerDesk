@@ -32,7 +32,7 @@ public sealed class ConnectionRoutingTests
     }
 
     [Fact]
-    public async Task ProxyRouteRoundTripsThroughSchemaVersionFiveWithoutSecretValue()
+    public async Task ProxyRouteRoundTripsThroughCurrentSchemaWithoutSecretValue()
     {
         var cancellationToken = TestContext.Current.CancellationToken;
         using var paths = new TemporaryAppPaths();
@@ -56,7 +56,7 @@ public sealed class ConnectionRoutingTests
         var loaded = await routeRepository.GetAsync(profile.Id, cancellationToken);
 
         Assert.Equal(SqliteDatabaseInitializer.CurrentSchemaVersion, await initializer.GetSchemaVersionAsync(cancellationToken));
-        Assert.Equal(5, SqliteDatabaseInitializer.CurrentSchemaVersion);
+        Assert.Equal(6, SqliteDatabaseInitializer.CurrentSchemaVersion);
         Assert.Equal(route, loaded);
 
         await using var connection = factory.Create();
