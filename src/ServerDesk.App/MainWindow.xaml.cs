@@ -7,6 +7,7 @@ using ServerDesk.Application.Capabilities;
 using ServerDesk.Application.Dashboard;
 using ServerDesk.Application.History;
 using ServerDesk.Application.PortForwarding;
+using ServerDesk.Application.Processes;
 using ServerDesk.Application.Profiles;
 using ServerDesk.Application.RemoteEditing;
 using ServerDesk.Application.RemoteFiles;
@@ -22,6 +23,7 @@ public partial class MainWindow : Window
     private readonly IRemoteTerminalSessionFactory _terminalFactory;
     private readonly IRemoteFileSystemFactory _remoteFileSystemFactory;
     private readonly IRemoteFileEditorService _remoteFileEditorService;
+    private readonly IServerProcessService _processService;
     private readonly PortForwardManager _portForwardManager;
     private readonly IServerCapabilityService _capabilityService;
     private readonly IServerDashboardService _dashboardService;
@@ -37,6 +39,7 @@ public partial class MainWindow : Window
         IRemoteTerminalSessionFactory terminalFactory,
         IRemoteFileSystemFactory remoteFileSystemFactory,
         IRemoteFileEditorService remoteFileEditorService,
+        IServerProcessService processService,
         PortForwardManager portForwardManager,
         IServerCapabilityService capabilityService,
         IServerDashboardService dashboardService,
@@ -49,6 +52,7 @@ public partial class MainWindow : Window
         _terminalFactory = terminalFactory;
         _remoteFileSystemFactory = remoteFileSystemFactory;
         _remoteFileEditorService = remoteFileEditorService;
+        _processService = processService;
         _portForwardManager = portForwardManager;
         _capabilityService = capabilityService;
         _dashboardService = dashboardService;
@@ -100,6 +104,10 @@ public partial class MainWindow : Window
             "Explorer",
             "Browse and manage remote files over the certified SFTP channel.",
             OpenExplorerOnClick);
+        var processesButton = CreateActionButton(
+            "Processes",
+            "Inspect processes and send confirmed SIGTERM/SIGKILL actions.",
+            OpenProcessesOnClick);
         var organizeButton = CreateActionButton(
             "Organize",
             "Manage groups, tags and favorites and search/filter saved servers.",
@@ -122,11 +130,12 @@ public partial class MainWindow : Window
             OpenPortForwardingOnClick);
         actionPanel.Children.Insert(editIndex, dashboardButton);
         actionPanel.Children.Insert(editIndex + 1, explorerButton);
-        actionPanel.Children.Insert(editIndex + 2, organizeButton);
-        actionPanel.Children.Insert(editIndex + 3, historyButton);
-        actionPanel.Children.Insert(editIndex + 4, routeButton);
-        actionPanel.Children.Insert(editIndex + 5, terminalButton);
-        actionPanel.Children.Insert(editIndex + 6, tunnelsButton);
+        actionPanel.Children.Insert(editIndex + 2, processesButton);
+        actionPanel.Children.Insert(editIndex + 3, organizeButton);
+        actionPanel.Children.Insert(editIndex + 4, historyButton);
+        actionPanel.Children.Insert(editIndex + 5, routeButton);
+        actionPanel.Children.Insert(editIndex + 6, terminalButton);
+        actionPanel.Children.Insert(editIndex + 7, tunnelsButton);
 
         if (VisualTreeHelper.GetParent(actionPanel) is Grid headerGrid &&
             VisualTreeHelper.GetParent(headerGrid) is StackPanel serverCardPanel)
@@ -183,6 +192,23 @@ public partial class MainWindow : Window
             selected.ConnectionState == RemoteSessionState.Connected)
         {
             EditorService = _remoteFileEditorService,
+            Owner = this,
+        };
+        window.Show();
+    }
+
+    private void OpenProcessesOnClick(object sender, RoutedEventArgs e)
+    {
+        if (_viewModel.SelectedServer is not { } selected)
+        {
+            return;
+        }
+
+        var window = new ProcessManagerWindow(
+            _processService,
+            selected.Profile,
+            selected.ConnectionState == RemoteSessionState.Connected)
+        {
             Owner = this,
         };
         window.Show();
