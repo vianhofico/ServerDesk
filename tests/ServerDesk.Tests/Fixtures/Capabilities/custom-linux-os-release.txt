@@ -1,0 +1,5 @@
+NAME="Example Appliance Linux"
+PRETTY_NAME="Example Appliance Linux 42"
+ID=example-appliance
+VERSION_ID="42"
+CUSTOM_FIELD="still safe to ignore"
