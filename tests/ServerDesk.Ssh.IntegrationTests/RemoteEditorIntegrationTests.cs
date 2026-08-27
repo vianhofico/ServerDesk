@@ -110,14 +110,16 @@ public sealed class RemoteEditorIntegrationTests
     }
 
     [Fact]
-    public async Task PrivilegedSaveRejectsSymbolicLinkTarget()
+    public async Task PrivilegedSaveRejectsSymbolicLinkTargetEvenWhenStatFollowsLink()
     {
         var cancellationToken = TestContext.Current.CancellationToken;
         var fixture = CreateFixture();
         var symlink = RemotePath.Parse($"{Home}/serverdesk-fixture-link");
         var original = await fixture.Service.LoadAsync(fixture.Profile, symlink, cancellationToken);
 
-        Assert.Equal(RemoteFileKind.SymbolicLink, original.Metadata.Kind);
+        // SFTP stat follows the link on this server. The guarded save must independently
+        // inspect the parent directory entry and reject replacing the symlink itself.
+        Assert.Equal(RemoteFileKind.File, original.Metadata.Kind);
         var result = await fixture.Service.SavePrivilegedAsync(
             fixture.Profile,
             original,
