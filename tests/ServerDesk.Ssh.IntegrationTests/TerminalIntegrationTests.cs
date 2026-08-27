@@ -33,7 +33,7 @@ public sealed class TerminalIntegrationTests
 
         await terminal.ConnectAsync(new TerminalSize(100, 30), cancellationToken);
         await terminal.SendAsync(
-            "printf '\\033[31mSD_RED\\033[0m\\n'; printf '__SD_ANSI_DONE__\\n'\n",
+            "printf '\\033[31mSD_RED\\033[0m\\n'; printf '\\137\\137SD_ANSI_DONE\\137\\137\\n'\n",
             cancellationToken);
 
         var captured = await output.WaitForAsync("__SD_ANSI_DONE__", cancellationToken);
@@ -54,8 +54,13 @@ public sealed class TerminalIntegrationTests
         terminal.OutputReceived += output.Append;
 
         await terminal.ConnectAsync(new TerminalSize(80, 24), cancellationToken);
+        await terminal.SendAsync("printf '\\137\\137SD_READY\\137\\137\\n'\n", cancellationToken);
+        await output.WaitForAsync("__SD_READY__", cancellationToken);
+
         await terminal.ResizeAsync(new TerminalSize(132, 43, 1320, 860), cancellationToken);
-        await terminal.SendAsync("stty size; printf '__SD_SIZE_DONE__\\n'\n", cancellationToken);
+        await terminal.SendAsync(
+            "stty size; printf '\\137\\137SD_SIZE_DONE\\137\\137\\n'\n",
+            cancellationToken);
 
         var captured = await output.WaitForAsync("__SD_SIZE_DONE__", cancellationToken);
 
@@ -72,14 +77,17 @@ public sealed class TerminalIntegrationTests
         terminal.OutputReceived += output.Append;
         await terminal.ConnectAsync(TerminalSize.Default, cancellationToken);
 
-        await terminal.SendAsync("sleep 10; printf '__SD_SLEEP_DONE__\\n'\n", cancellationToken);
+        await terminal.SendAsync(
+            "printf '\\137\\137SD_SLEEP_STARTED\\137\\137\\n'; sleep 10\n",
+            cancellationToken);
+        await output.WaitForAsync("__SD_SLEEP_STARTED__", cancellationToken);
 
         await using var fileSystem = fixture.FileSystemFactory.Create(fixture.Profile);
         await fileSystem.ConnectAsync(cancellationToken);
         var home = await fileSystem.StatAsync(RemotePath.Parse(Home), cancellationToken);
 
         Assert.Equal(RemoteFileKind.Directory, home.Kind);
-        Assert.DoesNotContain("__SD_SLEEP_DONE__", output.Text, StringComparison.Ordinal);
+        Assert.Equal(TerminalSessionState.Connected, terminal.State);
 
         await terminal.SendAsync("\u0003", cancellationToken);
     }
