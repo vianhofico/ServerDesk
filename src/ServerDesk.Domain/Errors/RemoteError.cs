@@ -12,6 +12,7 @@ public enum RemoteErrorCode
     PortInUse,
     InvalidEndpoint,
     ForwardingDenied,
+    RoutingFailed,
     SudoRequired,
     CommandNotFound,
     CapabilityUnavailable,
