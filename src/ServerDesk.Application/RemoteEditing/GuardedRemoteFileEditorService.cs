@@ -20,11 +20,17 @@ public sealed class GuardedRemoteFileEditorService : IRemoteFileEditorService
             commandExecutorFactory ?? throw new ArgumentNullException(nameof(commandExecutorFactory)));
     }
 
-    public ValueTask<RemoteEditorDocument> LoadAsync(
+    public async ValueTask<RemoteEditorDocument> LoadAsync(
         ServerProfile profile,
         RemotePath path,
-        CancellationToken cancellationToken = default) =>
-        _inner.LoadAsync(profile, path, cancellationToken);
+        CancellationToken cancellationToken = default)
+    {
+        var document = await _inner.LoadAsync(profile, path, cancellationToken).ConfigureAwait(false);
+        return document with
+        {
+            Metadata = document.Metadata with { Path = path },
+        };
+    }
 
     public ValueTask<RemoteEditorSaveResult> SaveWritableAsync(
         ServerProfile profile,
