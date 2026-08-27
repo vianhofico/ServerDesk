@@ -798,7 +798,7 @@ internal sealed class SftpRemoteFileSystem : IRemoteFileSystem
     private static RemoteFileEntry ToEntry(ISftpFile file)
     {
         var attributes = file.Attributes;
-        var lastWrite = attributes.LastWriteTimeUtc == DateTime.MinValue
+        DateTimeOffset? lastWrite = attributes.LastWriteTimeUtc == DateTime.MinValue
             ? null
             : new DateTimeOffset(DateTime.SpecifyKind(attributes.LastWriteTimeUtc, DateTimeKind.Utc));
         var kind = file.IsSymbolicLink
@@ -1014,7 +1014,6 @@ internal sealed class SftpConnectionResources : IDisposable
         }
 
         _disposed = true;
-        ConnectionInfo.Dispose();
         for (var index = _resources.Count - 1; index >= 0; index--)
         {
             _resources[index].Dispose();
