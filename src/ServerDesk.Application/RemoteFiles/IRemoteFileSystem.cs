@@ -12,7 +12,7 @@ public readonly record struct RemotePath
 
     public string Value { get; }
 
-    public bool IsAbsolute => Value.StartsWith('/', StringComparison.Ordinal);
+    public bool IsAbsolute => Value.StartsWith("/", StringComparison.Ordinal);
 
     public string Name
     {
@@ -52,12 +52,12 @@ public readonly record struct RemotePath
     public static RemotePath Parse(string path)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
-        if (path.Contains('\0', StringComparison.Ordinal))
+        if (path.Contains('\0'))
         {
             throw new ArgumentException("Remote paths cannot contain NUL characters.", nameof(path));
         }
 
-        var absolute = path.StartsWith('/', StringComparison.Ordinal);
+        var absolute = path.StartsWith("/", StringComparison.Ordinal);
         var segments = new List<string>();
         foreach (var segment in path.Split('/', StringSplitOptions.RemoveEmptyEntries))
         {
@@ -93,16 +93,14 @@ public readonly record struct RemotePath
     public RemotePath Combine(string childName)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(childName);
-        if (childName is "." or ".." ||
-            childName.Contains('/', StringComparison.Ordinal) ||
-            childName.Contains('\0', StringComparison.Ordinal))
+        if (childName is "." or ".." || childName.Contains('/') || childName.Contains('\0'))
         {
             throw new ArgumentException("Child name must be a single remote path segment.", nameof(childName));
         }
 
         return Value switch
         {
-            "/" => Parse('/' + childName),
+            "/" => Parse("/" + childName),
             "." => Parse(childName),
             _ => Parse(Value + '/' + childName),
         };
