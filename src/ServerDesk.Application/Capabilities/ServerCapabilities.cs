@@ -236,7 +236,7 @@ public sealed class ServerCapabilityService : IServerCapabilityService, IAsyncDi
             .ConfigureAwait(false);
         var uidText = await ReadSingleValueAsync(executor, "id -u", string.Empty, cancellationToken)
             .ConfigureAwait(false);
-        var uid = int.TryParse(uidText, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var parsedUid)
+        int? uid = int.TryParse(uidText, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var parsedUid)
             ? parsedUid
             : null;
         var identity = new LinuxIdentitySnapshot(
