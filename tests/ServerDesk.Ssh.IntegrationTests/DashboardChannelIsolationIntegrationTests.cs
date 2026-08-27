@@ -1,5 +1,6 @@
 using ServerDesk.Application.Dashboard;
 using ServerDesk.Application.HostTrust;
+using ServerDesk.Application.Remote;
 using ServerDesk.Application.RemoteFiles;
 using ServerDesk.Application.Secrets;
 using ServerDesk.Application.Sessions;
