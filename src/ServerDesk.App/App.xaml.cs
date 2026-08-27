@@ -68,6 +68,7 @@ public partial class App : System.Windows.Application
         services.AddSingleton<SqliteDatabaseInitializer>();
         services.AddSingleton<IProfileRepository, SqliteProfileRepository>();
         services.AddSingleton<IOperationAudit, SqliteOperationAudit>();
+        services.AddSingleton<IServerProfileService, ServerProfileService>();
 
         services.AddSingleton<INavigationService, NavigationService>();
         services.AddSingleton<IThemeService, WpfThemeService>();
