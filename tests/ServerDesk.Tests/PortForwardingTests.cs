@@ -123,7 +123,9 @@ public sealed class PortForwardingTests
         Assert.Equal(forward.BindPort, loaded.BindPort);
         Assert.Equal(forward.DestinationHost, loaded.DestinationHost);
         Assert.Equal(forward.DestinationPort, loaded.DestinationPort);
-        Assert.Equal(4, await initializer.GetSchemaVersionAsync(cancellationToken));
+        Assert.Equal(
+            SqliteDatabaseInitializer.CurrentSchemaVersion,
+            await initializer.GetSchemaVersionAsync(cancellationToken));
 
         await using (var connection = factory.Create())
         {
