@@ -41,7 +41,6 @@ public partial class App : System.Windows.Application
                     ValidateOnBuild = true,
                     ValidateScopes = true,
                 });
-            RemoteEditorWindow.EditorService = _serviceProvider.GetRequiredService<IRemoteFileEditorService>();
 
             var databaseInitializer = _serviceProvider.GetRequiredService<SqliteDatabaseInitializer>();
             await databaseInitializer.InitializeAsync().ConfigureAwait(true);
@@ -66,7 +65,6 @@ public partial class App : System.Windows.Application
 
     protected override void OnExit(ExitEventArgs e)
     {
-        RemoteEditorWindow.EditorService = null;
         if (_serviceProvider?.GetService<PortForwardManager>() is { } portForwardManager)
         {
             try
