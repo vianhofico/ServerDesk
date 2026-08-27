@@ -45,10 +45,13 @@ public sealed class ChannelConcurrencyCertificationTests
         var commandTask = VerifyCommandAsync(fixture, independentTimeout.Token);
         await Task.WhenAll(sftpTask, commandTask);
 
-        Assert.Equal(RemoteFileKind.Directory, sftpTask.Result.Kind);
-        Assert.True(commandTask.Result.IsSuccess);
-        Assert.Equal(0, commandTask.Result.Command!.ExitCode);
-        Assert.Contains("Linux", commandTask.Result.Command.StandardOutput, StringComparison.OrdinalIgnoreCase);
+        var sftpResult = await sftpTask;
+        var commandResult = await commandTask;
+
+        Assert.Equal(RemoteFileKind.Directory, sftpResult.Kind);
+        Assert.True(commandResult.IsSuccess);
+        Assert.Equal(0, commandResult.Command!.ExitCode);
+        Assert.Contains("Linux", commandResult.Command.StandardOutput, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(TerminalSessionState.Connected, terminal.State);
 
         await terminal.SendAsync("\u0003", cancellationToken);
