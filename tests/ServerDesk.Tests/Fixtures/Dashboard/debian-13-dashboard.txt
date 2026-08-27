@@ -1,0 +1,35 @@
+# distro=debian-13
+cpu  300 0 100 2600 0 0 0 0 0 0
+cpu0 150 0 50 1300 0 0 0 0 0 0
+cpu1 150 0 50 1300 0 0 0 0 0 0
+__SD_NET__
+Inter-|   Receive                                                |  Transmit
+ face |bytes    packets errs drop fifo frame compressed multicast|bytes    packets errs drop fifo colls carrier compressed
+    lo: 300 3 0 0 0 0 0 0 300 3 0 0 0 0 0 0
+ ens18: 10000 40 0 0 0 0 0 0 7000 30 0 0 0 0 0 0
+__SD_SAMPLE_2__
+# distro=debian-13
+cpu  340 0 120 2740 0 0 0 0 0 0
+cpu0 170 0 60 1370 0 0 0 0 0 0
+cpu1 170 0 60 1370 0 0 0 0 0 0
+__SD_NET__
+Inter-|   Receive                                                |  Transmit
+ face |bytes    packets errs drop fifo frame compressed multicast|bytes    packets errs drop fifo colls carrier compressed
+    lo: 350 4 0 0 0 0 0 0 350 4 0 0 0 0 0 0
+ ens18: 11800 48 0 0 0 0 0 0 7900 36 0 0 0 0 0 0
+__SD_LOAD__
+0.05 0.10 0.15 1/180 3333
+__SD_UPTIME__
+3600.25 1000.00
+__SD_MEM__
+MemTotal:        4194304 kB
+MemFree:          524288 kB
+MemAvailable:    1048576 kB
+Buffers:           65536 kB
+Cached:           262144 kB
+SwapTotal:             0 kB
+SwapFree:              0 kB
+__SD_DF__
+Filesystem     Type  1B-blocks      Used Available Capacity Mounted on
+/dev/sda1      ext4  53687091200 51002736640 2684354560      95% /
+tmpfs          tmpfs  2147483648    1048576 2146435072       1% /run
