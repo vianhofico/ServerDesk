@@ -13,6 +13,23 @@ public sealed class SqlitePortForwardProfileRepository : IPortForwardProfileRepo
         _connectionFactory = connectionFactory;
     }
 
+    public async ValueTask<IReadOnlyList<PortForwardProfile>> ListAsync(
+        CancellationToken cancellationToken = default)
+    {
+        await using var connection = _connectionFactory.Create();
+        await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
+        await using var command = connection.CreateCommand();
+        command.CommandText =
+            """
+            SELECT id, server_profile_id, name, kind, bind_host, bind_port,
+                   destination_host, destination_port
+            FROM port_forward_profiles
+            ORDER BY server_profile_id, name COLLATE NOCASE, id;
+            """;
+
+        return await ReadProfilesAsync(command, cancellationToken).ConfigureAwait(false);
+    }
+
     public async ValueTask<IReadOnlyList<PortForwardProfile>> ListForServerAsync(
         Guid serverProfileId,
         CancellationToken cancellationToken = default)
@@ -35,14 +52,7 @@ public sealed class SqlitePortForwardProfileRepository : IPortForwardProfileRepo
             """;
         command.Parameters.AddWithValue("@server_profile_id", serverProfileId.ToString("D"));
 
-        await using var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
-        var profiles = new List<PortForwardProfile>();
-        while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
-        {
-            profiles.Add(ReadProfile(reader));
-        }
-
-        return profiles;
+        return await ReadProfilesAsync(command, cancellationToken).ConfigureAwait(false);
     }
 
     public async ValueTask<PortForwardProfile?> GetAsync(
@@ -125,6 +135,20 @@ public sealed class SqlitePortForwardProfileRepository : IPortForwardProfileRepo
         command.CommandText = "DELETE FROM port_forward_profiles WHERE id = @id;";
         command.Parameters.AddWithValue("@id", id.ToString("D"));
         await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    private static async ValueTask<IReadOnlyList<PortForwardProfile>> ReadProfilesAsync(
+        SqliteCommand command,
+        CancellationToken cancellationToken)
+    {
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+        var profiles = new List<PortForwardProfile>();
+        while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+        {
+            profiles.Add(ReadProfile(reader));
+        }
+
+        return profiles;
     }
 
     private static PortForwardProfile ReadProfile(SqliteDataReader reader) =>
