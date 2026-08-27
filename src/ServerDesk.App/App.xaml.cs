@@ -6,8 +6,10 @@ using ServerDesk.Application.Audit;
 using ServerDesk.Application.HostTrust;
 using ServerDesk.Application.Profiles;
 using ServerDesk.Application.Secrets;
+using ServerDesk.Application.Sessions;
 using ServerDesk.Application.Settings;
 using ServerDesk.Infrastructure.Persistence.Sqlite;
+using ServerDesk.Infrastructure.Ssh;
 using ServerDesk.Platform.Windows;
 
 namespace ServerDesk.App;
@@ -54,6 +56,18 @@ public partial class App : System.Windows.Application
 
     protected override void OnExit(ExitEventArgs e)
     {
+        if (_serviceProvider?.GetService<ShellViewModel>() is { } shellViewModel)
+        {
+            try
+            {
+                shellViewModel.ShutdownAsync().AsTask().GetAwaiter().GetResult();
+            }
+            catch
+            {
+                // Process shutdown will close any remaining socket. Exit must not be blocked by cleanup failures.
+            }
+        }
+
         _serviceProvider?.Dispose();
         base.OnExit(e);
     }
@@ -74,6 +88,9 @@ public partial class App : System.Windows.Application
         services.AddSingleton<IServerProfileService, ServerProfileService>();
         services.AddSingleton<IHostTrustPrompt, WpfHostTrustPrompt>();
         services.AddSingleton<IHostTrustService, HostTrustService>();
+        services.AddSingleton<IInteractiveAuthenticationPrompt, WpfInteractiveAuthenticationPrompt>();
+        services.AddSingleton(SshSessionOptions.Default);
+        services.AddSingleton<IRemoteSessionFactory, SshRemoteSessionFactory>();
 
         services.AddSingleton<INavigationService, NavigationService>();
         services.AddSingleton<IThemeService, WpfThemeService>();

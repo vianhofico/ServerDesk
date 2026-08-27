@@ -1,0 +1,74 @@
+<Window x:Class="ServerDesk.App.InteractiveAuthenticationDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="SSH authentication"
+        Width="540"
+        MinHeight="300"
+        MaxHeight="720"
+        SizeToContent="Height"
+        ResizeMode="NoResize"
+        WindowStartupLocation="CenterOwner"
+        ShowInTaskbar="False">
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0">
+            <TextBlock Text="SSH interactive authentication"
+                       FontSize="21"
+                       FontWeight="SemiBold" />
+            <TextBlock x:Name="UsernameText"
+                       Margin="0,5,0,0"
+                       Foreground="{DynamicResource MutedTextBrush}" />
+        </StackPanel>
+
+        <Border Grid.Row="1"
+                Margin="0,18,0,0"
+                Padding="12"
+                CornerRadius="8"
+                Background="{DynamicResource AccentSoftBrush}">
+            <TextBlock x:Name="InstructionText"
+                       TextWrapping="Wrap" />
+        </Border>
+
+        <ScrollViewer Grid.Row="2"
+                      Margin="0,18,0,0"
+                      MaxHeight="360"
+                      VerticalScrollBarVisibility="Auto">
+            <StackPanel x:Name="PromptPanel" />
+        </ScrollViewer>
+
+        <Grid Grid.Row="3" Margin="0,22,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <TextBlock Text="Responses are sent only to the verified SSH server for this connection attempt."
+                       Margin="0,0,18,0"
+                       FontSize="11"
+                       VerticalAlignment="Center"
+                       TextWrapping="Wrap"
+                       Foreground="{DynamicResource MutedTextBrush}" />
+            <Button Grid.Column="1"
+                    Content="Cancel"
+                    MinWidth="88"
+                    Padding="12,7"
+                    Click="CancelButtonOnClick" />
+            <Button Grid.Column="2"
+                    Content="Continue"
+                    MinWidth="96"
+                    Margin="8,0,0,0"
+                    Padding="12,7"
+                    Background="{DynamicResource AccentBrush}"
+                    Foreground="White"
+                    BorderThickness="0"
+                    FontWeight="SemiBold"
+                    Click="ContinueButtonOnClick" />
+        </Grid>
+    </Grid>
+</Window>
