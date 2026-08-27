@@ -76,7 +76,7 @@ public sealed class ServerProcessService : IServerProcessService
                 BuildPsCommand(processId: null),
                 cancellationToken)
             .ConfigureAwait(false);
-        return ToQueryResult(result);
+        return ToQueryResult(result, missingProcessIsEmpty: false);
     }
 
     public async Task<ServerProcessQueryResult> GetAsync(
@@ -88,7 +88,7 @@ public sealed class ServerProcessService : IServerProcessService
         ValidateProcessId(processId);
         await using var executor = _commandExecutorFactory.Create(profile);
         var result = await executor.ExecuteAsync(BuildPsCommand(processId), cancellationToken).ConfigureAwait(false);
-        return ToQueryResult(result);
+        return ToQueryResult(result, missingProcessIsEmpty: true);
     }
 
     public async Task<ServerProcessActionResult> SignalAsync(
@@ -185,7 +185,9 @@ public sealed class ServerProcessService : IServerProcessService
             StableEnvironment);
     }
 
-    private static ServerProcessQueryResult ToQueryResult(RemoteExecutionResult execution)
+    private static ServerProcessQueryResult ToQueryResult(
+        RemoteExecutionResult execution,
+        bool missingProcessIsEmpty)
     {
         if (execution.Error is not null)
         {
@@ -193,6 +195,11 @@ public sealed class ServerProcessService : IServerProcessService
         }
 
         var command = execution.Command!;
+        if (missingProcessIsEmpty && command.ExitCode == 1 && string.IsNullOrWhiteSpace(command.StandardOutput))
+        {
+            return new ServerProcessQueryResult([], null);
+        }
+
         if (command.ExitCode != 0)
         {
             var detail = FirstUseful(command.StandardError, command.StandardOutput, "Unable to read the process list.");
