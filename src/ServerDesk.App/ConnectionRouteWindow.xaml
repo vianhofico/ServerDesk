@@ -1,0 +1,143 @@
+<Window x:Class="ServerDesk.App.ConnectionRouteWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Connection route"
+        Width="620"
+        Height="650"
+        MinWidth="560"
+        MinHeight="560"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="CanResize"
+        Background="{DynamicResource WindowBackgroundBrush}"
+        Foreground="{DynamicResource PrimaryTextBrush}">
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <StackPanel>
+            <TextBlock x:Name="TitleText"
+                       FontSize="24"
+                       FontWeight="SemiBold"
+                       Text="Connection route" />
+            <TextBlock Margin="0,6,0,0"
+                       Text="Choose how ServerDesk reaches this SSH endpoint. Target and bastion host keys are always verified independently."
+                       TextWrapping="Wrap"
+                       Foreground="{DynamicResource MutedTextBrush}" />
+        </StackPanel>
+
+        <ScrollViewer Grid.Row="1"
+                      Margin="0,22,0,18"
+                      VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+                <TextBlock Text="Route type" FontWeight="SemiBold" />
+                <ComboBox x:Name="RouteKindComboBox"
+                          Margin="0,7,0,0"
+                          ItemsSource="{Binding RouteChoices}"
+                          DisplayMemberPath="DisplayName"
+                          SelectionChanged="RouteKindOnSelectionChanged" />
+
+                <Border Margin="0,16,0,0"
+                        Padding="14"
+                        CornerRadius="8"
+                        Background="{DynamicResource SurfaceSecondaryBrush}">
+                    <TextBlock x:Name="RouteDescriptionText"
+                               TextWrapping="Wrap"
+                               Foreground="{DynamicResource MutedTextBrush}" />
+                </Border>
+
+                <StackPanel x:Name="ProxyPanel" Margin="0,18,0,0" Visibility="Collapsed">
+                    <TextBlock Text="Proxy endpoint" FontSize="16" FontWeight="SemiBold" />
+                    <Grid Margin="0,10,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="120" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Margin="0,0,10,0">
+                            <TextBlock Text="Host" />
+                            <TextBox x:Name="ProxyHostTextBox" Margin="0,5,0,0" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="1">
+                            <TextBlock Text="Port" />
+                            <TextBox x:Name="ProxyPortTextBox" Margin="0,5,0,0" />
+                        </StackPanel>
+                    </Grid>
+
+                    <TextBlock Margin="0,14,0,0" Text="Proxy username (optional)" />
+                    <TextBox x:Name="ProxyUsernameTextBox" Margin="0,5,0,0" />
+
+                    <TextBlock Margin="0,14,0,0" Text="Proxy password" />
+                    <PasswordBox x:Name="ProxyPasswordBox" Margin="0,5,0,0" />
+                    <TextBlock x:Name="ProxySecretHintText"
+                               Margin="0,5,0,0"
+                               TextWrapping="Wrap"
+                               FontSize="11"
+                               Foreground="{DynamicResource MutedTextBrush}" />
+                    <CheckBox x:Name="ReplaceProxyPasswordCheckBox"
+                              Margin="0,10,0,0"
+                              Content="Replace or clear the stored proxy password" />
+                    <TextBlock Margin="22,4,0,0"
+                               Text="When checked, an empty password clears the saved proxy credential. The saved value is never loaded back into this window."
+                               TextWrapping="Wrap"
+                               FontSize="11"
+                               Foreground="{DynamicResource MutedTextBrush}" />
+                </StackPanel>
+
+                <StackPanel x:Name="BastionPanel" Margin="0,18,0,0" Visibility="Collapsed">
+                    <TextBlock Text="Bastion server" FontSize="16" FontWeight="SemiBold" />
+                    <TextBlock Margin="0,5,0,0"
+                               Text="Select another saved ServerDesk profile. Nested bastions are blocked in V1; a bastion may itself use Direct or HTTP/SOCKS proxy routing."
+                               TextWrapping="Wrap"
+                               Foreground="{DynamicResource MutedTextBrush}" />
+                    <ComboBox x:Name="BastionComboBox"
+                              Margin="0,10,0,0"
+                              ItemsSource="{Binding BastionChoices}"
+                              DisplayMemberPath="DisplayName" />
+                </StackPanel>
+
+                <Border Margin="0,18,0,0"
+                        Padding="12"
+                        CornerRadius="7"
+                        Background="{DynamicResource SurfaceSecondaryBrush}">
+                    <StackPanel>
+                        <TextBlock Text="Security behavior" FontWeight="SemiBold" />
+                        <TextBlock Margin="0,5,0,0"
+                                   Text="• Proxy credentials are stored only in Windows Credential Manager.&#x0a;• Bastion and target SSH host keys are verified against their original endpoints.&#x0a;• Missing profiles, route cycles and unsupported nested bastions fail closed."
+                                   TextWrapping="Wrap"
+                                   Foreground="{DynamicResource MutedTextBrush}" />
+                    </StackPanel>
+                </Border>
+
+                <TextBlock x:Name="ErrorText"
+                           Margin="0,14,0,0"
+                           TextWrapping="Wrap"
+                           Foreground="{DynamicResource DangerBrush}"
+                           Visibility="Collapsed" />
+            </StackPanel>
+        </ScrollViewer>
+
+        <Grid Grid.Row="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <TextBlock x:Name="StatusText"
+                       VerticalAlignment="Center"
+                       Foreground="{DynamicResource MutedTextBrush}" />
+            <Button Grid.Column="1"
+                    Margin="0,0,8,0"
+                    Padding="18,8"
+                    Content="Cancel"
+                    Style="{StaticResource SecondaryButton}"
+                    Click="CancelOnClick" />
+            <Button Grid.Column="2"
+                    Padding="18,8"
+                    Content="Save route"
+                    Style="{StaticResource PrimaryButton}"
+                    Click="SaveOnClick" />
+        </Grid>
+    </Grid>
+</Window>
