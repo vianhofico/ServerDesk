@@ -83,7 +83,18 @@ public partial class App : System.Windows.Application
             }
         }
 
-        _serviceProvider?.Dispose();
+        if (_serviceProvider is not null)
+        {
+            try
+            {
+                _serviceProvider.DisposeAsync().AsTask().GetAwaiter().GetResult();
+            }
+            catch
+            {
+                // All critical remote resources were already given an explicit best-effort cleanup path above.
+            }
+        }
+
         base.OnExit(e);
     }
 
