@@ -1,0 +1,130 @@
+<Window x:Class="ServerDesk.App.StorageWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Storage"
+        Width="1220"
+        Height="780"
+        MinWidth="940"
+        MinHeight="600"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource WindowBackgroundBrush}"
+        Foreground="{DynamicResource PrimaryTextBrush}"
+        Loaded="WindowOnLoaded"
+        Closed="WindowOnClosed">
+    <Window.Resources>
+        <Style x:Key="StorageButton" TargetType="Button">
+            <Setter Property="Padding" Value="12,7" />
+            <Setter Property="MinHeight" Value="34" />
+            <Setter Property="Margin" Value="7,0,0,0" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+    </Window.Resources>
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <StackPanel>
+                <TextBlock x:Name="TitleText" FontSize="26" FontWeight="SemiBold" />
+                <TextBlock x:Name="EndpointText" Margin="0,5,0,0" Foreground="{DynamicResource MutedTextBrush}" />
+            </StackPanel>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Top">
+                <Button Content="Refresh" Click="RefreshOnClick" Style="{StaticResource StorageButton}" Margin="0" />
+                <Button Content="Cancel" Click="CancelOnClick" Style="{StaticResource StorageButton}" />
+            </StackPanel>
+        </Grid>
+
+        <Border Grid.Row="1" Margin="0,14,0,10" Padding="10" CornerRadius="7"
+                Background="{DynamicResource SurfaceSecondaryBrush}">
+            <TextBlock x:Name="StatusText" TextWrapping="Wrap" />
+        </Border>
+
+        <TabControl Grid.Row="2">
+            <TabItem Header="Filesystems">
+                <DataGrid x:Name="FilesystemGrid" Margin="6"
+                          AutoGenerateColumns="False" IsReadOnly="True"
+                          CanUserAddRows="False" CanUserDeleteRows="False"
+                          EnableRowVirtualization="True" EnableColumnVirtualization="True"
+                          VirtualizingPanel.IsVirtualizing="True"
+                          VirtualizingPanel.VirtualizationMode="Recycling"
+                          ScrollViewer.CanContentScroll="True">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Device" Binding="{Binding Device}" Width="1.5*" />
+                        <DataGridTextColumn Header="FS" Binding="{Binding FileSystemType}" Width="0.8*" />
+                        <DataGridTextColumn Header="Total" Binding="{Binding TotalText}" Width="1*" />
+                        <DataGridTextColumn Header="Used" Binding="{Binding UsedText}" Width="1*" />
+                        <DataGridTextColumn Header="Available" Binding="{Binding AvailableText}" Width="1*" />
+                        <DataGridTextColumn Header="Use" Binding="{Binding PercentText}" Width="0.8*" />
+                        <DataGridTextColumn Header="Health" Binding="{Binding HealthText}" Width="0.9*" />
+                        <DataGridTextColumn Header="Mount" Binding="{Binding MountPoint}" Width="2.3*" />
+                    </DataGrid.Columns>
+                </DataGrid>
+            </TabItem>
+            <TabItem Header="Block devices">
+                <DataGrid x:Name="BlockGrid" Margin="6"
+                          AutoGenerateColumns="False" IsReadOnly="True"
+                          CanUserAddRows="False" CanUserDeleteRows="False"
+                          EnableRowVirtualization="True" EnableColumnVirtualization="True"
+                          VirtualizingPanel.IsVirtualizing="True"
+                          VirtualizingPanel.VirtualizationMode="Recycling"
+                          ScrollViewer.CanContentScroll="True">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="1*" />
+                        <DataGridTextColumn Header="Parent" Binding="{Binding ParentName}" Width="1*" />
+                        <DataGridTextColumn Header="Type" Binding="{Binding Type}" Width="0.8*" />
+                        <DataGridTextColumn Header="Size" Binding="{Binding SizeText}" Width="1*" />
+                        <DataGridTextColumn Header="FS" Binding="{Binding FileSystemType}" Width="0.9*" />
+                        <DataGridTextColumn Header="Mount" Binding="{Binding MountPoint}" Width="2*" />
+                        <DataGridTextColumn Header="Model" Binding="{Binding Model}" Width="1.8*" />
+                        <DataGridTextColumn Header="Media" Binding="{Binding MediaText}" Width="0.9*" />
+                    </DataGrid.Columns>
+                </DataGrid>
+            </TabItem>
+            <TabItem Header="Directory analyzer">
+                <Grid Margin="10">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="100" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock VerticalAlignment="Center" Text="Linux path" Foreground="{DynamicResource MutedTextBrush}" />
+                        <TextBox x:Name="DirectoryPathBox" Grid.Column="1" Text="/var" />
+                        <Button Grid.Column="2" Content="Analyze" Click="AnalyzeOnClick" Style="{StaticResource StorageButton}" />
+                    </Grid>
+                    <TextBlock x:Name="AnalyzerStatusText" Grid.Row="1" Margin="0,10,0,10"
+                               Text="Directory analysis is read-only and cancellable."
+                               Foreground="{DynamicResource MutedTextBrush}" TextWrapping="Wrap" />
+                    <DataGrid x:Name="DirectoryGrid" Grid.Row="2"
+                              AutoGenerateColumns="False" IsReadOnly="True"
+                              CanUserAddRows="False" CanUserDeleteRows="False"
+                              EnableRowVirtualization="True"
+                              VirtualizingPanel.IsVirtualizing="True"
+                              VirtualizingPanel.VirtualizationMode="Recycling"
+                              ScrollViewer.CanContentScroll="True">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Path" Binding="{Binding Path}" Width="4*" />
+                            <DataGridTextColumn Header="Size" Binding="{Binding SizeText}" Width="1*" />
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Grid>
+            </TabItem>
+        </TabControl>
+
+        <TextBlock x:Name="FooterText" Grid.Row="3" Margin="0,10,0,0"
+                   Foreground="{DynamicResource MutedTextBrush}" />
+    </Grid>
+</Window>
