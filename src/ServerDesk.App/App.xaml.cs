@@ -12,6 +12,7 @@ using ServerDesk.Application.History;
 using ServerDesk.Application.HostTrust;
 using ServerDesk.Application.Logs;
 using ServerDesk.Application.Networking;
+using ServerDesk.Application.Nginx;
 using ServerDesk.Application.PortForwarding;
 using ServerDesk.Application.Processes;
 using ServerDesk.Application.Profiles;
@@ -202,6 +203,12 @@ public partial class App : System.Windows.Application
         services.AddSingleton<IScheduledTaskService>(provider =>
             new AuditedScheduledTaskService(
                 provider.GetRequiredService<GuardedScheduledTaskService>(),
+                provider.GetRequiredService<IOperationAudit>()));
+        services.AddSingleton(NginxSiteEditingOptions.Default);
+        services.AddSingleton<NginxSiteEditingService>();
+        services.AddSingleton<INginxSiteEditingService>(provider =>
+            new AuditedNginxSiteEditingService(
+                provider.GetRequiredService<NginxSiteEditingService>(),
                 provider.GetRequiredService<IOperationAudit>()));
 
         services.AddSingleton<INavigationService, NavigationService>();

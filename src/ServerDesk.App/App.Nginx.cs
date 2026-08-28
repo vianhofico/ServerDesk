@@ -27,4 +27,22 @@ public partial class App
         };
         window.Show();
     }
+
+    internal bool OpenNginxSiteEditor(ServerProfile profile, NginxSiteInfo site, Window owner)
+    {
+        ArgumentNullException.ThrowIfNull(profile);
+        ArgumentNullException.ThrowIfNull(site);
+        ArgumentNullException.ThrowIfNull(owner);
+        var provider = _serviceProvider ?? throw new InvalidOperationException("ServerDesk services are not initialized.");
+        var window = new NginxSiteEditorWindow(
+            provider.GetRequiredService<INginxSiteEditingService>(),
+            provider.GetRequiredService<ILocalizationService>(),
+            profile,
+            site)
+        {
+            Owner = owner,
+        };
+        _ = window.ShowDialog();
+        return window.WasApplied;
+    }
 }

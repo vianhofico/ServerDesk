@@ -51,6 +51,22 @@ public partial class NginxInventoryWindow : Window
     private async void RefreshOnClick(object sender, RoutedEventArgs e) =>
         await RefreshAsync().ConfigureAwait(true);
 
+    private async void EditOnClick(object sender, RoutedEventArgs e)
+    {
+        if (SiteGrid.SelectedItem is not SiteRow row ||
+            System.Windows.Application.Current is not App app ||
+            _snapshot?.RuntimeState != NginxRuntimeState.Available)
+        {
+            return;
+        }
+
+        var changed = app.OpenNginxSiteEditor(_profile, row.Site, this);
+        if (changed)
+        {
+            await RefreshAsync().ConfigureAwait(true);
+        }
+    }
+
     private void CancelOnClick(object sender, RoutedEventArgs e) =>
         _refreshCancellation?.Cancel();
 
@@ -62,6 +78,7 @@ public partial class NginxInventoryWindow : Window
     {
         if (!_initiallyConnected)
         {
+            EditButton.IsEnabled = false;
             StatusText.Text = _localization.Get("Loc.Nginx.Disconnected");
             return;
         }
@@ -70,6 +87,7 @@ public partial class NginxInventoryWindow : Window
         _refreshCancellation?.Dispose();
         _refreshCancellation = new CancellationTokenSource();
         RefreshButton.IsEnabled = false;
+        EditButton.IsEnabled = false;
         CancelButton.IsEnabled = true;
         StatusText.Text = _localization.Get("Loc.Nginx.Loading");
 
@@ -99,6 +117,7 @@ public partial class NginxInventoryWindow : Window
         {
             RefreshButton.IsEnabled = true;
             CancelButton.IsEnabled = false;
+            RenderSelectedSite();
         }
     }
 
@@ -158,6 +177,7 @@ public partial class NginxInventoryWindow : Window
     {
         if (SiteGrid.SelectedItem is not SiteRow row)
         {
+            EditButton.IsEnabled = false;
             SelectedTitleText.Text = _localization.Get("Loc.Nginx.SelectSite");
             ServerNamesText.Text = string.Empty;
             ProxyTargetsText.Text = string.Empty;
@@ -168,6 +188,9 @@ public partial class NginxInventoryWindow : Window
         }
 
         var site = row.Site;
+        EditButton.IsEnabled = _initiallyConnected &&
+            _snapshot?.RuntimeState == NginxRuntimeState.Available &&
+            RefreshButton.IsEnabled;
         SelectedTitleText.Text = site.DisplayName;
         ServerNamesText.Text = $"{_localization.Get("Loc.Nginx.ServerNames")}: {Join(site.ServerNames)}";
         ProxyTargetsText.Text = $"{_localization.Get("Loc.Nginx.ProxyTargets")}: {Join(site.ProxyTargets)}";
