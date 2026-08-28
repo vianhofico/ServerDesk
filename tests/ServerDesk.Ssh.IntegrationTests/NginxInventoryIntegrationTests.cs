@@ -1,0 +1,202 @@
+using System.Globalization;
+using System.Text;
+using ServerDesk.Application.HostTrust;
+using ServerDesk.Application.Nginx;
+using ServerDesk.Application.Remote;
+using ServerDesk.Application.RemoteFiles;
+using ServerDesk.Application.Secrets;
+using ServerDesk.Application.Sessions;
+using ServerDesk.Domain.Secrets;
+using ServerDesk.Domain.Security;
+using ServerDesk.Domain.Servers;
+using ServerDesk.Infrastructure.Ssh;
+using Xunit;
+
+namespace ServerDesk.Ssh.IntegrationTests;
+
+public sealed class NginxInventoryIntegrationTests
+{
+    private static readonly string Host = Environment.GetEnvironmentVariable("SERVERDESK_SSH_HOST") ?? "127.0.0.1";
+    private static readonly int Port = int.Parse(Environment.GetEnvironmentVariable("SERVERDESK_SSH_PORT") ?? "2222", CultureInfo.InvariantCulture);
+    private static readonly string Username = Environment.GetEnvironmentVariable("SERVERDESK_SSH_USER") ?? "serverdesk_ci";
+    private static readonly string Password = Environment.GetEnvironmentVariable("SERVERDESK_SSH_PASSWORD") ?? "serverdesk-password";
+    private static readonly string Home = Environment.GetEnvironmentVariable("SERVERDESK_SFTP_HOME") ?? $"/home/{Username}";
+
+    [Fact]
+    public async Task InventoryCrossesOpenSshAndRedactsProxyCredentials()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var fixture = CreateFixture();
+        var path = RemotePath.Parse($"{Home}/serverdesk-nginx-{Guid.NewGuid():N}");
+        await InstallFixtureAsync(fixture, path, cancellationToken);
+
+        try
+        {
+            var service = new NginxInventoryService(
+                new ExecutableRewriteFactory(fixture.CommandFactory, path.Value),
+                NginxInventoryOptions.Default);
+
+            var result = await service.InspectAsync(fixture.Profile, cancellationToken);
+
+            Assert.True(result.IsSuccess, result.Error?.Message);
+            Assert.Equal(NginxRuntimeState.Available, result.Snapshot!.RuntimeState);
+            Assert.Contains("1.26.3", result.Snapshot.Version, StringComparison.Ordinal);
+            var site = Assert.Single(result.Snapshot.Sites);
+            Assert.Contains("ssh.example.test", site.ServerNames);
+            Assert.Contains("http://***@127.0.0.1:5050", site.ProxyTargets);
+            Assert.DoesNotContain("fixture-secret", string.Join('|', site.ProxyTargets), StringComparison.Ordinal);
+            Assert.Contains("proxy_set_header Host $host;", site.RawBlock, StringComparison.Ordinal);
+        }
+        finally
+        {
+            await CleanupAsync(fixture, path, CancellationToken.None);
+        }
+    }
+
+    private static async Task InstallFixtureAsync(Fixture fixture, RemotePath path, CancellationToken cancellationToken)
+    {
+        var content = await File.ReadAllTextAsync(
+            Path.Combine(AppContext.BaseDirectory, "Fixtures", "nginx-fixture.sh"),
+            cancellationToken);
+        await using var fileSystem = fixture.FileSystemFactory.Create(fixture.Profile);
+        await fileSystem.ConnectAsync(cancellationToken);
+        var bytes = Encoding.UTF8.GetBytes(content);
+        await using var stream = new MemoryStream(bytes, writable: false);
+        await fileSystem.UploadAsync(stream, path, bytes.Length, overwrite: false, cancellationToken: cancellationToken);
+        await fileSystem.SetPermissionsAsync(path, RemoteUnixPermissions.FromMode(700), cancellationToken);
+    }
+
+    private static async Task CleanupAsync(Fixture fixture, RemotePath path, CancellationToken cancellationToken)
+    {
+        await using var fileSystem = fixture.FileSystemFactory.Create(fixture.Profile);
+        try
+        {
+            await fileSystem.ConnectAsync(cancellationToken);
+            await fileSystem.DeleteFileAsync(path, cancellationToken);
+        }
+        catch
+        {
+        }
+    }
+
+    private static Fixture CreateFixture()
+    {
+        var profileId = Guid.NewGuid();
+        var reference = SecretReference.ForServerProfile(profileId);
+        var profile = ServerProfile.Create(
+            profileId,
+            "nginx fixture",
+            Host,
+            Port,
+            Username,
+            credentialReference: reference,
+            authenticationKind: ServerAuthenticationKind.Password);
+        var secretStore = new MemorySecretStore(reference, Password);
+        var trust = new TrustOnceHostTrustService();
+        var prompt = new RejectInteractivePrompt();
+        var options = new SshSessionOptions(
+            TimeSpan.FromSeconds(8),
+            TimeSpan.FromSeconds(3),
+            TimeSpan.FromSeconds(2),
+            TimeSpan.FromMilliseconds(250));
+        return new Fixture(
+            profile,
+            new SshRemoteCommandExecutorFactory(secretStore, trust, prompt, options),
+            new SftpRemoteFileSystemFactory(secretStore, trust, prompt, options));
+    }
+
+    private sealed record Fixture(
+        ServerProfile Profile,
+        IRemoteCommandExecutorFactory CommandFactory,
+        IRemoteFileSystemFactory FileSystemFactory);
+
+    private sealed class ExecutableRewriteFactory : IRemoteCommandExecutorFactory
+    {
+        private readonly IRemoteCommandExecutorFactory _inner;
+        private readonly string _fixtureExecutable;
+
+        public ExecutableRewriteFactory(IRemoteCommandExecutorFactory inner, string fixtureExecutable)
+        {
+            _inner = inner;
+            _fixtureExecutable = fixtureExecutable;
+        }
+
+        public IRemoteCommandExecutor Create(ServerProfile profile) =>
+            new ExecutableRewriteExecutor(_inner.Create(profile), _fixtureExecutable);
+    }
+
+    private sealed class ExecutableRewriteExecutor : IRemoteCommandExecutor
+    {
+        private readonly IRemoteCommandExecutor _inner;
+        private readonly string _fixtureExecutable;
+
+        public ExecutableRewriteExecutor(IRemoteCommandExecutor inner, string fixtureExecutable)
+        {
+            _inner = inner;
+            _fixtureExecutable = fixtureExecutable;
+        }
+
+        public Guid ServerProfileId => _inner.ServerProfileId;
+
+        public Task<RemoteExecutionResult> ExecuteAsync(
+            RemoteCommandSpec command,
+            CancellationToken cancellationToken = default)
+        {
+            if (command.Executable != "nginx")
+            {
+                return _inner.ExecuteAsync(command, cancellationToken);
+            }
+
+            var arguments = new List<string>(command.Arguments.Count + 1) { command.Executable };
+            arguments.AddRange(command.Arguments);
+            return _inner.ExecuteAsync(
+                command with { Executable = _fixtureExecutable, Arguments = arguments },
+                cancellationToken);
+        }
+
+        public ValueTask DisposeAsync() => _inner.DisposeAsync();
+    }
+
+    private sealed class MemorySecretStore : ISecretStore
+    {
+        private readonly SecretReference _reference;
+        private readonly string _secret;
+
+        public MemorySecretStore(SecretReference reference, string secret)
+        {
+            _reference = reference;
+            _secret = secret;
+        }
+
+        public ValueTask SetAsync(SecretReference reference, string secret, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+
+        public ValueTask<string?> GetAsync(SecretReference reference, CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return ValueTask.FromResult<string?>(reference == _reference ? _secret : null);
+        }
+
+        public ValueTask DeleteAsync(SecretReference reference, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+    }
+
+    private sealed class TrustOnceHostTrustService : IHostTrustService
+    {
+        public ValueTask<HostTrustVerification> VerifyAsync(
+            HostKeyObservation observation,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return ValueTask.FromResult(new HostTrustVerification(HostTrustOutcome.TrustedOnce, observation, []));
+        }
+    }
+
+    private sealed class RejectInteractivePrompt : IInteractiveAuthenticationPrompt
+    {
+        public ValueTask<IReadOnlyList<string>?> PromptAsync(
+            InteractiveAuthenticationChallenge challenge,
+            CancellationToken cancellationToken = default) =>
+            throw new InvalidOperationException("Password fixture must not request keyboard-interactive authentication.");
+    }
+}
