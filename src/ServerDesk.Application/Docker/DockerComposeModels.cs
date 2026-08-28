@@ -165,7 +165,7 @@ public static class DockerComposeIdentity
         ArgumentException.ThrowIfNullOrWhiteSpace(value);
         var normalized = value.Trim();
         if (!string.Equals(value, normalized, StringComparison.Ordinal) ||
-            !normalized.StartsWith('/', StringComparison.Ordinal) ||
+            !normalized.StartsWith("/", StringComparison.Ordinal) ||
             normalized.Length > 4096 ||
             normalized.IndexOfAny(['\0', '\r', '\n']) >= 0)
         {
