@@ -17,6 +17,7 @@ public partial class MainWindow
         EnsureNginxActionButton();
         EnsureTlsActionButton();
         EnsureEnvironmentFilesActionButton();
+        EnsureDeploymentActionButton();
     }
 
     private void EnsureGitActionButton()
