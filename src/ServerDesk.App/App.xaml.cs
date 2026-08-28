@@ -1,5 +1,6 @@
 using System.Windows;
 using Microsoft.Extensions.DependencyInjection;
+using ServerDesk.App.Localization;
 using ServerDesk.App.Presentation;
 using ServerDesk.Application.Abstractions;
 using ServerDesk.Application.Audit;
@@ -112,6 +113,7 @@ public partial class App : System.Windows.Application
         services.AddSingleton<IAppPaths, WindowsAppPaths>();
         services.AddSingleton<IAppSettingsStore, JsonAppSettingsStore>();
         services.AddSingleton<ISystemThemeDetector, WindowsSystemThemeDetector>();
+        services.AddSingleton<ISystemCultureDetector, WindowsSystemCultureDetector>();
         services.AddSingleton<ISecretStore, WindowsCredentialSecretStore>();
 
         services.AddSingleton<SqliteConnectionFactory>();
@@ -178,6 +180,7 @@ public partial class App : System.Windows.Application
 
         services.AddSingleton<INavigationService, NavigationService>();
         services.AddSingleton<IThemeService, WpfThemeService>();
+        services.AddSingleton<ILocalizationService, WpfLocalizationService>();
         services.AddSingleton<ShellViewModel>();
         services.AddSingleton<MainWindow>();
     }
