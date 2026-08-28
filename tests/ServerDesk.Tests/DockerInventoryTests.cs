@@ -32,7 +32,7 @@ public sealed class DockerInventoryTests
         Assert.False(string.IsNullOrWhiteSpace(system.OperatingSystem));
         Assert.True(system.CpuCount > 0);
         Assert.True(system.MemoryBytes > 0);
-        Assert.Equal(system.Containers, containers.Count + Math.Max(0, system.Containers - containers.Count));
+        Assert.True(system.Containers >= containers.Count);
         Assert.All(containers, item => Assert.False(string.IsNullOrWhiteSpace(item.Id)));
         Assert.All(images, item => Assert.False(string.IsNullOrWhiteSpace(item.Id)));
         Assert.All(networks, item => Assert.False(string.IsNullOrWhiteSpace(item.Id)));
@@ -220,12 +220,12 @@ public sealed class DockerInventoryTests
             return Success(0, "Docker version 27.5.1, build fixture\n");
         }
 
-        if (spec.Arguments.SequenceEqual(["version", "--format", "{{json .}}"] ))
+        if (spec.Arguments.SequenceEqual(["version", "--format", "{{json .}}"]))
         {
             return Success(0, root.GetProperty("version").GetRawText());
         }
 
-        if (spec.Arguments.SequenceEqual(["info", "--format", "{{json .}}"] ))
+        if (spec.Arguments.SequenceEqual(["info", "--format", "{{json .}}"]))
         {
             return Success(0, root.GetProperty("info").GetRawText());
         }
