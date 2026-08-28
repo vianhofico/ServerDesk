@@ -1,0 +1,15 @@
+---OPENSSL---
+subject=CN = app24.example.test
+issuer=C = US, O = Let's Encrypt, CN = R13
+notBefore=Aug  1 00:00:00 2026 GMT
+notAfter=Oct 30 00:00:00 2026 GMT
+X509v3 Subject Alternative Name:
+    DNS:app24.example.test, DNS:www.app24.example.test
+sha256 Fingerprint=24:04:AA:BB
+---CERTBOT---
+Found the following certificates:
+  Certificate Name: app24.example.test
+    Domains: app24.example.test www.app24.example.test
+    Expiry Date: 2026-10-30 00:00:00+00:00 (VALID: 62 days)
+    Certificate Path: /etc/letsencrypt/live/app24.example.test/fullchain.pem
+    Private Key Path: /etc/letsencrypt/live/app24.example.test/privkey.pem

@@ -22,7 +22,7 @@ public interface ILocalizationService
 public sealed class WpfLocalizationService : ILocalizationService
 {
     private const string LocalizationResourceMarker = "ServerDesk.App;component/Localization/Strings.";
-    private static readonly string[] FeatureDictionaries = ["Tasks", "Nginx"];
+    private static readonly string[] FeatureDictionaries = ["Tasks", "Nginx", "Tls"];
     private readonly ISystemCultureDetector _systemCultureDetector;
 
     public WpfLocalizationService(ISystemCultureDetector systemCultureDetector)

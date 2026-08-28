@@ -27,6 +27,7 @@ using ServerDesk.Application.Sessions;
 using ServerDesk.Application.Settings;
 using ServerDesk.Application.Storage;
 using ServerDesk.Application.Terminal;
+using ServerDesk.Application.Tls;
 using ServerDesk.Infrastructure.Persistence.Sqlite;
 using ServerDesk.Infrastructure.Ssh;
 using ServerDesk.Platform.Windows;
@@ -204,11 +205,20 @@ public partial class App : System.Windows.Application
             new AuditedScheduledTaskService(
                 provider.GetRequiredService<GuardedScheduledTaskService>(),
                 provider.GetRequiredService<IOperationAudit>()));
+        services.AddSingleton(NginxInventoryOptions.Default);
+        services.AddSingleton<INginxInventoryService, NginxInventoryService>();
         services.AddSingleton(NginxSiteEditingOptions.Default);
         services.AddSingleton<NginxSiteEditingService>();
         services.AddSingleton<INginxSiteEditingService>(provider =>
             new AuditedNginxSiteEditingService(
                 provider.GetRequiredService<NginxSiteEditingService>(),
+                provider.GetRequiredService<IOperationAudit>()));
+        services.AddSingleton(TlsCertificateOptions.Default);
+        services.AddSingleton<TimeProvider>(TimeProvider.System);
+        services.AddSingleton<TlsCertificateService>();
+        services.AddSingleton<ITlsCertificateService>(provider =>
+            new AuditedTlsCertificateService(
+                provider.GetRequiredService<TlsCertificateService>(),
                 provider.GetRequiredService<IOperationAudit>()));
 
         services.AddSingleton<INavigationService, NavigationService>();
