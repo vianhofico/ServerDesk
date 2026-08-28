@@ -8,12 +8,14 @@ public partial class ScheduledTasksWindow
     {
         base.OnContentRendered(e);
         _localization.LanguageChanged += LocalizationOnLanguageChanged;
+        TaskGrid.SelectionChanged += TaskGridLocalizationOnSelectionChanged;
         RefreshLocalizedPresentation();
     }
 
     protected override void OnClosed(EventArgs e)
     {
         _localization.LanguageChanged -= LocalizationOnLanguageChanged;
+        TaskGrid.SelectionChanged -= TaskGridLocalizationOnSelectionChanged;
         base.OnClosed(e);
     }
 
@@ -27,6 +29,9 @@ public partial class ScheduledTasksWindow
 
         RefreshLocalizedPresentation();
     }
+
+    private void TaskGridLocalizationOnSelectionChanged(object? sender, System.Windows.Controls.SelectionChangedEventArgs e) =>
+        RefreshSelectedTaskPresentation();
 
     private void RefreshLocalizedPresentation()
     {
@@ -55,6 +60,11 @@ public partial class ScheduledTasksWindow
                 : _localization.Get("Loc.Tasks.Disconnected");
         }
 
+        RefreshSelectedTaskPresentation();
+    }
+
+    private void RefreshSelectedTaskPresentation()
+    {
         if (TaskGrid.SelectedItem is ScheduledTaskInfo task)
         {
             SelectedTitleText.Text = task.Name;
