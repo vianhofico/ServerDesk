@@ -1,0 +1,161 @@
+<Window x:Class="ServerDesk.App.DockerComposeWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Docker Compose"
+        Width="1450" Height="900" MinWidth="1120" MinHeight="700"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource WindowBackgroundBrush}"
+        Foreground="{DynamicResource PrimaryTextBrush}"
+        Loaded="WindowOnLoaded" Closed="WindowOnClosed">
+    <Window.Resources>
+        <Style x:Key="ComposeButton" TargetType="Button">
+            <Setter Property="Padding" Value="10,6" />
+            <Setter Property="MinHeight" Value="34" />
+            <Setter Property="Margin" Value="8,0,0,0" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+    </Window.Resources>
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <StackPanel>
+                <TextBlock x:Name="TitleText" FontSize="26" FontWeight="SemiBold" Text="Docker Compose" />
+                <TextBlock x:Name="EndpointText" Margin="0,5,0,0" Foreground="{DynamicResource MutedTextBrush}" />
+            </StackPanel>
+            <StackPanel Grid.Column="1" Orientation="Horizontal">
+                <Button Content="Refresh" Click="RefreshOnClick" Style="{StaticResource ComposeButton}" Margin="0" />
+                <Button Content="Cancel active work" Click="CancelOnClick" Style="{StaticResource ComposeButton}" />
+            </StackPanel>
+        </Grid>
+
+        <Border Grid.Row="1" Margin="0,14,0,10" Padding="10" CornerRadius="7"
+                Background="{DynamicResource SurfaceSecondaryBrush}">
+            <TextBlock x:Name="StatusText" TextWrapping="Wrap" />
+        </Border>
+
+        <Grid Grid.Row="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="380" />
+                <ColumnDefinition Width="12" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <Grid Grid.Column="0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+                <DockPanel Margin="0,0,0,8">
+                    <TextBlock Text="Projects" FontWeight="SemiBold" FontSize="17" DockPanel.Dock="Left" VerticalAlignment="Center" />
+                    <TextBox x:Name="SearchBox" Width="210" HorizontalAlignment="Right"
+                             TextChanged="SearchOnChanged" ToolTip="Filter Compose projects locally" />
+                </DockPanel>
+                <DataGrid Grid.Row="1" x:Name="ProjectGrid" AutoGenerateColumns="False" IsReadOnly="True"
+                          CanUserAddRows="False" CanUserDeleteRows="False" SelectionMode="Single"
+                          SelectionChanged="ProjectSelectionOnChanged"
+                          EnableRowVirtualization="True" VirtualizingPanel.IsVirtualizing="True"
+                          VirtualizingPanel.VirtualizationMode="Recycling" ScrollViewer.CanContentScroll="True">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Project" Binding="{Binding Name}" Width="1.2*" />
+                        <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="1.4*" />
+                    </DataGrid.Columns>
+                </DataGrid>
+            </Grid>
+
+            <TabControl Grid.Column="2" x:Name="ProjectTabs">
+                <TabItem Header="Services">
+                    <Grid Margin="12">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+                        <WrapPanel>
+                            <Button Content="Up" Tag="Up" Click="ActionOnClick" Style="{StaticResource ComposeButton}" Margin="0" />
+                            <Button Content="Down" Tag="Down" Click="ActionOnClick" Style="{StaticResource ComposeButton}" />
+                            <Button Content="Restart" Tag="Restart" Click="ActionOnClick" Style="{StaticResource ComposeButton}" />
+                            <Button Content="Pull" Tag="Pull" Click="ActionOnClick" Style="{StaticResource ComposeButton}" />
+                            <Button Content="Build" Tag="Build" Click="ActionOnClick" Style="{StaticResource ComposeButton}" />
+                            <Button Content="Refresh state" Click="RefreshProjectOnClick" Style="{StaticResource ComposeButton}" />
+                        </WrapPanel>
+                        <TextBlock Grid.Row="1" x:Name="ProjectIdentityText" Margin="0,10,0,8"
+                                   Foreground="{DynamicResource MutedTextBrush}" TextWrapping="Wrap" />
+                        <DataGrid Grid.Row="2" x:Name="ServiceGrid" AutoGenerateColumns="False" IsReadOnly="True"
+                                  CanUserAddRows="False" CanUserDeleteRows="False"
+                                  EnableRowVirtualization="True" EnableColumnVirtualization="True"
+                                  VirtualizingPanel.IsVirtualizing="True"
+                                  VirtualizingPanel.VirtualizationMode="Recycling"
+                                  ScrollViewer.CanContentScroll="True">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Service" Binding="{Binding Service}" Width="1.1*" />
+                                <DataGridTextColumn Header="Container" Binding="{Binding Name}" Width="1.5*" />
+                                <DataGridTextColumn Header="State" Binding="{Binding State}" Width="0.8*" />
+                                <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="1.4*" />
+                                <DataGridTextColumn Header="Health" Binding="{Binding Health}" Width="0.8*" />
+                                <DataGridTextColumn Header="Image" Binding="{Binding Image}" Width="1.5*" />
+                                <DataGridTextColumn Header="Ports" Binding="{Binding Ports}" Width="1.3*" />
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </Grid>
+                </TabItem>
+
+                <TabItem Header="Logs">
+                    <Grid Margin="12">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+                        <StackPanel Orientation="Horizontal">
+                            <Button Content="Refresh recent logs" Click="RefreshLogsOnClick"
+                                    Style="{StaticResource ComposeButton}" Margin="0" />
+                            <TextBlock Text="Logs are rendered as untrusted plain text; no ANSI/markup execution."
+                                       Margin="12,0,0,0" VerticalAlignment="Center"
+                                       Foreground="{DynamicResource MutedTextBrush}" />
+                        </StackPanel>
+                        <ListBox Grid.Row="1" x:Name="LogList" Margin="0,10,0,0"
+                                 FontFamily="Consolas" FontSize="13"
+                                 VirtualizingPanel.IsVirtualizing="True"
+                                 VirtualizingPanel.VirtualizationMode="Recycling" />
+                    </Grid>
+                </TabItem>
+
+                <TabItem Header="Raw YAML">
+                    <Grid Margin="12">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+                        <WrapPanel>
+                            <TextBlock Text="Config file" Margin="0,0,6,0" VerticalAlignment="Center"
+                                       Foreground="{DynamicResource MutedTextBrush}" />
+                            <ComboBox x:Name="ConfigFileBox" Width="440" SelectionChanged="ConfigFileOnChanged" />
+                            <Button Content="Reload raw" Click="ReloadConfigOnClick" Style="{StaticResource ComposeButton}" />
+                            <Button Content="Validate + save" Click="SaveConfigOnClick" Style="{StaticResource ComposeButton}" />
+                            <Button Content="Validate + save with sudo" Click="SavePrivilegedConfigOnClick" Style="{StaticResource ComposeButton}" />
+                        </WrapPanel>
+                        <TextBlock Grid.Row="1" Margin="0,10,0,8" TextWrapping="Wrap"
+                                   Foreground="{DynamicResource MutedTextBrush}"
+                                   Text="Raw escape hatch: ServerDesk preserves the YAML text exactly. It does not deserialize/re-emit anchors, extensions, profiles or unsupported directives. Candidate text is staged and validated by Docker Compose before replacement." />
+                        <TextBox Grid.Row="2" x:Name="ConfigTextBox" AcceptsReturn="True" AcceptsTab="True"
+                                 VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
+                                 TextWrapping="NoWrap" FontFamily="Consolas" FontSize="13" />
+                    </Grid>
+                </TabItem>
+            </TabControl>
+        </Grid>
+
+        <TextBlock Grid.Row="3" x:Name="FooterText" Margin="0,10,0,0"
+                   Foreground="{DynamicResource MutedTextBrush}" TextWrapping="Wrap" />
+    </Grid>
+</Window>
