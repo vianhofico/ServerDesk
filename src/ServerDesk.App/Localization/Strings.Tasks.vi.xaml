@@ -10,6 +10,8 @@
     <system:String x:Key="Loc.Tasks.List">Tác vụ theo lịch</system:String>
     <system:String x:Key="Loc.Tasks.SearchHint">Lọc các tác vụ đã tải theo tên, lịch hoặc command/unit ngay trên máy.</system:String>
     <system:String x:Key="Loc.Tasks.Type">Loại</system:String>
+    <system:String x:Key="Loc.Tasks.Kind.Cron">Cron</system:String>
+    <system:String x:Key="Loc.Tasks.Kind.SystemdTimer">Bộ hẹn giờ systemd</system:String>
     <system:String x:Key="Loc.Tasks.Name">Tên</system:String>
     <system:String x:Key="Loc.Tasks.Schedule">Lịch</system:String>
     <system:String x:Key="Loc.Tasks.Enabled">Đã bật</system:String>
