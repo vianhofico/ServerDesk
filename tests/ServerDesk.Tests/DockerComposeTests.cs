@@ -98,7 +98,7 @@ public sealed class DockerComposeTests
         var result = await service.ExecuteAsync(profile, Project, DockerComposeAction.Down, cancellationToken);
 
         Assert.True(result.IsSuccess, result.Error?.Message);
-        var down = Assert.Single(factory.Commands.Where(command => command.Arguments.Contains("down")));
+        var down = Assert.Single(factory.Commands, command => command.Arguments.Contains("down"));
         Assert.Equal(OperationRisk.Destructive, down.Risk);
         Assert.DoesNotContain("--volumes", down.Arguments);
         Assert.DoesNotContain("-v", down.Arguments);
@@ -123,7 +123,7 @@ public sealed class DockerComposeTests
         var result = await service.ExecuteAsync(profile, Project, DockerComposeAction.Up, cancellationToken);
 
         Assert.True(result.IsSuccess, result.Error?.Message);
-        var up = Assert.Single(factory.Commands.Where(command => command.Arguments.Contains("up")));
+        var up = Assert.Single(factory.Commands, command => command.Arguments.Contains("up"));
         Assert.Equal(OperationRisk.Destructive, up.Risk);
         Assert.Equal("docker", up.Executable);
         Assert.Equal(
@@ -153,7 +153,7 @@ public sealed class DockerComposeTests
 
         Assert.False(result.IsSuccess);
         Assert.Equal(RemoteErrorCode.AmbiguousState, result.Error?.Code);
-        Assert.Single(factory.Commands.Where(command => command.Arguments.Contains("restart")));
+        Assert.Single(factory.Commands, command => command.Arguments.Contains("restart"));
         Assert.Equal(3, factory.Commands.Count);
     }
 
