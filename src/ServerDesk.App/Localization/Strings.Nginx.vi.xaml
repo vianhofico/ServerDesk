@@ -53,7 +53,7 @@
     <system:String x:Key="Loc.Nginx.Editor.Loading">Đang tải file nginx đã resolve…</system:String>
     <system:String x:Key="Loc.Nginx.Editor.Ready">Hãy kiểm tra candidate trước khi áp dụng.</system:String>
     <system:String x:Key="Loc.Nginx.Editor.SimpleApplied">Các trường đơn giản đã được áp dụng vào candidate thô. Hãy kiểm tra diff trước khi áp dụng.</system:String>
-    <system:String x:Key="Loc.Nginx.Editor.SimpleFailed">Chế độ đơn giản không thể patch site này: {0}</system:String>
+    <system:String x:Key="Loc.Nginx.Editor.SimpleFailed">Chế độ đơn giản không thể patch site này.</system:String>
     <system:String x:Key="Loc.Nginx.Editor.Applying">Đang xác thực candidate trong ngữ cảnh nginx thực, sau đó áp dụng và kiểm tra…</system:String>
     <system:String x:Key="Loc.Nginx.Editor.ConfirmTitle">Áp dụng cấu hình nginx?</system:String>
     <system:String x:Key="Loc.Nginx.Editor.ConfirmMessage">Thao tác này có thể reload nginx và ảnh hưởng traffic đang hoạt động. Target: {0}\n{1}\n\nServerDesk xác thực trước khi thay thế và sẽ không retry mù khi trạng thái mutation không rõ ràng. Tiếp tục?</system:String>
@@ -63,6 +63,6 @@
     <system:String x:Key="Loc.Nginx.Editor.Ambiguous">Không thể xác định chắc chắn trạng thái hoàn tất. Không retry cho tới khi làm mới file live và runtime nginx.</system:String>
     <system:String x:Key="Loc.Nginx.Editor.ApplyFailed">Áp dụng nginx thất bại.</system:String>
     <system:String x:Key="Loc.Nginx.Editor.Cancelled">Đã hủy thao tác.</system:String>
-    <system:String x:Key="Loc.Nginx.Editor.LoadFailed">Không thể tải file nginx: {0}</system:String>
+    <system:String x:Key="Loc.Nginx.Editor.LoadFailed">Không thể tải file nginx.</system:String>
     <system:String x:Key="Loc.Nginx.Editor.Backup">Bản sao khôi phục: {0}</system:String>
 </ResourceDictionary>
