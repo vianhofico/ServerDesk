@@ -1,0 +1,9 @@
+{
+  "root": "/opt/edge-stack",
+  "status": "# branch.oid bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\u0000# branch.head release\u0000# branch.upstream upstream/release\u0000# branch.ab +1 -0\u00001 .M N... 100644 100644 100644 bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb src/file with spaces.cs\u0000? notes.txt\u0000",
+  "remotes": "remote.upstream.url ssh://git@example.invalid/team/edge-stack.git\n",
+  "expectedBranch": "release",
+  "expectedAhead": 1,
+  "expectedBehind": 0,
+  "expectedChanges": 2
+}
