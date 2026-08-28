@@ -25,7 +25,7 @@ public sealed class NginxInventoryTests
     }
 
     [Fact]
-    public void ParserPreservesAdvancedRawAndRedactsProxyUserInfo()
+    public void ParserPreservesAdvancedRawAndRedactsProxyUserInfoForPresentation()
     {
         var raw = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Fixtures", "Nginx", "ubuntu-24.04.txt"));
 
@@ -34,7 +34,8 @@ public sealed class NginxInventoryTests
 
         Assert.Contains("proxy_set_header Host $host;", app.RawBlock, StringComparison.Ordinal);
         Assert.Contains("http://***@127.0.0.1:5000", app.ProxyTargets);
-        Assert.DoesNotContain("super-secret", string.Join('|', app.ProxyTargets), StringComparison.Ordinal);
+        Assert.Contains("http://***@127.0.0.1:5000", app.PresentationRawBlock, StringComparison.Ordinal);
+        Assert.DoesNotContain("super-secret", app.PresentationRawBlock, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -95,6 +96,7 @@ public sealed class NginxInventoryTests
         {
             Assert.Equal("nginx", command.Executable);
             Assert.Equal(OperationRisk.ReadOnly, command.Risk);
+            Assert.NotNull(command.Environment);
             Assert.Equal("C", command.Environment["LC_ALL"]);
         });
     }
