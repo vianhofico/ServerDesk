@@ -223,7 +223,7 @@ public static partial class NetworkParser
     private static partial Regex SocketRowRegex();
 
     [GeneratedRegex(
-        "users:\\\(\\\\(\\\"(?<name>[^\\\"]+)\\\",pid=(?<pid>\\d+)",
+        @"users:\(\(""(?<name>[^""]+)"",pid=(?<pid>\d+)",
         RegexOptions.CultureInvariant)]
     private static partial Regex SocketOwnerRegex();
 
