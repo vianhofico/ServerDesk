@@ -1,4 +1,5 @@
 using System.Windows;
+using System.Windows.Controls;
 using ServerDesk.Application.Storage;
 using ServerDesk.Domain.Errors;
 using ServerDesk.Domain.Servers;
@@ -10,6 +11,8 @@ public partial class StorageWindow : Window
     private readonly IServerStorageService _storageService;
     private readonly ServerProfile _profile;
     private readonly bool _initiallyConnected;
+    private readonly List<FilesystemRow> _allFilesystems = [];
+    private readonly List<BlockDeviceRow> _allBlockDevices = [];
     private CancellationTokenSource? _operationCancellation;
 
     public StorageWindow(
@@ -45,6 +48,8 @@ public partial class StorageWindow : Window
 
     private void CancelOnClick(object sender, RoutedEventArgs e) => CancelActiveOperation();
 
+    private void SearchBoxOnTextChanged(object sender, TextChangedEventArgs e) => ApplyFilter();
+
     private async Task RefreshAsync()
     {
         using var operation = BeginOperation();
@@ -58,17 +63,18 @@ public partial class StorageWindow : Window
                 return;
             }
 
-            var filesystems = result.Filesystems.Select(FilesystemRow.From).ToArray();
-            var devices = result.BlockDevices.Select(BlockDeviceRow.From).ToArray();
-            FilesystemGrid.ItemsSource = filesystems;
-            BlockGrid.ItemsSource = devices;
-            var warnings = filesystems.Count(row => row.IsWarning);
-            StatusText.Text = filesystems.Length == 0 && devices.Length == 0
+            _allFilesystems.Clear();
+            _allFilesystems.AddRange(result.Filesystems.Select(FilesystemRow.From));
+            _allBlockDevices.Clear();
+            _allBlockDevices.AddRange(result.BlockDevices.Select(BlockDeviceRow.From));
+            ApplyFilter();
+
+            var warnings = _allFilesystems.Count(row => row.IsWarning);
+            StatusText.Text = _allFilesystems.Count == 0 && _allBlockDevices.Count == 0
                 ? "Empty: no storage data was returned."
                 : warnings == 0
-                    ? $"Ready: {filesystems.Length:N0} filesystem(s), {devices.Length:N0} block device row(s)."
-                    : $"Ready: {filesystems.Length:N0} filesystem(s), {devices.Length:N0} block device row(s); {warnings:N0} filesystem(s) at or above 85% usage.";
-            FooterText.Text = "Read-only snapshot · warning threshold 85%.";
+                    ? $"Ready: {_allFilesystems.Count:N0} filesystem(s), {_allBlockDevices.Count:N0} block device row(s)."
+                    : $"Ready: {_allFilesystems.Count:N0} filesystem(s), {_allBlockDevices.Count:N0} block device row(s); {warnings:N0} filesystem(s) at or above 85% usage.";
         }
         catch (OperationCanceledException)
         {
@@ -114,6 +120,23 @@ public partial class StorageWindow : Window
         {
             AnalyzerStatusText.Text = $"Error: {exception.Message}";
         }
+    }
+
+    private void ApplyFilter()
+    {
+        var query = SearchBox.Text.Trim();
+        var filesystems = query.Length == 0
+            ? _allFilesystems
+            : _allFilesystems.Where(row => row.SearchText.Contains(query, StringComparison.OrdinalIgnoreCase)).ToList();
+        var devices = query.Length == 0
+            ? _allBlockDevices
+            : _allBlockDevices.Where(row => row.SearchText.Contains(query, StringComparison.OrdinalIgnoreCase)).ToList();
+
+        FilesystemGrid.ItemsSource = filesystems;
+        BlockGrid.ItemsSource = devices;
+        FooterText.Text = query.Length == 0
+            ? $"Read-only snapshot · {_allFilesystems.Count:N0} filesystem(s) · {_allBlockDevices.Count:N0} block device row(s) · warning threshold 85%."
+            : $"Filter '{query}': {filesystems.Count:N0}/{_allFilesystems.Count:N0} filesystem(s), {devices.Count:N0}/{_allBlockDevices.Count:N0} block device row(s).";
     }
 
     private void ApplyError(RemoteError error) => StatusText.Text = FormatError(error);
@@ -166,7 +189,8 @@ public partial class StorageWindow : Window
         string PercentText,
         string HealthText,
         string MountPoint,
-        bool IsWarning)
+        bool IsWarning,
+        string SearchText)
     {
         public static FilesystemRow From(ServerFilesystemInfo info) =>
             new(
@@ -178,7 +202,8 @@ public partial class StorageWindow : Window
                 $"{info.UsedPercent:0.#}%",
                 info.IsWarning ? "Warning" : "Healthy",
                 info.MountPoint,
-                info.IsWarning);
+                info.IsWarning,
+                $"{info.Device} {info.FileSystemType} {info.MountPoint}");
     }
 
     private sealed record BlockDeviceRow(
@@ -189,18 +214,27 @@ public partial class StorageWindow : Window
         string FileSystemType,
         string MountPoint,
         string Model,
-        string MediaText)
+        string MediaText,
+        string SearchText)
     {
-        public static BlockDeviceRow From(ServerBlockDeviceInfo info) =>
-            new(
+        public static BlockDeviceRow From(ServerBlockDeviceInfo info)
+        {
+            var parent = info.ParentName ?? "—";
+            var fileSystemType = string.IsNullOrWhiteSpace(info.FileSystemType) ? "—" : info.FileSystemType;
+            var mountPoint = string.IsNullOrWhiteSpace(info.MountPoint) ? "—" : info.MountPoint;
+            var model = string.IsNullOrWhiteSpace(info.Model) ? "—" : info.Model;
+            var media = info.IsRotational is null ? "Unknown" : info.IsRotational.Value ? "HDD" : "SSD/flash";
+            return new BlockDeviceRow(
                 info.Name,
-                info.ParentName ?? "—",
+                parent,
                 info.Type,
                 FormatBytes(info.SizeBytes),
-                string.IsNullOrWhiteSpace(info.FileSystemType) ? "—" : info.FileSystemType,
-                string.IsNullOrWhiteSpace(info.MountPoint) ? "—" : info.MountPoint,
-                string.IsNullOrWhiteSpace(info.Model) ? "—" : info.Model,
-                info.IsRotational is null ? "Unknown" : info.IsRotational.Value ? "HDD" : "SSD/flash");
+                fileSystemType,
+                mountPoint,
+                model,
+                media,
+                $"{info.Name} {parent} {info.Type} {fileSystemType} {mountPoint} {model} {media}");
+        }
     }
 
     private sealed record DirectoryRow(string Path, string SizeText)
