@@ -1,0 +1,8 @@
+{
+  "projects": [{"Name":"serverdesk-demo","Status":"running(2)","ConfigFiles":"/srv/demo/compose.yaml"}],
+  "services": [
+    {"ID":"aaaaaaaaaaaaaaaa","Name":"serverdesk-demo-api-1","Service":"api","Image":"demo/api:latest","State":"running","Status":"Up 3 minutes","Publishers":[{"URL":"0.0.0.0","TargetPort":8080,"PublishedPort":18080,"Protocol":"tcp"}]},
+    {"ID":"bbbbbbbbbbbbbbbb","Name":"serverdesk-demo-db-1","Service":"db","Image":"postgres:17","State":"running","Status":"Up 3 minutes","Publishers":[]}
+  ],
+  "config": {"name":"serverdesk-demo","services":{"api":{"image":"demo/api:latest"},"db":{"image":"postgres:17"}}}
+}

@@ -177,6 +177,12 @@ public partial class App : System.Windows.Application
                 provider.GetRequiredService<DockerContainerActionService>(),
                 provider.GetRequiredService<IOperationAudit>()));
         services.AddSingleton<IDockerExecTerminalSessionFactory, DockerExecTerminalSessionFactory>();
+        services.AddSingleton(DockerComposeOptions.Default);
+        services.AddSingleton<DockerComposeService>();
+        services.AddSingleton<IDockerComposeService>(provider =>
+            new AuditedDockerComposeService(
+                provider.GetRequiredService<DockerComposeService>(),
+                provider.GetRequiredService<IOperationAudit>()));
 
         services.AddSingleton<INavigationService, NavigationService>();
         services.AddSingleton<IThemeService, WpfThemeService>();
