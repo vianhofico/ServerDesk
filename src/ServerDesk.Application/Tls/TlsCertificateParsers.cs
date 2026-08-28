@@ -85,10 +85,16 @@ public static class OpenSslCertificateParser
     private static DateTimeOffset ParseOpenSslDate(string value)
     {
         var normalized = Regex.Replace(value.Trim(), @"\s+", " ");
-        if (DateTimeOffset.TryParse(
+        var formats = new[]
+        {
+            "MMM d HH:mm:ss yyyy 'GMT'",
+            "MMM dd HH:mm:ss yyyy 'GMT'",
+        };
+        if (DateTimeOffset.TryParseExact(
                 normalized,
+                formats,
                 CultureInfo.InvariantCulture,
-                DateTimeStyles.AllowWhiteSpaces | DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal,
+                DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal,
                 out var parsed))
         {
             return parsed.ToUniversalTime();
