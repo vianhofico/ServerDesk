@@ -139,6 +139,7 @@ public partial class App : System.Windows.Application
             new ConnectionHistoryRemoteSessionFactory(
                 provider.GetRequiredService<RouteAwareRemoteSessionFactory>(),
                 provider.GetRequiredService<IConnectionHistoryRepository>(),
+                provider.GetRequiredService<IConnectionRouteRepository>(),
                 provider.GetRequiredService<IProfileRepository>()));
         services.AddSingleton<IRemoteCommandExecutorFactory, RouteAwareRemoteCommandExecutorFactory>();
         services.AddSingleton<IRemoteFileSystemFactory, RouteAwareSftpRemoteFileSystemFactory>();
