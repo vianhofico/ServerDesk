@@ -59,7 +59,7 @@ public sealed class DockerContainerDiagnosticsTests
     [Fact]
     public void InspectParserSanitizesRemoteControlCharacters()
     {
-        var json = InspectJson.Replace("Production", "Prod\u001b[31m", StringComparison.Ordinal);
+        var json = InspectJson.Replace("Production", "Prod\\u001b[31m", StringComparison.Ordinal);
 
         var details = DockerContainerDiagnosticsParser.ParseInspect(json);
 
