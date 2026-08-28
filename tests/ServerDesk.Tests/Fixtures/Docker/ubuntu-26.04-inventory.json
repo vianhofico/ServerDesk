@@ -1,0 +1,36 @@
+{
+  "version": {
+    "Client": { "Version": "28.0.1", "ApiVersion": "1.48", "Os": "linux", "Arch": "amd64" },
+    "Server": { "Version": "28.0.1", "ApiVersion": "1.48", "Os": "linux", "Arch": "amd64" }
+  },
+  "info": {
+    "Containers": "2",
+    "ContainersRunning": "2",
+    "ContainersPaused": "0",
+    "ContainersStopped": "0",
+    "Images": "4",
+    "Driver": "overlay2",
+    "DockerRootDir": "/var/lib/docker",
+    "ServerVersion": "28.0.1",
+    "OperatingSystem": "Ubuntu 26.04 LTS",
+    "OSType": "linux",
+    "Architecture": "x86_64",
+    "NCPU": "16",
+    "MemTotal": "34359738368",
+    "Name": "ubuntu-2604-docker"
+  },
+  "containers": [
+    { "ID": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc", "Names": "frontend", "Image": "example/web:2.0", "State": "running", "Status": "Up 30 minutes (healthy)", "Ports": "127.0.0.1:3000->3000/tcp", "Mounts": "", "Networks": "frontend-net", "CreatedAt": "2026-08-28 04:00:00 +0000 UTC", "Size": "0B (virtual 95MB)" },
+    { "ID": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd", "Names": "redis", "Image": "redis:8", "State": "running", "Status": "Up 30 minutes", "Ports": "6379/tcp", "Mounts": "redis-data", "Networks": "frontend-net", "CreatedAt": "2026-08-28 04:00:02 +0000 UTC", "Size": "1.2kB (virtual 60MB)" }
+  ],
+  "images": [
+    { "ID": "sha256:3333333333333333333333333333333333333333333333333333333333333333", "Repository": "example/web", "Tag": "2.0", "Digest": "sha256:ghi", "CreatedAt": "2026-08-28 03:55:00 +0000 UTC", "Size": "95MB" },
+    { "ID": "sha256:4444444444444444444444444444444444444444444444444444444444444444", "Repository": "redis", "Tag": "8", "Digest": "sha256:jkl", "CreatedAt": "2026-08-20 12:00:00 +0000 UTC", "Size": "60MB" }
+  ],
+  "volumes": [
+    { "Name": "redis-data", "Driver": "local", "Scope": "local", "Mountpoint": "/var/lib/docker/volumes/redis-data/_data", "Labels": "" }
+  ],
+  "networks": [
+    { "ID": "net3333333333333333333333333333333333333333333333333333333333333", "Name": "frontend-net", "Driver": "bridge", "Scope": "local", "IPv6": true, "Internal": false, "Labels": "com.docker.compose.project=frontend" }
+  ]
+}

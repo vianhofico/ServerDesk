@@ -1,0 +1,37 @@
+{
+  "version": {
+    "Client": { "Version": "27.5.1", "ApiVersion": "1.47", "Os": "linux", "Arch": "amd64" },
+    "Server": { "Version": "27.5.1", "ApiVersion": "1.47", "Os": "linux", "Arch": "amd64" }
+  },
+  "info": {
+    "Containers": 3,
+    "ContainersRunning": 2,
+    "ContainersPaused": 0,
+    "ContainersStopped": 1,
+    "Images": 5,
+    "Driver": "overlay2",
+    "DockerRootDir": "/var/lib/docker",
+    "ServerVersion": "27.5.1",
+    "OperatingSystem": "Ubuntu 24.04.3 LTS",
+    "OSType": "linux",
+    "Architecture": "x86_64",
+    "NCPU": 8,
+    "MemTotal": 16777216000,
+    "Name": "ubuntu-2404-docker"
+  },
+  "containers": [
+    { "ID": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "Names": "api", "Image": "example/api:1.0", "State": "running", "Status": "Up 2 hours", "Ports": "0.0.0.0:8080->8080/tcp", "Mounts": "api-data", "Networks": "app-net", "CreatedAt": "2026-08-28 02:00:00 +0000 UTC", "Size": "12.3MB (virtual 220MB)" },
+    { "ID": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", "Names": "worker", "Image": "example/worker:1.0", "State": "exited", "Status": "Exited (0) 10 minutes ago", "Ports": "", "Mounts": "", "Networks": "app-net", "CreatedAt": "2026-08-27 20:00:00 +0000 UTC", "Size": "2kB (virtual 180MB)" }
+  ],
+  "images": [
+    { "ID": "sha256:1111111111111111111111111111111111111111111111111111111111111111", "Repository": "example/api", "Tag": "1.0", "Digest": "sha256:abc", "CreatedAt": "2026-08-27 18:00:00 +0000 UTC", "Size": "220MB" },
+    { "ID": "sha256:2222222222222222222222222222222222222222222222222222222222222222", "Repository": "example/worker", "Tag": "1.0", "Digest": "sha256:def", "CreatedAt": "2026-08-27 18:05:00 +0000 UTC", "Size": "180MB" }
+  ],
+  "volumes": [
+    { "Name": "api-data", "Driver": "local", "Scope": "local", "Mountpoint": "/var/lib/docker/volumes/api-data/_data", "Labels": "com.example.stack=app" }
+  ],
+  "networks": [
+    { "ID": "net1111111111111111111111111111111111111111111111111111111111111", "Name": "app-net", "Driver": "bridge", "Scope": "local", "IPv6": "false", "Internal": "false", "Labels": "com.example.stack=app" },
+    { "ID": "net2222222222222222222222222222222222222222222222222222222222222", "Name": "host", "Driver": "host", "Scope": "local", "IPv6": "false", "Internal": "false", "Labels": "" }
+  ]
+}

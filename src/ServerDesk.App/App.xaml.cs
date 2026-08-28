@@ -5,6 +5,7 @@ using ServerDesk.Application.Abstractions;
 using ServerDesk.Application.Audit;
 using ServerDesk.Application.Capabilities;
 using ServerDesk.Application.Dashboard;
+using ServerDesk.Application.Docker;
 using ServerDesk.Application.History;
 using ServerDesk.Application.HostTrust;
 using ServerDesk.Application.Logs;
@@ -166,6 +167,8 @@ public partial class App : System.Windows.Application
         services.AddSingleton<IServerNetworkService, ServerNetworkService>();
         services.AddSingleton(ServerLogOptions.Default);
         services.AddSingleton<IServerLogService, ServerLogService>();
+        services.AddSingleton(DockerInventoryOptions.Default);
+        services.AddSingleton<IDockerInventoryService, DockerInventoryService>();
 
         services.AddSingleton<INavigationService, NavigationService>();
         services.AddSingleton<IThemeService, WpfThemeService>();

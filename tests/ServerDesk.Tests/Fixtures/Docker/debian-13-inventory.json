@@ -1,0 +1,32 @@
+{
+  "version": {
+    "Client": { "Version": "27.5.1", "ApiVersion": "1.47", "Os": "linux", "Arch": "arm64" },
+    "Server": { "Version": "27.5.1", "ApiVersion": "1.47", "Os": "linux", "Arch": "arm64" }
+  },
+  "info": {
+    "Containers": 1,
+    "ContainersRunning": 1,
+    "ContainersPaused": 0,
+    "ContainersStopped": 0,
+    "Images": 2,
+    "Driver": "overlay2",
+    "DockerRootDir": "/var/lib/docker",
+    "ServerVersion": "27.5.1",
+    "OperatingSystem": "Debian GNU/Linux 13 (trixie)",
+    "OSType": "linux",
+    "Architecture": "aarch64",
+    "NCPU": 4,
+    "MemTotal": 8589934592,
+    "Name": "debian-13-docker"
+  },
+  "containers": [
+    { "ID": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee", "Names": "gateway", "Image": "nginx:stable", "State": "running", "Status": "Up 5 days", "Ports": "80/tcp", "Networks": "bridge", "CreatedAt": "2026-08-23 04:00:00 +0000 UTC" }
+  ],
+  "images": [
+    { "ID": "sha256:5555555555555555555555555555555555555555555555555555555555555555", "Repository": "nginx", "Tag": "stable", "CreatedAt": "2026-08-21 10:00:00 +0000 UTC", "Size": "78MB" }
+  ],
+  "volumes": [],
+  "networks": [
+    { "ID": "net4444444444444444444444444444444444444444444444444444444444444", "Name": "bridge", "Driver": "bridge", "Scope": "local", "IPv6": "false", "Internal": "false" }
+  ]
+}

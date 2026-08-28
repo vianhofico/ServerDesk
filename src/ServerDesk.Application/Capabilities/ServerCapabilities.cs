@@ -256,9 +256,18 @@ public sealed class ServerCapabilityService : IServerCapabilityService, IAsyncDi
             results[probe.Key] = await ProbeCapabilityAsync(executor, probe, cancellationToken).ConfigureAwait(false);
         }
 
+        if (results["docker"].Status == CapabilityStatus.Available)
+        {
+            results["docker"] = await ProbeDockerRuntimeAsync(
+                    executor,
+                    results["docker"].Version,
+                    cancellationToken)
+                .ConfigureAwait(false);
+        }
+
         var compose = results["docker"].Status == CapabilityStatus.Available
             ? await ProbeDockerComposeAsync(executor, cancellationToken).ConfigureAwait(false)
-            : CapabilityState.Unavailable("Docker CLI is not available, so Docker Compose cannot be used.");
+            : CapabilityState.Unavailable("Docker runtime is not usable, so Docker Compose cannot be used safely.");
         var sudo = await ProbeSudoAsync(executor, cancellationToken).ConfigureAwait(false);
 
         return new ServerCapabilitySnapshot(
@@ -333,6 +342,56 @@ public sealed class ServerCapabilityService : IServerCapabilityService, IAsyncDi
 
         return CapabilityState.Unknown(
             $"{resolved} exists but its version probe returned exit code {version.ExitCode}.");
+    }
+
+    private static async ValueTask<CapabilityState> ProbeDockerRuntimeAsync(
+        IRemoteCommandExecutor executor,
+        string? cliVersion,
+        CancellationToken cancellationToken)
+    {
+        var result = await RunAsync(
+            executor,
+            new RemoteCommandSpec("docker", ["version", "--format", "{{json .}}"], TimeSpan.FromSeconds(8)),
+            cancellationToken).ConfigureAwait(false);
+        if (result.ExecutionError is not null)
+        {
+            return CapabilityState.Unknown(result.ExecutionError.Message);
+        }
+
+        if (result.ExitCode == 0)
+        {
+            return CapabilityState.Available(
+                cliVersion,
+                "Docker CLI can communicate with the Docker daemon for the current user.");
+        }
+
+        var text = $"{result.StandardError}\n{result.Output}";
+        if (LooksLikePermissionDenied(result.StandardError, result.Output))
+        {
+            return CapabilityState.PermissionDenied(
+                "Docker CLI is installed, but the current user cannot access the Docker daemon.");
+        }
+
+        if (text.Contains("cannot connect to the docker daemon", StringComparison.OrdinalIgnoreCase) ||
+            text.Contains("is the docker daemon running", StringComparison.OrdinalIgnoreCase) ||
+            text.Contains("docker daemon is not running", StringComparison.OrdinalIgnoreCase) ||
+            text.Contains("error during connect", StringComparison.OrdinalIgnoreCase))
+        {
+            return CapabilityState.Unavailable(
+                "Docker CLI is installed, but the Docker daemon is unavailable.");
+        }
+
+        if (text.Contains("minimum supported api version", StringComparison.OrdinalIgnoreCase) ||
+            text.Contains("api version is too old", StringComparison.OrdinalIgnoreCase) ||
+            text.Contains("client version", StringComparison.OrdinalIgnoreCase) &&
+            text.Contains("too new", StringComparison.OrdinalIgnoreCase))
+        {
+            return CapabilityState.Unavailable(
+                "The installed Docker client/server API combination is unsupported.");
+        }
+
+        return CapabilityState.Unknown(
+            $"Docker runtime probe returned exit code {result.ExitCode} with an unrecognized response.");
     }
 
     private static async ValueTask<CapabilityState> ProbeDockerComposeAsync(
