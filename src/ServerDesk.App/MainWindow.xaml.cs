@@ -34,6 +34,7 @@ public partial class MainWindow : Window
     private readonly IDockerContainerDiagnosticsService _dockerDiagnosticsService;
     private readonly IDockerContainerActionService _dockerActionService;
     private readonly IDockerExecTerminalSessionFactory _dockerExecTerminalSessionFactory;
+    private readonly IDockerComposeService _dockerComposeService;
     private readonly IServerStorageService _storageService;
     private readonly IServerNetworkService _networkService;
     private readonly IServerLogService _logService;
@@ -58,6 +59,7 @@ public partial class MainWindow : Window
         IDockerContainerDiagnosticsService dockerDiagnosticsService,
         IDockerContainerActionService dockerActionService,
         IDockerExecTerminalSessionFactory dockerExecTerminalSessionFactory,
+        IDockerComposeService dockerComposeService,
         IServerStorageService storageService,
         IServerNetworkService networkService,
         IServerLogService logService,
@@ -79,6 +81,7 @@ public partial class MainWindow : Window
         _dockerDiagnosticsService = dockerDiagnosticsService;
         _dockerActionService = dockerActionService;
         _dockerExecTerminalSessionFactory = dockerExecTerminalSessionFactory;
+        _dockerComposeService = dockerComposeService;
         _storageService = storageService;
         _networkService = networkService;
         _logService = logService;
@@ -143,7 +146,7 @@ public partial class MainWindow : Window
             OpenServicesOnClick);
         var dockerButton = CreateActionButton(
             "Docker",
-            "Inspect Docker resources, verified container lifecycle actions and container exec without exposing the Docker socket.",
+            "Inspect Docker resources, verified container lifecycle actions, container exec and Compose v2 projects without exposing the Docker socket.",
             OpenDockerOnClick);
         var storageButton = CreateActionButton(
             "Storage",
@@ -301,6 +304,7 @@ public partial class MainWindow : Window
         {
             ActionService = _dockerActionService,
             ExecTerminalSessionFactory = _dockerExecTerminalSessionFactory,
+            ComposeService = _dockerComposeService,
             Owner = this,
         };
         window.Show();
