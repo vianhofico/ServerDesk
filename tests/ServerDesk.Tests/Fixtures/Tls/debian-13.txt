@@ -1,0 +1,15 @@
+---OPENSSL---
+subject=CN = legacy13.example.test
+issuer=O = Example Legacy CA, CN = Legacy Issuer
+notBefore=May 20 12:00:00 2026 GMT
+notAfter=Aug 20 12:00:00 2026 GMT
+X509v3 Subject Alternative Name:
+    DNS:legacy13.example.test, DNS:api.legacy13.example.test
+sha256 Fingerprint=13:00:EE:FF
+---CERTBOT---
+Found the following certificates:
+  Certificate Name: legacy13.example.test
+    Domains: legacy13.example.test api.legacy13.example.test
+    Expiry Date: 2026-08-20 12:00:00+00:00 (INVALID: EXPIRED)
+    Certificate Path: /etc/letsencrypt/live/legacy13.example.test/fullchain.pem
+    Private Key Path: /etc/letsencrypt/live/legacy13.example.test/privkey.pem
