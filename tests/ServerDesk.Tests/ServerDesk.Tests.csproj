@@ -44,6 +44,9 @@
     <None Include="Fixtures\Tls\**\*"
           CopyToOutputDirectory="PreserveNewest"
           CopyToPublishDirectory="Never" />
+    <None Include="Fixtures\EnvironmentFiles\**\*"
+          CopyToOutputDirectory="PreserveNewest"
+          CopyToPublishDirectory="Never" />
     <None Include="..\..\src\ServerDesk.App\Localization\Strings.*.xaml"
           Link="Fixtures\Localization\%(Filename)%(Extension)"
           CopyToOutputDirectory="PreserveNewest"
