@@ -1,0 +1,5 @@
+{
+  "projects": [{"Name":"jobs","Status":"exited(1)","ConfigFiles":"/srv/jobs/docker-compose.yaml"}],
+  "services": [{"ID":"dddddddddddddddd","Name":"jobs-worker-1","Service":"worker","Image":"example/worker:2026.08","State":"exited","Status":"Exited (0) 2 minutes ago","Publishers":[]}],
+  "config": {"name":"jobs","services":{"worker":{"image":"example/worker:2026.08"}}}
+}
