@@ -47,6 +47,8 @@
     <system:String x:Key="Loc.Nginx.Editor.RawWarning">Raw mode preserves the file exactly as edited. It may contain sensitive technical values; ServerDesk does not write candidate content to audit records.</system:String>
     <system:String x:Key="Loc.Nginx.Editor.Diff">Changes: {0} changed · {1} added · {2} removed</system:String>
     <system:String x:Key="Loc.Nginx.Editor.Reload">Reload file</system:String>
+    <system:String x:Key="Loc.Nginx.Editor.ReloadConfirmTitle">Discard unsaved nginx edits?</system:String>
+    <system:String x:Key="Loc.Nginx.Editor.ReloadConfirmMessage">Reloading the remote file will discard the current unsaved candidate. Continue?</system:String>
     <system:String x:Key="Loc.Nginx.Editor.Apply">Validate &amp; apply</system:String>
     <system:String x:Key="Loc.Nginx.Editor.Loading">Loading the resolved nginx file…</system:String>
     <system:String x:Key="Loc.Nginx.Editor.Ready">Review the candidate before applying.</system:String>
