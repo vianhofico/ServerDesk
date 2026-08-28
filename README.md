@@ -1,5 +1,7 @@
 # ServerDesk
 
+**English** | [Tiếng Việt](README.vi.md)
+
 ServerDesk is a Windows desktop application for managing Linux servers through a visual, Windows-like experience while keeping SSH/SFTP as the secure control plane.
 
 > Product direction: **File Explorer + Task Manager + Services + Terminal + Docker Desktop + server administration**, without requiring users to memorize Linux commands for common operations.
