@@ -39,7 +39,7 @@
 
     <Grid Background="{DynamicResource WindowBackgroundBrush}">
         <Grid.RowDefinitions>
-            <RowDefinition Height="60" />
+            <RowDefinition Height="64" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
@@ -65,7 +65,7 @@
                     </Border>
                     <StackPanel Margin="10,0,0,0" VerticalAlignment="Center">
                         <TextBlock Text="ServerDesk" FontSize="17" FontWeight="SemiBold" />
-                        <TextBlock Text="Visual Linux server administration"
+                        <TextBlock Text="{DynamicResource Loc.AppSubtitle}"
                                    FontSize="11"
                                    Foreground="{DynamicResource MutedTextBrush}" />
                     </StackPanel>
@@ -81,18 +81,33 @@
                                      Fill="{DynamicResource SuccessBrush}"
                                      VerticalAlignment="Center" />
                             <TextBlock Margin="7,0,0,0"
-                                       Text="M1 SSH sessions"
+                                       Text="{DynamicResource Loc.Header.Milestone}"
                                        FontSize="12"
                                        FontWeight="SemiBold" />
                         </StackPanel>
                     </Border>
-                    <TextBlock Text="Theme"
+                    <TextBlock Text="{DynamicResource Loc.Settings}"
+                               Margin="0,0,12,0"
+                               FontWeight="SemiBold"
+                               VerticalAlignment="Center" />
+                    <TextBlock Text="{DynamicResource Loc.Theme}"
                                Margin="0,0,7,0"
                                Foreground="{DynamicResource MutedTextBrush}"
                                VerticalAlignment="Center" />
-                    <ComboBox Width="112"
+                    <ComboBox Width="122"
                               ItemsSource="{Binding ThemeOptions}"
-                              SelectedItem="{Binding ThemePreference, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                              DisplayMemberPath="DisplayName"
+                              SelectedValuePath="Value"
+                              SelectedValue="{Binding ThemePreference, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                    <TextBlock Text="{DynamicResource Loc.Language}"
+                               Margin="16,0,7,0"
+                               Foreground="{DynamicResource MutedTextBrush}"
+                               VerticalAlignment="Center" />
+                    <ComboBox Width="166"
+                              ItemsSource="{Binding LanguageOptions}"
+                              DisplayMemberPath="DisplayName"
+                              SelectedValuePath="Value"
+                              SelectedValue="{Binding LanguagePreference, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                 </StackPanel>
             </Grid>
         </Border>
@@ -122,13 +137,13 @@
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
                         <StackPanel VerticalAlignment="Center">
-                            <TextBlock Text="SERVERS" FontSize="11" FontWeight="SemiBold"
+                            <TextBlock Text="{DynamicResource Loc.Servers}" FontSize="11" FontWeight="SemiBold"
                                        Foreground="{DynamicResource MutedTextBrush}" />
                             <TextBlock Text="{Binding ServerCountLabel}" FontSize="11"
                                        Foreground="{DynamicResource MutedTextBrush}" />
                         </StackPanel>
                         <Button Grid.Column="1"
-                                Content="+ Add"
+                                Content="{DynamicResource Loc.Common.Add}"
                                 Command="{Binding AddServerCommand}"
                                 Style="{StaticResource PrimaryButton}" />
                     </Grid>
@@ -195,10 +210,11 @@
                     </ListBox>
 
                     <TextBlock Grid.Row="2"
-                               Text="WORKSPACE"
+                               Text="{DynamicResource Loc.Workspace}"
                                Margin="8,18,8,6"
                                FontSize="11"
                                FontWeight="SemiBold"
+                               TextWrapping="Wrap"
                                Foreground="{DynamicResource MutedTextBrush}" />
 
                     <ListBox Grid.Row="3"
@@ -233,15 +249,18 @@
                             CornerRadius="8"
                             Background="{DynamicResource SurfaceSecondaryBrush}">
                         <StackPanel>
-                            <TextBlock Text="Security boundary" FontSize="12" FontWeight="SemiBold" />
+                            <TextBlock Text="{DynamicResource Loc.SecurityBoundary}" FontSize="12" FontWeight="SemiBold" />
                             <TextBlock Margin="0,3,0,0"
-                                       Text="Secrets → Windows Credential Manager"
+                                       Text="{DynamicResource Loc.Security.SecretsStore}"
+                                       TextWrapping="Wrap"
                                        FontSize="11"
                                        Foreground="{DynamicResource MutedTextBrush}" />
-                            <TextBlock Text="Host trust → SQLite schema v3"
+                            <TextBlock Text="{DynamicResource Loc.Security.HostTrustStore}"
+                                       TextWrapping="Wrap"
                                        FontSize="11"
                                        Foreground="{DynamicResource MutedTextBrush}" />
-                            <TextBlock Text="Transport → SSH.NET 2026.0.0"
+                            <TextBlock Text="{DynamicResource Loc.Security.Transport}"
+                                       TextWrapping="Wrap"
                                        FontSize="11"
                                        Foreground="{DynamicResource MutedTextBrush}" />
                         </StackPanel>
