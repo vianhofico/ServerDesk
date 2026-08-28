@@ -2,7 +2,6 @@ using System.Windows;
 using Microsoft.Extensions.DependencyInjection;
 using ServerDesk.App.Localization;
 using ServerDesk.Application.Nginx;
-using ServerDesk.Application.Remote;
 using ServerDesk.Domain.Servers;
 
 namespace ServerDesk.App;
@@ -14,11 +13,8 @@ public partial class App
         ArgumentNullException.ThrowIfNull(profile);
         ArgumentNullException.ThrowIfNull(owner);
         var provider = _serviceProvider ?? throw new InvalidOperationException("ServerDesk services are not initialized.");
-        var service = new NginxInventoryService(
-            provider.GetRequiredService<IRemoteCommandExecutorFactory>(),
-            NginxInventoryOptions.Default);
         var window = new NginxInventoryWindow(
-            service,
+            provider.GetRequiredService<INginxInventoryService>(),
             provider.GetRequiredService<ILocalizationService>(),
             profile,
             connected)
