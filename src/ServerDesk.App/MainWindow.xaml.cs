@@ -5,6 +5,7 @@ using System.Windows.Media;
 using ServerDesk.App.Presentation;
 using ServerDesk.Application.Capabilities;
 using ServerDesk.Application.Dashboard;
+using ServerDesk.Application.Docker;
 using ServerDesk.Application.History;
 using ServerDesk.Application.Logs;
 using ServerDesk.Application.Networking;
@@ -29,6 +30,7 @@ public partial class MainWindow : Window
     private readonly IRemoteFileEditorService _remoteFileEditorService;
     private readonly IServerProcessService _processService;
     private readonly IServerServiceManager _serviceManager;
+    private readonly IDockerInventoryService _dockerInventoryService;
     private readonly IServerStorageService _storageService;
     private readonly IServerNetworkService _networkService;
     private readonly IServerLogService _logService;
@@ -49,6 +51,7 @@ public partial class MainWindow : Window
         IRemoteFileEditorService remoteFileEditorService,
         IServerProcessService processService,
         IServerServiceManager serviceManager,
+        IDockerInventoryService dockerInventoryService,
         IServerStorageService storageService,
         IServerNetworkService networkService,
         IServerLogService logService,
@@ -66,6 +69,7 @@ public partial class MainWindow : Window
         _remoteFileEditorService = remoteFileEditorService;
         _processService = processService;
         _serviceManager = serviceManager;
+        _dockerInventoryService = dockerInventoryService;
         _storageService = storageService;
         _networkService = networkService;
         _logService = logService;
@@ -128,6 +132,10 @@ public partial class MainWindow : Window
             "Services",
             "Inspect systemd services and run confirmed lifecycle actions with verification.",
             OpenServicesOnClick);
+        var dockerButton = CreateActionButton(
+            "Docker",
+            "Detect Docker runtime access and inspect containers, images, volumes and networks without exposing the Docker socket.",
+            OpenDockerOnClick);
         var storageButton = CreateActionButton(
             "Storage",
             "Inspect filesystems, block devices and run cancellable read-only directory analysis.",
@@ -164,14 +172,15 @@ public partial class MainWindow : Window
         actionPanel.Children.Insert(editIndex + 1, explorerButton);
         actionPanel.Children.Insert(editIndex + 2, processesButton);
         actionPanel.Children.Insert(editIndex + 3, servicesButton);
-        actionPanel.Children.Insert(editIndex + 4, storageButton);
-        actionPanel.Children.Insert(editIndex + 5, networkButton);
-        actionPanel.Children.Insert(editIndex + 6, logsButton);
-        actionPanel.Children.Insert(editIndex + 7, organizeButton);
-        actionPanel.Children.Insert(editIndex + 8, historyButton);
-        actionPanel.Children.Insert(editIndex + 9, routeButton);
-        actionPanel.Children.Insert(editIndex + 10, terminalButton);
-        actionPanel.Children.Insert(editIndex + 11, tunnelsButton);
+        actionPanel.Children.Insert(editIndex + 4, dockerButton);
+        actionPanel.Children.Insert(editIndex + 5, storageButton);
+        actionPanel.Children.Insert(editIndex + 6, networkButton);
+        actionPanel.Children.Insert(editIndex + 7, logsButton);
+        actionPanel.Children.Insert(editIndex + 8, organizeButton);
+        actionPanel.Children.Insert(editIndex + 9, historyButton);
+        actionPanel.Children.Insert(editIndex + 10, routeButton);
+        actionPanel.Children.Insert(editIndex + 11, terminalButton);
+        actionPanel.Children.Insert(editIndex + 12, tunnelsButton);
 
         if (VisualTreeHelper.GetParent(actionPanel) is Grid headerGrid &&
             VisualTreeHelper.GetParent(headerGrid) is StackPanel serverCardPanel)
@@ -260,6 +269,23 @@ public partial class MainWindow : Window
         var window = new ServiceManagerWindow(
             _serviceManager,
             _logService,
+            selected.Profile,
+            selected.ConnectionState == RemoteSessionState.Connected)
+        {
+            Owner = this,
+        };
+        window.Show();
+    }
+
+    private void OpenDockerOnClick(object sender, RoutedEventArgs e)
+    {
+        if (_viewModel.SelectedServer is not { } selected)
+        {
+            return;
+        }
+
+        var window = new DockerInventoryWindow(
+            _dockerInventoryService,
             selected.Profile,
             selected.ConnectionState == RemoteSessionState.Connected)
         {
