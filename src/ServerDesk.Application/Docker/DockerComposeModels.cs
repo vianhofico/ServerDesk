@@ -148,12 +148,13 @@ public static class DockerComposeIdentity
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(value);
         var normalized = value.Trim();
-        if (normalized.Length > 128 ||
+        if (!string.Equals(value, normalized, StringComparison.Ordinal) ||
+            normalized.Length > 128 ||
             !char.IsAsciiLetterOrDigit(normalized[0]) ||
             normalized.Any(character =>
                 !(char.IsAsciiLetterOrDigit(character) || character is '-' or '_')))
         {
-            throw new FormatException("Docker Compose project name must use letters, digits, '-' or '_' and start with a letter or digit.");
+            throw new FormatException("Docker Compose project name must not contain surrounding whitespace, must start with a letter or digit, and may contain only letters, digits, '-' or '_'.");
         }
 
         return normalized;
@@ -163,11 +164,12 @@ public static class DockerComposeIdentity
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(value);
         var normalized = value.Trim();
-        if (!normalized.StartsWith('/', StringComparison.Ordinal) ||
+        if (!string.Equals(value, normalized, StringComparison.Ordinal) ||
+            !normalized.StartsWith('/', StringComparison.Ordinal) ||
             normalized.Length > 4096 ||
             normalized.IndexOfAny(['\0', '\r', '\n']) >= 0)
         {
-            throw new FormatException("Docker Compose configuration path must be an absolute Linux path without control characters.");
+            throw new FormatException("Docker Compose configuration path must be an absolute Linux path without surrounding whitespace or control characters.");
         }
 
         return normalized;
