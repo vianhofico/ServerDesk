@@ -13,4 +13,9 @@
     <ProjectReference Include="..\..\src\ServerDesk.Domain\ServerDesk.Domain.csproj" />
     <ProjectReference Include="..\..\src\ServerDesk.Infrastructure.Ssh\ServerDesk.Infrastructure.Ssh.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="Fixtures\**\*"
+          CopyToOutputDirectory="PreserveNewest"
+          CopyToPublishDirectory="Never" />
+  </ItemGroup>
 </Project>
