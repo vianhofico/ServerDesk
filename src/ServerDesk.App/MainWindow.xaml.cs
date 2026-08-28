@@ -14,6 +14,7 @@ using ServerDesk.Application.RemoteFiles;
 using ServerDesk.Application.Routing;
 using ServerDesk.Application.Services;
 using ServerDesk.Application.Sessions;
+using ServerDesk.Application.Storage;
 using ServerDesk.Application.Terminal;
 
 namespace ServerDesk.App;
@@ -26,6 +27,7 @@ public partial class MainWindow : Window
     private readonly IRemoteFileEditorService _remoteFileEditorService;
     private readonly IServerProcessService _processService;
     private readonly IServerServiceManager _serviceManager;
+    private readonly IServerStorageService _storageService;
     private readonly PortForwardManager _portForwardManager;
     private readonly IServerCapabilityService _capabilityService;
     private readonly IServerDashboardService _dashboardService;
@@ -43,6 +45,7 @@ public partial class MainWindow : Window
         IRemoteFileEditorService remoteFileEditorService,
         IServerProcessService processService,
         IServerServiceManager serviceManager,
+        IServerStorageService storageService,
         PortForwardManager portForwardManager,
         IServerCapabilityService capabilityService,
         IServerDashboardService dashboardService,
@@ -57,6 +60,7 @@ public partial class MainWindow : Window
         _remoteFileEditorService = remoteFileEditorService;
         _processService = processService;
         _serviceManager = serviceManager;
+        _storageService = storageService;
         _portForwardManager = portForwardManager;
         _capabilityService = capabilityService;
         _dashboardService = dashboardService;
@@ -116,6 +120,10 @@ public partial class MainWindow : Window
             "Services",
             "Inspect systemd services and run confirmed lifecycle actions with verification.",
             OpenServicesOnClick);
+        var storageButton = CreateActionButton(
+            "Storage",
+            "Inspect filesystems, block devices and run cancellable read-only directory analysis.",
+            OpenStorageOnClick);
         var organizeButton = CreateActionButton(
             "Organize",
             "Manage groups, tags and favorites and search/filter saved servers.",
@@ -140,11 +148,12 @@ public partial class MainWindow : Window
         actionPanel.Children.Insert(editIndex + 1, explorerButton);
         actionPanel.Children.Insert(editIndex + 2, processesButton);
         actionPanel.Children.Insert(editIndex + 3, servicesButton);
-        actionPanel.Children.Insert(editIndex + 4, organizeButton);
-        actionPanel.Children.Insert(editIndex + 5, historyButton);
-        actionPanel.Children.Insert(editIndex + 6, routeButton);
-        actionPanel.Children.Insert(editIndex + 7, terminalButton);
-        actionPanel.Children.Insert(editIndex + 8, tunnelsButton);
+        actionPanel.Children.Insert(editIndex + 4, storageButton);
+        actionPanel.Children.Insert(editIndex + 5, organizeButton);
+        actionPanel.Children.Insert(editIndex + 6, historyButton);
+        actionPanel.Children.Insert(editIndex + 7, routeButton);
+        actionPanel.Children.Insert(editIndex + 8, terminalButton);
+        actionPanel.Children.Insert(editIndex + 9, tunnelsButton);
 
         if (VisualTreeHelper.GetParent(actionPanel) is Grid headerGrid &&
             VisualTreeHelper.GetParent(headerGrid) is StackPanel serverCardPanel)
@@ -232,6 +241,23 @@ public partial class MainWindow : Window
 
         var window = new ServiceManagerWindow(
             _serviceManager,
+            selected.Profile,
+            selected.ConnectionState == RemoteSessionState.Connected)
+        {
+            Owner = this,
+        };
+        window.Show();
+    }
+
+    private void OpenStorageOnClick(object sender, RoutedEventArgs e)
+    {
+        if (_viewModel.SelectedServer is not { } selected)
+        {
+            return;
+        }
+
+        var window = new StorageWindow(
+            _storageService,
             selected.Profile,
             selected.ConnectionState == RemoteSessionState.Connected)
         {
