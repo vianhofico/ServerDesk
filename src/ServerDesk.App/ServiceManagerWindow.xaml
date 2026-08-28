@@ -101,8 +101,8 @@
                     <TextBlock x:Name="DetailsText" Margin="0,12,0,0" TextWrapping="Wrap"
                                Foreground="{DynamicResource MutedTextBrush}" />
                     <Button x:Name="LogsButton" Content="Open logs" Margin="0,16,0,0" Padding="10,6"
-                            HorizontalAlignment="Left" IsEnabled="False"
-                            ToolTip="Available after the M2 Logs slice is connected." />
+                            HorizontalAlignment="Left" IsEnabled="False" Click="LogsOnClick"
+                            ToolTip="Open the shared Logs viewer filtered to this systemd unit." />
                 </StackPanel>
             </Border>
         </Grid>

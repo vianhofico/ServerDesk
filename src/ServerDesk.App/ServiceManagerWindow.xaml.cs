@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
+using ServerDesk.Application.Logs;
 using ServerDesk.Application.Services;
 using ServerDesk.Domain.Errors;
 using ServerDesk.Domain.Servers;
@@ -9,6 +10,7 @@ namespace ServerDesk.App;
 public partial class ServiceManagerWindow : Window
 {
     private readonly IServerServiceManager _serviceManager;
+    private readonly IServerLogService _logService;
     private readonly ServerProfile _profile;
     private readonly bool _initiallyConnected;
     private readonly List<ServerServiceInfo> _allServices = [];
@@ -16,10 +18,12 @@ public partial class ServiceManagerWindow : Window
 
     public ServiceManagerWindow(
         IServerServiceManager serviceManager,
+        IServerLogService logService,
         ServerProfile profile,
         bool initiallyConnected)
     {
         _serviceManager = serviceManager ?? throw new ArgumentNullException(nameof(serviceManager));
+        _logService = logService ?? throw new ArgumentNullException(nameof(logService));
         _profile = profile ?? throw new ArgumentNullException(nameof(profile));
         _initiallyConnected = initiallyConnected;
         InitializeComponent();
@@ -60,16 +64,37 @@ public partial class ServiceManagerWindow : Window
 
     private async void DisableOnClick(object sender, RoutedEventArgs e) => await ExecuteSelectedAsync(ServerServiceAction.Disable);
 
+    private void LogsOnClick(object sender, RoutedEventArgs e)
+    {
+        if (ServiceGrid.SelectedItem is not ServerServiceInfo selected)
+        {
+            StatusText.Text = "Select a service first.";
+            return;
+        }
+
+        var window = new LogViewerWindow(
+            _logService,
+            _profile,
+            _initiallyConnected,
+            selected.Unit)
+        {
+            Owner = this,
+        };
+        window.Show();
+    }
+
     private void SearchBoxOnTextChanged(object sender, TextChangedEventArgs e) => ApplyFilter();
 
     private void ServiceGridOnSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (ServiceGrid.SelectedItem is not ServerServiceInfo service)
         {
+            LogsButton.IsEnabled = false;
             DetailsText.Text = "Select a service, then choose Details for normalized systemd status.";
             return;
         }
 
+        LogsButton.IsEnabled = _initiallyConnected;
         ApplyDetails(service, includeStatus: false);
     }
 

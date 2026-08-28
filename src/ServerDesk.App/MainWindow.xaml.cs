@@ -6,6 +6,7 @@ using ServerDesk.App.Presentation;
 using ServerDesk.Application.Capabilities;
 using ServerDesk.Application.Dashboard;
 using ServerDesk.Application.History;
+using ServerDesk.Application.Logs;
 using ServerDesk.Application.Networking;
 using ServerDesk.Application.PortForwarding;
 using ServerDesk.Application.Processes;
@@ -30,6 +31,7 @@ public partial class MainWindow : Window
     private readonly IServerServiceManager _serviceManager;
     private readonly IServerStorageService _storageService;
     private readonly IServerNetworkService _networkService;
+    private readonly IServerLogService _logService;
     private readonly PortForwardManager _portForwardManager;
     private readonly IServerCapabilityService _capabilityService;
     private readonly IServerDashboardService _dashboardService;
@@ -49,6 +51,7 @@ public partial class MainWindow : Window
         IServerServiceManager serviceManager,
         IServerStorageService storageService,
         IServerNetworkService networkService,
+        IServerLogService logService,
         PortForwardManager portForwardManager,
         IServerCapabilityService capabilityService,
         IServerDashboardService dashboardService,
@@ -65,6 +68,7 @@ public partial class MainWindow : Window
         _serviceManager = serviceManager;
         _storageService = storageService;
         _networkService = networkService;
+        _logService = logService;
         _portForwardManager = portForwardManager;
         _capabilityService = capabilityService;
         _dashboardService = dashboardService;
@@ -132,6 +136,10 @@ public partial class MainWindow : Window
             "Network",
             "Inspect interfaces, traffic rates and listening TCP/UDP sockets without mutating the server.",
             OpenNetworkOnClick);
+        var logsButton = CreateActionButton(
+            "Logs",
+            "Inspect journald or remote text logs with follow, pause, filters and explicit local export.",
+            OpenLogsOnClick);
         var organizeButton = CreateActionButton(
             "Organize",
             "Manage groups, tags and favorites and search/filter saved servers.",
@@ -158,11 +166,12 @@ public partial class MainWindow : Window
         actionPanel.Children.Insert(editIndex + 3, servicesButton);
         actionPanel.Children.Insert(editIndex + 4, storageButton);
         actionPanel.Children.Insert(editIndex + 5, networkButton);
-        actionPanel.Children.Insert(editIndex + 6, organizeButton);
-        actionPanel.Children.Insert(editIndex + 7, historyButton);
-        actionPanel.Children.Insert(editIndex + 8, routeButton);
-        actionPanel.Children.Insert(editIndex + 9, terminalButton);
-        actionPanel.Children.Insert(editIndex + 10, tunnelsButton);
+        actionPanel.Children.Insert(editIndex + 6, logsButton);
+        actionPanel.Children.Insert(editIndex + 7, organizeButton);
+        actionPanel.Children.Insert(editIndex + 8, historyButton);
+        actionPanel.Children.Insert(editIndex + 9, routeButton);
+        actionPanel.Children.Insert(editIndex + 10, terminalButton);
+        actionPanel.Children.Insert(editIndex + 11, tunnelsButton);
 
         if (VisualTreeHelper.GetParent(actionPanel) is Grid headerGrid &&
             VisualTreeHelper.GetParent(headerGrid) is StackPanel serverCardPanel)
@@ -250,6 +259,7 @@ public partial class MainWindow : Window
 
         var window = new ServiceManagerWindow(
             _serviceManager,
+            _logService,
             selected.Profile,
             selected.ConnectionState == RemoteSessionState.Connected)
         {
@@ -284,6 +294,23 @@ public partial class MainWindow : Window
 
         var window = new NetworkWindow(
             _networkService,
+            selected.Profile,
+            selected.ConnectionState == RemoteSessionState.Connected)
+        {
+            Owner = this,
+        };
+        window.Show();
+    }
+
+    private void OpenLogsOnClick(object sender, RoutedEventArgs e)
+    {
+        if (_viewModel.SelectedServer is not { } selected)
+        {
+            return;
+        }
+
+        var window = new LogViewerWindow(
+            _logService,
             selected.Profile,
             selected.ConnectionState == RemoteSessionState.Connected)
         {
