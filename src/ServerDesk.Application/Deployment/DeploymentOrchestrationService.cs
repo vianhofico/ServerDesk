@@ -59,24 +59,21 @@ public sealed class DeploymentOrchestrationService : IDeploymentOrchestrationSer
             return new DeploymentPlanResult(null, observed.Error);
         }
 
-        var steps = BuildSteps(normalized);
         var rollbackPossible = normalized.Kind == DeploymentTargetKind.Compose &&
                                normalized.ComposeMode == DeploymentComposeMode.Up &&
                                !normalized.ComposePull &&
                                !normalized.ComposeBuild &&
                                !observed.State!.ComposeProjectPresent;
-        var rollbackSummary = rollbackPossible
-            ? "Rollback can deterministically return this Compose-only target to its pre-deployment absent state by running verified compose down."
-            : "Automatic rollback is unavailable because the supported primitives cannot deterministically restore the complete pre-deployment revision/config/image state.";
-
         return new DeploymentPlanResult(
             new DeploymentPlan(
                 Guid.NewGuid(),
                 normalized,
-                steps,
+                BuildSteps(normalized),
                 observed.State!,
                 rollbackPossible,
-                rollbackSummary),
+                rollbackPossible
+                    ? "compose-down-to-predeployment-absence"
+                    : "rollback-unavailable-for-nondeterministic-state"),
             null);
     }
 
@@ -101,13 +98,23 @@ public sealed class DeploymentOrchestrationService : IDeploymentOrchestrationSer
             return new DeploymentRunResult(executionId, DeploymentRunStatus.Failed, results, error.Message, error);
         }
 
-        if (!Equals(normalized, plan.Target))
+        if (!TargetMatches(normalized, plan.Target))
         {
             var error = new RemoteError(RemoteErrorCode.PathConflict, "The deployment target changed after preview. Create a new plan before executing.");
             return new DeploymentRunResult(executionId, DeploymentRunStatus.Failed, results, error.Message, error);
         }
 
-        var current = await ObserveAsync(profile, normalized, cancellationToken).ConfigureAwait(false);
+        ObservationResult current;
+        try
+        {
+            current = await ObserveAsync(profile, normalized, cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            var error = new RemoteError(RemoteErrorCode.OperationCancelled, "Deployment execution was cancelled before mutation started.");
+            return new DeploymentRunResult(executionId, DeploymentRunStatus.Cancelled, results, error.Message, error);
+        }
+
         if (current.Error is not null)
         {
             return new DeploymentRunResult(executionId, DeploymentRunStatus.Failed, results, current.Error.Message, current.Error);
@@ -115,18 +122,16 @@ public sealed class DeploymentOrchestrationService : IDeploymentOrchestrationSer
 
         if (!ObservedStateMatches(plan.ObservedState, current.State!))
         {
-            var error = new RemoteError(
-                RemoteErrorCode.PathConflict,
-                "Deployment state changed after preview. Refresh and preview again before any mutation.");
+            var error = new RemoteError(RemoteErrorCode.PathConflict, "Deployment state changed after preview. Refresh and preview again before any mutation.");
             return new DeploymentRunResult(executionId, DeploymentRunStatus.Failed, results, error.Message, error);
         }
 
-        GitRepositorySnapshot? gitSnapshot = null;
+        GitRepositorySnapshot? fetchedGitState = null;
         DeploymentRollbackPlan? rollback = null;
-        var mutatingStepStarted = false;
 
         foreach (var step in plan.Steps)
         {
+            var mutationStarted = false;
             try
             {
                 cancellationToken.ThrowIfCancellationRequested();
@@ -134,45 +139,65 @@ public sealed class DeploymentOrchestrationService : IDeploymentOrchestrationSer
                 switch (step.Kind)
                 {
                     case DeploymentStepKind.GitFetch:
-                        mutatingStepStarted = true;
-                        result = await ExecuteGitFetchAsync(profile, normalized, step, cancellationToken).ConfigureAwait(false);
-                        if (result.Outcome == DeploymentStepOutcome.Succeeded)
+                    {
+                        mutationStarted = true;
+                        var fetch = await _git.FetchAsync(profile, normalized.RepositoryPath!, cancellationToken).ConfigureAwait(false);
+                        result = new DeploymentStepResult(step, ToOutcome(fetch.IsSuccess, fetch.Error), fetch.Message, fetch.Error);
+                        if (fetch.IsSuccess)
                         {
-                            var fetch = _lastGitFetch;
-                            gitSnapshot = fetch?.VerifiedSnapshot;
+                            fetchedGitState = fetch.VerifiedSnapshot;
                         }
+
                         break;
+                    }
                     case DeploymentStepKind.GitFastForward:
-                        if (gitSnapshot is null)
+                    {
+                        if (fetchedGitState is null)
                         {
-                            result = StepFailure(step, RemoteErrorCode.PathConflict, "Git fast-forward cannot run because the verified post-fetch repository state is unavailable.");
+                            result = StepFailure(step, RemoteErrorCode.PathConflict, "Verified post-fetch Git state is unavailable.");
                             break;
                         }
 
-                        if (gitSnapshot.Behind == 0 && gitSnapshot.Ahead == 0)
+                        if (fetchedGitState.Behind == 0 && fetchedGitState.Ahead == 0)
                         {
-                            result = new DeploymentStepResult(step, DeploymentStepOutcome.Skipped, "Git fast-forward was skipped because the fetched upstream state is already current.");
+                            result = new DeploymentStepResult(step, DeploymentStepOutcome.Skipped, "git-fast-forward-not-needed");
                             break;
                         }
 
-                        mutatingStepStarted = true;
-                        result = await ExecuteGitFastForwardAsync(profile, normalized, step, gitSnapshot, cancellationToken).ConfigureAwait(false);
+                        var pullPreview = await _git.PreviewPullAsync(profile, normalized.RepositoryPath!, cancellationToken).ConfigureAwait(false);
+                        if (!pullPreview.IsSuccess || pullPreview.Preview is null)
+                        {
+                            var error = pullPreview.Error ?? new RemoteError(RemoteErrorCode.CommandFailed, "Git safe-pull preview failed after fetch.");
+                            result = new DeploymentStepResult(step, DeploymentStepOutcome.Failed, error.Message, error);
+                            break;
+                        }
+
+                        if (!pullPreview.Preview.CanApply ||
+                            !string.Equals(pullPreview.Preview.CurrentRevision, fetchedGitState.Revision, StringComparison.Ordinal))
+                        {
+                            result = StepFailure(step, RemoteErrorCode.PathConflict, "Git state changed or became unsafe after fetch; deployment stopped before fast-forward.");
+                            break;
+                        }
+
+                        mutationStarted = true;
+                        var pull = await _git.PullAsync(profile, normalized.RepositoryPath!, fetchedGitState.Revision, cancellationToken).ConfigureAwait(false);
+                        result = new DeploymentStepResult(step, ToOutcome(pull.IsSuccess, pull.Error), pull.Message, pull.Error);
                         break;
+                    }
                     case DeploymentStepKind.ComposePull:
-                        mutatingStepStarted = true;
-                        result = await ExecuteComposeAsync(profile, normalized, step, DockerComposeAction.Pull, executionId, cancellationToken).ConfigureAwait(false);
+                        mutationStarted = true;
+                        result = await ExecuteComposeAsync(profile, normalized, step, DockerComposeAction.Pull, cancellationToken).ConfigureAwait(false);
                         break;
                     case DeploymentStepKind.ComposeBuild:
-                        mutatingStepStarted = true;
-                        result = await ExecuteComposeAsync(profile, normalized, step, DockerComposeAction.Build, executionId, cancellationToken).ConfigureAwait(false);
+                        mutationStarted = true;
+                        result = await ExecuteComposeAsync(profile, normalized, step, DockerComposeAction.Build, cancellationToken).ConfigureAwait(false);
                         break;
                     case DeploymentStepKind.ComposeUp:
-                        mutatingStepStarted = true;
-                        var up = await ExecuteComposeDetailedAsync(profile, normalized, step, DockerComposeAction.Up, cancellationToken).ConfigureAwait(false);
-                        result = up.Step;
-                        if (result.Outcome == DeploymentStepOutcome.Succeeded &&
-                            plan.DeterministicRollbackPossible &&
-                            up.Action?.VerifiedDetails is { } verifiedDetails)
+                    {
+                        mutationStarted = true;
+                        var action = await _compose.ExecuteAsync(profile, normalized.ComposeProject!, DockerComposeAction.Up, cancellationToken).ConfigureAwait(false);
+                        result = new DeploymentStepResult(step, ToOutcome(action.IsSuccess, action.Error), action.Message, action.Error);
+                        if (action.IsSuccess && plan.DeterministicRollbackPossible && action.VerifiedDetails is { } verified)
                         {
                             rollback = new DeploymentRollbackPlan(
                                 executionId,
@@ -180,45 +205,61 @@ public sealed class DeploymentOrchestrationService : IDeploymentOrchestrationSer
                                 normalized.Id,
                                 normalized.Environment,
                                 normalized.ComposeProject!,
-                                ComposeFingerprint(verifiedDetails),
-                                "Return the Compose-only target to the verified pre-deployment absent state with compose down.");
+                                ComposeFingerprint(verified),
+                                "compose-down-to-predeployment-absence");
                         }
+
                         break;
+                    }
                     case DeploymentStepKind.ComposeRestart:
-                        mutatingStepStarted = true;
-                        result = await ExecuteComposeAsync(profile, normalized, step, DockerComposeAction.Restart, executionId, cancellationToken).ConfigureAwait(false);
+                        mutationStarted = true;
+                        result = await ExecuteComposeAsync(profile, normalized, step, DockerComposeAction.Restart, cancellationToken).ConfigureAwait(false);
                         break;
                     case DeploymentStepKind.SystemdRestart:
-                        mutatingStepStarted = true;
-                        result = await ExecuteSystemdRestartAsync(profile, normalized, step, cancellationToken).ConfigureAwait(false);
+                    {
+                        mutationStarted = true;
+                        var action = await _services.ExecuteAsync(profile, normalized.SystemdUnit!, ServerServiceAction.Restart, cancellationToken).ConfigureAwait(false);
+                        result = new DeploymentStepResult(step, ToOutcome(action.IsSuccess, action.Error), action.Message, action.Error);
                         break;
+                    }
                     case DeploymentStepKind.HealthCheck:
-                        mutatingStepStarted = false;
-                        result = await ExecuteHealthAsync(profile, normalized, step, cancellationToken).ConfigureAwait(false);
+                    {
+                        var check = normalized.HealthChecks.FirstOrDefault(candidate => string.Equals(candidate.Name, step.HealthCheckName, StringComparison.Ordinal));
+                        if (check is null)
+                        {
+                            result = StepFailure(step, RemoteErrorCode.PathConflict, "The health-check definition changed after preview.");
+                            break;
+                        }
+
+                        var health = await _health.RunAsync(profile, check, cancellationToken).ConfigureAwait(false);
+                        result = new DeploymentStepResult(
+                            step,
+                            health.IsSuccess ? DeploymentStepOutcome.Succeeded : DeploymentStepOutcome.Failed,
+                            health.Message,
+                            health.Error);
                         break;
+                    }
                     default:
                         throw new ArgumentOutOfRangeException(nameof(step));
                 }
 
-                result = await AppendAuditWarningAsync(profile, normalized, result, cancellationToken).ConfigureAwait(false);
+                result = await AppendAuditWarningAsync(profile, normalized.Id, normalized.Environment, result, cancellationToken).ConfigureAwait(false);
                 results.Add(result);
                 if (result.Outcome is DeploymentStepOutcome.Failed or DeploymentStepOutcome.Unknown or DeploymentStepOutcome.Cancelled)
                 {
                     return StopForStep(executionId, results, result, rollback);
                 }
-
-                mutatingStepStarted = false;
             }
             catch (OperationCanceledException)
             {
-                var outcome = mutatingStepStarted ? DeploymentStepOutcome.Unknown : DeploymentStepOutcome.Cancelled;
-                var code = mutatingStepStarted ? RemoteErrorCode.AmbiguousState : RemoteErrorCode.OperationCancelled;
-                var message = mutatingStepStarted
-                    ? "Deployment cancellation occurred after a mutation step started. Current remote state is unknown; refresh before any retry."
-                    : "Deployment execution was cancelled before the next mutation.";
-                var error = new RemoteError(code, message);
-                var cancelled = new DeploymentStepResult(step, outcome, message, error);
-                cancelled = await AppendAuditWarningAsync(profile, normalized, cancelled, CancellationToken.None).ConfigureAwait(false);
+                var outcome = mutationStarted ? DeploymentStepOutcome.Unknown : DeploymentStepOutcome.Cancelled;
+                var error = new RemoteError(
+                    mutationStarted ? RemoteErrorCode.AmbiguousState : RemoteErrorCode.OperationCancelled,
+                    mutationStarted
+                        ? "Deployment cancellation occurred after a mutation step started. Current remote state is unknown; refresh before any retry."
+                        : "Deployment execution was cancelled during read-only verification.");
+                var cancelled = new DeploymentStepResult(step, outcome, error.Message, error);
+                cancelled = await AppendAuditWarningAsync(profile, normalized.Id, normalized.Environment, cancelled, CancellationToken.None).ConfigureAwait(false);
                 results.Add(cancelled);
                 return StopForStep(executionId, results, cancelled, rollback);
             }
@@ -228,7 +269,7 @@ public sealed class DeploymentOrchestrationService : IDeploymentOrchestrationSer
             executionId,
             DeploymentRunStatus.Succeeded,
             results,
-            $"Deployment '{normalized.Id}' for environment '{normalized.Environment}' completed and all configured health checks passed.");
+            "deployment-completed-and-health-verified");
     }
 
     public async Task<DeploymentRollbackResult> RollbackAsync(
@@ -259,13 +300,20 @@ public sealed class DeploymentOrchestrationService : IDeploymentOrchestrationSer
         var snapshot = await _compose.InspectAsync(profile, cancellationToken).ConfigureAwait(false);
         if (!snapshot.IsSuccess || snapshot.Snapshot is null)
         {
-            return RollbackFailure(
-                snapshot.Error?.Code ?? RemoteErrorCode.CommandFailed,
-                snapshot.Error?.Message ?? "Compose state could not be inspected before rollback.",
-                snapshot.Error);
+            var error = snapshot.Error ?? new RemoteError(RemoteErrorCode.CommandFailed, "Compose state could not be inspected before rollback.");
+            return RollbackFailure(error.Code, error.Message, error);
         }
 
-        var liveProject = FindProject(snapshot.Snapshot, project);
+        DockerComposeProject? liveProject;
+        try
+        {
+            liveProject = FindProject(snapshot.Snapshot, project);
+        }
+        catch (FormatException exception)
+        {
+            return RollbackFailure(RemoteErrorCode.PathConflict, exception.Message);
+        }
+
         if (liveProject is null)
         {
             return RollbackFailure(RemoteErrorCode.PathConflict, "Rollback was not executed because the Compose project is no longer present in the expected state.");
@@ -274,95 +322,33 @@ public sealed class DeploymentOrchestrationService : IDeploymentOrchestrationSer
         var details = await _compose.InspectProjectAsync(profile, liveProject, cancellationToken).ConfigureAwait(false);
         if (!details.IsSuccess || details.Details is null)
         {
-            return RollbackFailure(
-                details.Error?.Code ?? RemoteErrorCode.CommandFailed,
-                details.Error?.Message ?? "Compose project details could not be verified before rollback.",
-                details.Error);
+            var error = details.Error ?? new RemoteError(RemoteErrorCode.CommandFailed, "Compose project details could not be verified before rollback.");
+            return RollbackFailure(error.Code, error.Message, error);
         }
 
         if (!string.Equals(ComposeFingerprint(details.Details), rollback.ExpectedComposeFingerprint, StringComparison.Ordinal))
         {
-            return RollbackFailure(
-                RemoteErrorCode.PathConflict,
-                "Rollback was blocked because the Compose project changed after the failed deployment. Refresh and resolve the live state explicitly.");
+            return RollbackFailure(RemoteErrorCode.PathConflict, "Rollback was blocked because the Compose project changed after the failed deployment.");
         }
 
-        var step = new DeploymentPlanStep(
-            1,
-            DeploymentStepKind.RollbackComposeDown,
-            OperationRisk.Destructive,
-            "compose-down-rollback");
-        DockerComposeActionResult action;
+        var step = new DeploymentPlanStep(1, DeploymentStepKind.RollbackComposeDown, OperationRisk.Destructive, "compose-down-rollback");
         try
         {
             cancellationToken.ThrowIfCancellationRequested();
-            action = await _compose.ExecuteAsync(profile, project, DockerComposeAction.Down, cancellationToken).ConfigureAwait(false);
+            var action = await _compose.ExecuteAsync(profile, project, DockerComposeAction.Down, cancellationToken).ConfigureAwait(false);
+            var result = new DeploymentStepResult(step, ToOutcome(action.IsSuccess, action.Error), action.Message, action.Error);
+            result = await AppendAuditWarningAsync(profile, rollback.TargetId, rollback.Environment, result, cancellationToken).ConfigureAwait(false);
+            return action.IsSuccess
+                ? new DeploymentRollbackResult(true, false, "compose-rollback-completed-and-verified", Step: result)
+                : new DeploymentRollbackResult(false, action.Error?.Code == RemoteErrorCode.AmbiguousState, result.Message, action.Error, result);
         }
         catch (OperationCanceledException)
         {
-            var error = new RemoteError(
-                RemoteErrorCode.AmbiguousState,
-                "Rollback cancellation occurred after compose down started. Refresh Compose state before any retry.");
+            var error = new RemoteError(RemoteErrorCode.AmbiguousState, "Rollback cancellation occurred after compose down started. Refresh Compose state before any retry.");
             var unknown = new DeploymentStepResult(step, DeploymentStepOutcome.Unknown, error.Message, error);
-            _ = await TryAuditAsync(profile, rollback.TargetId, rollback.Environment, unknown, CancellationToken.None).ConfigureAwait(false);
+            _ = await AppendAuditWarningAsync(profile, rollback.TargetId, rollback.Environment, unknown, CancellationToken.None).ConfigureAwait(false);
             return new DeploymentRollbackResult(false, true, error.Message, error, unknown);
         }
-
-        var outcome = ToOutcome(action.IsSuccess, action.Error);
-        var result = new DeploymentStepResult(step, outcome, action.Message, action.Error);
-        result = await AppendAuditWarningAsync(profile, rollback.TargetId, rollback.Environment, result, cancellationToken).ConfigureAwait(false);
-        if (!action.IsSuccess)
-        {
-            var ambiguous = action.Error?.Code == RemoteErrorCode.AmbiguousState;
-            return new DeploymentRollbackResult(false, ambiguous, result.Message, action.Error, result);
-        }
-
-        return new DeploymentRollbackResult(
-            true,
-            false,
-            "Deterministic Compose rollback completed and the project absence was verified.",
-            Step: result);
-    }
-
-    private GitFetchResult? _lastGitFetch;
-
-    private async Task<DeploymentStepResult> ExecuteGitFetchAsync(
-        ServerProfile profile,
-        DeploymentTarget target,
-        DeploymentPlanStep step,
-        CancellationToken cancellationToken)
-    {
-        var result = await _git.FetchAsync(profile, target.RepositoryPath!, cancellationToken).ConfigureAwait(false);
-        _lastGitFetch = result;
-        return new DeploymentStepResult(step, ToOutcome(result.IsSuccess, result.Error), result.Message, result.Error);
-    }
-
-    private async Task<DeploymentStepResult> ExecuteGitFastForwardAsync(
-        ServerProfile profile,
-        DeploymentTarget target,
-        DeploymentPlanStep step,
-        GitRepositorySnapshot fetched,
-        CancellationToken cancellationToken)
-    {
-        var preview = await _git.PreviewPullAsync(profile, target.RepositoryPath!, cancellationToken).ConfigureAwait(false);
-        if (!preview.IsSuccess || preview.Preview is null)
-        {
-            var error = preview.Error ?? new RemoteError(RemoteErrorCode.CommandFailed, "Git safe-pull preview failed after fetch.");
-            return new DeploymentStepResult(step, DeploymentStepOutcome.Failed, error.Message, error);
-        }
-
-        if (!preview.Preview.CanApply)
-        {
-            return StepFailure(step, RemoteErrorCode.PathConflict, preview.Preview.Message);
-        }
-
-        if (!string.Equals(preview.Preview.CurrentRevision, fetched.Revision, StringComparison.Ordinal))
-        {
-            return StepFailure(step, RemoteErrorCode.PathConflict, "Repository revision changed between fetch verification and safe-pull execution.");
-        }
-
-        var result = await _git.PullAsync(profile, target.RepositoryPath!, fetched.Revision, cancellationToken).ConfigureAwait(false);
-        return new DeploymentStepResult(step, ToOutcome(result.IsSuccess, result.Error), result.Message, result.Error);
     }
 
     private async Task<DeploymentStepResult> ExecuteComposeAsync(
@@ -370,55 +356,10 @@ public sealed class DeploymentOrchestrationService : IDeploymentOrchestrationSer
         DeploymentTarget target,
         DeploymentPlanStep step,
         DockerComposeAction action,
-        Guid executionId,
-        CancellationToken cancellationToken)
-    {
-        _ = executionId;
-        var result = await _compose.ExecuteAsync(profile, target.ComposeProject!, action, cancellationToken).ConfigureAwait(false);
-        return new DeploymentStepResult(step, ToOutcome(result.IsSuccess, result.Error), result.Message, result.Error);
-    }
-
-    private async Task<ComposeStepResult> ExecuteComposeDetailedAsync(
-        ServerProfile profile,
-        DeploymentTarget target,
-        DeploymentPlanStep step,
-        DockerComposeAction action,
         CancellationToken cancellationToken)
     {
         var result = await _compose.ExecuteAsync(profile, target.ComposeProject!, action, cancellationToken).ConfigureAwait(false);
-        return new ComposeStepResult(
-            new DeploymentStepResult(step, ToOutcome(result.IsSuccess, result.Error), result.Message, result.Error),
-            result);
-    }
-
-    private async Task<DeploymentStepResult> ExecuteSystemdRestartAsync(
-        ServerProfile profile,
-        DeploymentTarget target,
-        DeploymentPlanStep step,
-        CancellationToken cancellationToken)
-    {
-        var result = await _services.ExecuteAsync(profile, target.SystemdUnit!, ServerServiceAction.Restart, cancellationToken).ConfigureAwait(false);
         return new DeploymentStepResult(step, ToOutcome(result.IsSuccess, result.Error), result.Message, result.Error);
-    }
-
-    private async Task<DeploymentStepResult> ExecuteHealthAsync(
-        ServerProfile profile,
-        DeploymentTarget target,
-        DeploymentPlanStep step,
-        CancellationToken cancellationToken)
-    {
-        var check = target.HealthChecks.FirstOrDefault(candidate => string.Equals(candidate.Name, step.HealthCheckName, StringComparison.Ordinal));
-        if (check is null)
-        {
-            return StepFailure(step, RemoteErrorCode.PathConflict, "The health-check definition changed after preview.");
-        }
-
-        var result = await _health.RunAsync(profile, check, cancellationToken).ConfigureAwait(false);
-        return new DeploymentStepResult(
-            step,
-            result.IsSuccess ? DeploymentStepOutcome.Succeeded : DeploymentStepOutcome.Failed,
-            result.Message,
-            result.Error);
     }
 
     private async Task<ObservationResult> ObserveAsync(
@@ -481,7 +422,16 @@ public sealed class DeploymentOrchestrationService : IDeploymentOrchestrationSer
                 return ObservationResult.Failure(new RemoteError(RemoteErrorCode.CapabilityUnavailable, compose.Snapshot.Runtime.Detail));
             }
 
-            var liveProject = FindProject(compose.Snapshot, target.ComposeProject!);
+            DockerComposeProject? liveProject;
+            try
+            {
+                liveProject = FindProject(compose.Snapshot, target.ComposeProject!);
+            }
+            catch (FormatException exception)
+            {
+                return ObservationResult.Failure(new RemoteError(RemoteErrorCode.PathConflict, exception.Message));
+            }
+
             composePresent = liveProject is not null;
             if (target.ComposeMode == DeploymentComposeMode.Restart && liveProject is null)
             {
@@ -531,7 +481,7 @@ public sealed class DeploymentOrchestrationService : IDeploymentOrchestrationSer
         if (target.Kind is DeploymentTargetKind.GitCompose or DeploymentTargetKind.GitSystemd)
         {
             Add(DeploymentStepKind.GitFetch, OperationRisk.Mutating, "git-fetch");
-            Add(DeploymentStepKind.GitFastForward, OperationRisk.Mutating, "git-fast-forward-if-behind", conditional: true);
+            Add(DeploymentStepKind.GitFastForward, OperationRisk.Mutating, "git-fast-forward", conditional: true);
         }
 
         if (target.Kind is DeploymentTargetKind.GitCompose or DeploymentTargetKind.Compose)
@@ -546,14 +496,10 @@ public sealed class DeploymentOrchestrationService : IDeploymentOrchestrationSer
                 Add(DeploymentStepKind.ComposeBuild, OperationRisk.Mutating, "compose-build");
             }
 
-            if (target.ComposeMode == DeploymentComposeMode.Up)
-            {
-                Add(DeploymentStepKind.ComposeUp, OperationRisk.Destructive, "compose-up");
-            }
-            else
-            {
-                Add(DeploymentStepKind.ComposeRestart, OperationRisk.Destructive, "compose-restart");
-            }
+            Add(
+                target.ComposeMode == DeploymentComposeMode.Up ? DeploymentStepKind.ComposeUp : DeploymentStepKind.ComposeRestart,
+                OperationRisk.Destructive,
+                target.ComposeMode == DeploymentComposeMode.Up ? "compose-up" : "compose-restart");
         }
 
         if (target.Kind == DeploymentTargetKind.GitSystemd)
@@ -608,6 +554,32 @@ public sealed class DeploymentOrchestrationService : IDeploymentOrchestrationSer
         return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(builder.ToString())));
     }
 
+    private static bool TargetMatches(DeploymentTarget left, DeploymentTarget right) =>
+        string.Equals(left.Id, right.Id, StringComparison.Ordinal) &&
+        string.Equals(left.Name, right.Name, StringComparison.Ordinal) &&
+        string.Equals(left.Environment, right.Environment, StringComparison.Ordinal) &&
+        left.Kind == right.Kind &&
+        string.Equals(left.RepositoryPath, right.RepositoryPath, StringComparison.Ordinal) &&
+        ComposeIdentityMatches(left.ComposeProject, right.ComposeProject) &&
+        left.ComposeMode == right.ComposeMode &&
+        left.ComposePull == right.ComposePull &&
+        left.ComposeBuild == right.ComposeBuild &&
+        string.Equals(left.SystemdUnit, right.SystemdUnit, StringComparison.Ordinal) &&
+        left.HealthChecks.SequenceEqual(right.HealthChecks);
+
+    private static bool ComposeIdentityMatches(DockerComposeProject? left, DockerComposeProject? right)
+    {
+        if (left is null || right is null)
+        {
+            return left is null && right is null;
+        }
+
+        var normalizedLeft = DockerComposeIdentity.Normalize(left);
+        var normalizedRight = DockerComposeIdentity.Normalize(right);
+        return string.Equals(normalizedLeft.Name, normalizedRight.Name, StringComparison.Ordinal) &&
+               normalizedLeft.ConfigFiles.SequenceEqual(normalizedRight.ConfigFiles, StringComparer.Ordinal);
+    }
+
     private static bool ObservedStateMatches(DeploymentObservedState expected, DeploymentObservedState actual) =>
         string.Equals(expected.GitRevision, actual.GitRevision, StringComparison.Ordinal) &&
         string.Equals(expected.GitBranch, actual.GitBranch, StringComparison.Ordinal) &&
@@ -616,13 +588,6 @@ public sealed class DeploymentOrchestrationService : IDeploymentOrchestrationSer
         string.Equals(expected.ComposeFingerprint, actual.ComposeFingerprint, StringComparison.Ordinal) &&
         string.Equals(expected.SystemdActiveState, actual.SystemdActiveState, StringComparison.Ordinal) &&
         string.Equals(expected.SystemdSubState, actual.SystemdSubState, StringComparison.Ordinal);
-
-    private async Task<DeploymentStepResult> AppendAuditWarningAsync(
-        ServerProfile profile,
-        DeploymentTarget target,
-        DeploymentStepResult result,
-        CancellationToken cancellationToken) =>
-        await AppendAuditWarningAsync(profile, target.Id, target.Environment, result, cancellationToken).ConfigureAwait(false);
 
     private async Task<DeploymentStepResult> AppendAuditWarningAsync(
         ServerProfile profile,
@@ -703,7 +668,7 @@ public sealed class DeploymentOrchestrationService : IDeploymentOrchestrationSer
     private static DeploymentRollbackResult RollbackFailure(RemoteErrorCode code, string message, RemoteError? original = null)
     {
         var error = original ?? new RemoteError(code, message);
-        return new DeploymentRollbackResult(false, code == RemoteErrorCode.AmbiguousState, message, error);
+        return new DeploymentRollbackResult(false, error.Code == RemoteErrorCode.AmbiguousState, message, error);
     }
 
     private static bool IsAuditToken(string value) =>
@@ -718,6 +683,4 @@ public sealed class DeploymentOrchestrationService : IDeploymentOrchestrationSer
 
         public static ObservationResult Failure(RemoteError error) => new(null, error);
     }
-
-    private sealed record ComposeStepResult(DeploymentStepResult Step, DockerComposeActionResult? Action);
 }
