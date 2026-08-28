@@ -79,7 +79,6 @@ public partial class App : System.Windows.Application
             }
             catch
             {
-                // Process shutdown must continue; tunnel disposal closes SSH/listener resources best-effort.
             }
         }
 
@@ -91,7 +90,6 @@ public partial class App : System.Windows.Application
             }
             catch
             {
-                // Process shutdown will close any remaining socket. Exit must not be blocked by cleanup failures.
             }
         }
 
@@ -103,7 +101,6 @@ public partial class App : System.Windows.Application
             }
             catch
             {
-                // All critical remote resources were already given an explicit best-effort cleanup path above.
             }
         }
 
@@ -171,6 +168,13 @@ public partial class App : System.Windows.Application
         services.AddSingleton<IDockerInventoryService, DockerInventoryService>();
         services.AddSingleton(DockerContainerDiagnosticsOptions.Default);
         services.AddSingleton<IDockerContainerDiagnosticsService, DockerContainerDiagnosticsService>();
+        services.AddSingleton(DockerContainerActionOptions.Default);
+        services.AddSingleton<DockerContainerActionService>();
+        services.AddSingleton<IDockerContainerActionService>(provider =>
+            new AuditedDockerContainerActionService(
+                provider.GetRequiredService<DockerContainerActionService>(),
+                provider.GetRequiredService<IOperationAudit>()));
+        services.AddSingleton<IDockerExecTerminalSessionFactory, DockerExecTerminalSessionFactory>();
 
         services.AddSingleton<INavigationService, NavigationService>();
         services.AddSingleton<IThemeService, WpfThemeService>();
