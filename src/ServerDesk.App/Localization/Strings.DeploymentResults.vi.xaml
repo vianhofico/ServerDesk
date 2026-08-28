@@ -1,0 +1,15 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:system="clr-namespace:System;assembly=System.Runtime">
+    <system:String x:Key="Loc.Deploy.RollbackPotential">Nếu kế hoạch Compose-only này tạo một project trước đó chưa tồn tại và health check sau đó thất bại, ServerDesk có thể cung cấp rollback compose-down có xác minh.</system:String>
+    <system:String x:Key="Loc.Deploy.OutcomeSucceeded">Thành công</system:String>
+    <system:String x:Key="Loc.Deploy.OutcomeFailed">Thất bại</system:String>
+    <system:String x:Key="Loc.Deploy.OutcomeSkipped">Bỏ qua</system:String>
+    <system:String x:Key="Loc.Deploy.OutcomeUnknown">Chưa xác định</system:String>
+    <system:String x:Key="Loc.Deploy.OutcomeCancelled">Đã hủy</system:String>
+    <system:String x:Key="Loc.Deploy.ResultSucceeded">Bước đã hoàn tất và trạng thái yêu cầu đã được xác minh.</system:String>
+    <system:String x:Key="Loc.Deploy.ResultFailed">Bước thất bại; workflow triển khai đã dừng.</system:String>
+    <system:String x:Key="Loc.Deploy.ResultSkipped">Bước được bỏ qua an toàn vì điều kiện không yêu cầu mutation.</system:String>
+    <system:String x:Key="Loc.Deploy.ResultUnknown">Kết quả chưa xác định; workflow đã dừng và không được retry mù.</system:String>
+    <system:String x:Key="Loc.Deploy.ResultCancelled">Đã hủy bước kiểm tra chỉ đọc trước mutation tiếp theo.</system:String>
+</ResourceDictionary>
