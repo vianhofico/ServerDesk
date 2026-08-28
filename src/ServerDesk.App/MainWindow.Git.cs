@@ -16,6 +16,7 @@ public partial class MainWindow
         EnsureScheduledTasksActionButton();
         EnsureNginxActionButton();
         EnsureTlsActionButton();
+        EnsureEnvironmentFilesActionButton();
     }
 
     private void EnsureGitActionButton()
