@@ -22,6 +22,7 @@ public interface ILocalizationService
 public sealed class WpfLocalizationService : ILocalizationService
 {
     private const string LocalizationResourceMarker = "ServerDesk.App;component/Localization/Strings.";
+    private static readonly string[] FeatureDictionaries = ["Tasks"];
     private readonly ISystemCultureDetector _systemCultureDetector;
 
     public WpfLocalizationService(ISystemCultureDetector systemCultureDetector)
@@ -58,10 +59,10 @@ public sealed class WpfLocalizationService : ILocalizationService
                 resources.MergedDictionaries.Remove(dictionary);
             }
 
-            resources.MergedDictionaries.Add(CreateDictionary(LanguagePreferenceResolver.EnglishCode));
+            AddCultureDictionaries(resources, LanguagePreferenceResolver.EnglishCode);
             if (EffectiveLanguage == AppLanguageKind.Vietnamese)
             {
-                resources.MergedDictionaries.Add(CreateDictionary(LanguagePreferenceResolver.VietnameseCode));
+                AddCultureDictionaries(resources, LanguagePreferenceResolver.VietnameseCode);
             }
         }
 
@@ -87,11 +88,28 @@ public sealed class WpfLocalizationService : ILocalizationService
         }
     }
 
+    private static void AddCultureDictionaries(ResourceDictionary resources, string cultureCode)
+    {
+        resources.MergedDictionaries.Add(CreateDictionary(cultureCode));
+        foreach (var feature in FeatureDictionaries)
+        {
+            resources.MergedDictionaries.Add(CreateFeatureDictionary(feature, cultureCode));
+        }
+    }
+
     private static ResourceDictionary CreateDictionary(string cultureCode) =>
         new()
         {
             Source = new Uri(
                 $"pack://application:,,,/ServerDesk.App;component/Localization/Strings.{cultureCode}.xaml",
+                UriKind.Absolute),
+        };
+
+    private static ResourceDictionary CreateFeatureDictionary(string feature, string cultureCode) =>
+        new()
+        {
+            Source = new Uri(
+                $"pack://application:,,,/ServerDesk.App;component/Localization/Strings.{feature}.{cultureCode}.xaml",
                 UriKind.Absolute),
         };
 
