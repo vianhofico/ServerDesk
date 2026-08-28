@@ -1,0 +1,2 @@
+{"__REALTIME_TIMESTAMP":"1760000000123456","__CURSOR":"s=ubuntu24;i=1","PRIORITY":"6","MESSAGE":"Started ServerDesk fixture","SYSLOG_IDENTIFIER":"systemd","_SYSTEMD_UNIT":"serverdesk-fixture.service","_PID":"1","_HOSTNAME":"ubuntu-2404"}
+{"__REALTIME_TIMESTAMP":"1760000001123456","__CURSOR":"s=ubuntu24;i=2","PRIORITY":"4","MESSAGE":"Fixture warning","SYSLOG_IDENTIFIER":"serverdesk-fixture","_SYSTEMD_UNIT":"serverdesk-fixture.service","_PID":"4242","_HOSTNAME":"ubuntu-2404"}
