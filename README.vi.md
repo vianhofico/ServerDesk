@@ -1,6 +1,23 @@
-# ServerDesk
+<p align="center">
+  <img src="docs/assets/serverdesk-logo.png" alt="ServerDesk" width="140" />
+</p>
 
-[English](README.md) | **Tiếng Việt**
+<h1 align="center">ServerDesk</h1>
+
+<p align="center">
+  Quản trị máy chủ Linux trực quan trên Windows
+</p>
+
+<p align="center">
+  <a href="README.md">English</a> |
+  <strong>Tiếng Việt</strong>
+</p>
+
+<p align="center">
+  <a href="https://github.com/vianhofico/ServerDesk/actions/workflows/ci.yml">
+    <img src="https://github.com/vianhofico/ServerDesk/actions/workflows/ci.yml/badge.svg" alt="CI" />
+  </a>
+</p>
 
 ServerDesk là ứng dụng desktop dành cho Windows giúp quản lý máy chủ Linux thông qua giao diện trực quan, quen thuộc kiểu Windows, đồng thời vẫn sử dụng SSH/SFTP làm lớp điều khiển an toàn.
 
