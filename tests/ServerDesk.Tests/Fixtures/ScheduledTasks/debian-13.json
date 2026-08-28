@@ -1,0 +1,5 @@
+{
+  "crontab": "0 */6 * * * /usr/local/bin/sync-data\n",
+  "unitFiles": "fstrim.timer enabled enabled\nreport.timer disabled enabled\n",
+  "timerShow": "Id=report.timer\nLoadState=loaded\nActiveState=inactive\nUnitFileState=disabled\nNextElapseUSecRealtime=Sun 2026-08-30 03:00:00 UTC\nLastTriggerUSec=Sun 2026-08-23 03:00:00 UTC\nTimersCalendar={ OnCalendar=Sun *-*-* 03:00:00 ; next_elapse=Sun 2026-08-30 03:00:00 UTC }\nTriggers=report.service\nFragmentPath=/etc/systemd/system/report.timer\n"
+}
