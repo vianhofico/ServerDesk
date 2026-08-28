@@ -1,0 +1,249 @@
+<Window x:Class="ServerDesk.App.DockerContainerDiagnosticsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Docker container diagnostics"
+        Width="1380"
+        Height="860"
+        MinWidth="1080"
+        MinHeight="680"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource WindowBackgroundBrush}"
+        Foreground="{DynamicResource PrimaryTextBrush}"
+        Loaded="WindowOnLoaded"
+        Closed="WindowOnClosed">
+    <Window.Resources>
+        <Style x:Key="DockerDiagButton" TargetType="Button">
+            <Setter Property="Padding" Value="10,6" />
+            <Setter Property="MinHeight" Value="34" />
+            <Setter Property="Margin" Value="8,0,0,0" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+        <Style x:Key="MetricValue" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="22" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+        <Style x:Key="MetricLabel" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" />
+            <Setter Property="Margin" Value="0,3,0,0" />
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <StackPanel>
+                <TextBlock x:Name="TitleText" FontSize="26" FontWeight="SemiBold" />
+                <TextBlock x:Name="IdentityText" Margin="0,5,0,0"
+                           Foreground="{DynamicResource MutedTextBrush}" />
+            </StackPanel>
+            <Button Grid.Column="1" Content="Cancel active work" Click="CancelAllOnClick"
+                    Style="{StaticResource DockerDiagButton}" Margin="0" VerticalAlignment="Top" />
+        </Grid>
+
+        <Border Grid.Row="1" Margin="0,14,0,10" Padding="10" CornerRadius="7"
+                Background="{DynamicResource SurfaceSecondaryBrush}">
+            <TextBlock x:Name="StatusText" TextWrapping="Wrap" />
+        </Border>
+
+        <TabControl Grid.Row="2" x:Name="DiagnosticsTabs">
+            <TabItem Header="Details">
+                <Grid Margin="12">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    <StackPanel Orientation="Horizontal">
+                        <Button Content="Refresh details" Click="RefreshDetailsOnClick"
+                                Style="{StaticResource DockerDiagButton}" Margin="0" />
+                    </StackPanel>
+                    <Grid Grid.Row="1" Margin="0,12,0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="State" Style="{StaticResource MetricLabel}" />
+                            <TextBlock x:Name="DetailStateText" FontWeight="SemiBold" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="1">
+                            <TextBlock Text="Image" Style="{StaticResource MetricLabel}" />
+                            <TextBlock x:Name="DetailImageText" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="2">
+                            <TextBlock Text="PID / Exit" Style="{StaticResource MetricLabel}" />
+                            <TextBlock x:Name="DetailPidText" FontWeight="SemiBold" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="3">
+                            <TextBlock Text="Working directory" Style="{StaticResource MetricLabel}" />
+                            <TextBlock x:Name="DetailWorkdirText" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                        </StackPanel>
+                    </Grid>
+                    <TabControl Grid.Row="2">
+                        <TabItem Header="Environment">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="*" />
+                                </Grid.RowDefinitions>
+                                <TextBlock Margin="0,0,0,8" TextWrapping="Wrap"
+                                           Foreground="{DynamicResource MutedTextBrush}"
+                                           Text="Secret-like environment variables are redacted in the Application layer before WPF receives them." />
+                                <DataGrid x:Name="EnvironmentGrid" Grid.Row="1" AutoGenerateColumns="False" IsReadOnly="True"
+                                          CanUserAddRows="False" CanUserDeleteRows="False"
+                                          EnableRowVirtualization="True" EnableColumnVirtualization="True"
+                                          VirtualizingPanel.IsVirtualizing="True"
+                                          VirtualizingPanel.VirtualizationMode="Recycling"
+                                          ScrollViewer.CanContentScroll="True">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="1.4*" />
+                                        <DataGridTextColumn Header="Value" Binding="{Binding DisplayValue}" Width="2.6*" />
+                                        <DataGridCheckBoxColumn Header="Sensitive" Binding="{Binding IsSensitive}" Width="0.7*" />
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                            </Grid>
+                        </TabItem>
+                        <TabItem Header="Mounts">
+                            <DataGrid x:Name="MountGrid" AutoGenerateColumns="False" IsReadOnly="True"
+                                      CanUserAddRows="False" CanUserDeleteRows="False"
+                                      EnableRowVirtualization="True" EnableColumnVirtualization="True"
+                                      VirtualizingPanel.IsVirtualizing="True"
+                                      VirtualizingPanel.VirtualizationMode="Recycling"
+                                      ScrollViewer.CanContentScroll="True">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="Type" Binding="{Binding Type}" Width="0.8*" />
+                                    <DataGridTextColumn Header="Source" Binding="{Binding Source}" Width="2*" />
+                                    <DataGridTextColumn Header="Destination" Binding="{Binding Destination}" Width="2*" />
+                                    <DataGridTextColumn Header="Mode" Binding="{Binding Mode}" Width="0.8*" />
+                                    <DataGridCheckBoxColumn Header="RW" Binding="{Binding ReadWrite}" Width="0.6*" />
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </TabItem>
+                        <TabItem Header="Networks">
+                            <DataGrid x:Name="DetailNetworkGrid" AutoGenerateColumns="False" IsReadOnly="True"
+                                      CanUserAddRows="False" CanUserDeleteRows="False"
+                                      EnableRowVirtualization="True" EnableColumnVirtualization="True"
+                                      VirtualizingPanel.IsVirtualizing="True"
+                                      VirtualizingPanel.VirtualizationMode="Recycling"
+                                      ScrollViewer.CanContentScroll="True">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="Network" Binding="{Binding Name}" Width="1.2*" />
+                                    <DataGridTextColumn Header="IP" Binding="{Binding IpAddress}" Width="1.2*" />
+                                    <DataGridTextColumn Header="Gateway" Binding="{Binding Gateway}" Width="1.2*" />
+                                    <DataGridTextColumn Header="MAC" Binding="{Binding MacAddress}" Width="1.4*" />
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </TabItem>
+                        <TabItem Header="Labels">
+                            <DataGrid x:Name="LabelGrid" AutoGenerateColumns="False" IsReadOnly="True"
+                                      CanUserAddRows="False" CanUserDeleteRows="False"
+                                      EnableRowVirtualization="True" EnableColumnVirtualization="True"
+                                      VirtualizingPanel.IsVirtualizing="True"
+                                      VirtualizingPanel.VirtualizationMode="Recycling"
+                                      ScrollViewer.CanContentScroll="True">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="Key" Binding="{Binding Key}" Width="1.5*" />
+                                    <DataGridTextColumn Header="Value" Binding="{Binding Value}" Width="2.5*" />
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </TabItem>
+                    </TabControl>
+                </Grid>
+            </TabItem>
+
+            <TabItem Header="Stats">
+                <Grid Margin="12">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    <StackPanel Orientation="Horizontal">
+                        <Button Content="Refresh once" Click="RefreshStatsOnClick"
+                                Style="{StaticResource DockerDiagButton}" Margin="0" />
+                        <Button Content="Start polling" Click="StartStatsOnClick"
+                                Style="{StaticResource DockerDiagButton}" />
+                        <Button Content="Pause polling" Click="PauseStatsOnClick"
+                                Style="{StaticResource DockerDiagButton}" />
+                    </StackPanel>
+                    <UniformGrid Grid.Row="1" Columns="6" Margin="0,14,0,0">
+                        <Border Margin="0,0,8,0" Padding="12" CornerRadius="7" Background="{DynamicResource SurfaceSecondaryBrush}">
+                            <StackPanel><TextBlock x:Name="CpuValue" Style="{StaticResource MetricValue}" Text="—" /><TextBlock Text="CPU" Style="{StaticResource MetricLabel}" /></StackPanel>
+                        </Border>
+                        <Border Margin="0,0,8,0" Padding="12" CornerRadius="7" Background="{DynamicResource SurfaceSecondaryBrush}">
+                            <StackPanel><TextBlock x:Name="MemoryValue" Style="{StaticResource MetricValue}" Text="—" /><TextBlock Text="Memory" Style="{StaticResource MetricLabel}" /></StackPanel>
+                        </Border>
+                        <Border Margin="0,0,8,0" Padding="12" CornerRadius="7" Background="{DynamicResource SurfaceSecondaryBrush}">
+                            <StackPanel><TextBlock x:Name="MemoryPercentValue" Style="{StaticResource MetricValue}" Text="—" /><TextBlock Text="Memory %" Style="{StaticResource MetricLabel}" /></StackPanel>
+                        </Border>
+                        <Border Margin="0,0,8,0" Padding="12" CornerRadius="7" Background="{DynamicResource SurfaceSecondaryBrush}">
+                            <StackPanel><TextBlock x:Name="NetworkIoValue" Style="{StaticResource MetricValue}" Text="—" /><TextBlock Text="Network RX / TX" Style="{StaticResource MetricLabel}" /></StackPanel>
+                        </Border>
+                        <Border Margin="0,0,8,0" Padding="12" CornerRadius="7" Background="{DynamicResource SurfaceSecondaryBrush}">
+                            <StackPanel><TextBlock x:Name="BlockIoValue" Style="{StaticResource MetricValue}" Text="—" /><TextBlock Text="Block R / W" Style="{StaticResource MetricLabel}" /></StackPanel>
+                        </Border>
+                        <Border Padding="12" CornerRadius="7" Background="{DynamicResource SurfaceSecondaryBrush}">
+                            <StackPanel><TextBlock x:Name="PidsValue" Style="{StaticResource MetricValue}" Text="—" /><TextBlock Text="PIDs" Style="{StaticResource MetricLabel}" /></StackPanel>
+                        </Border>
+                    </UniformGrid>
+                    <TextBlock Grid.Row="2" x:Name="StatsFooterText" Margin="0,14,0,0"
+                               Foreground="{DynamicResource MutedTextBrush}" TextWrapping="Wrap" />
+                </Grid>
+            </TabItem>
+
+            <TabItem Header="Logs">
+                <Grid Margin="12">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    <WrapPanel>
+                        <Button Content="Refresh recent" Click="RefreshLogsOnClick"
+                                Style="{StaticResource DockerDiagButton}" Margin="0" />
+                        <Button Content="Follow" Click="FollowLogsOnClick"
+                                Style="{StaticResource DockerDiagButton}" />
+                        <Button Content="Pause" Click="PauseLogsOnClick"
+                                Style="{StaticResource DockerDiagButton}" />
+                        <TextBlock Text="Search" Margin="16,0,6,0" VerticalAlignment="Center"
+                                   Foreground="{DynamicResource MutedTextBrush}" />
+                        <TextBox x:Name="LogSearchBox" Width="260" TextChanged="LogFilterOnChanged" />
+                        <TextBlock Text="Stream" Margin="16,0,6,0" VerticalAlignment="Center"
+                                   Foreground="{DynamicResource MutedTextBrush}" />
+                        <ComboBox x:Name="LogStreamBox" Width="120" SelectionChanged="LogFilterOnSelectionChanged" />
+                    </WrapPanel>
+                    <TextBlock Grid.Row="1" x:Name="LogFooterText" Margin="0,10,0,8"
+                               Foreground="{DynamicResource MutedTextBrush}" />
+                    <DataGrid x:Name="LogGrid" Grid.Row="2" AutoGenerateColumns="False" IsReadOnly="True"
+                              CanUserAddRows="False" CanUserDeleteRows="False"
+                              EnableRowVirtualization="True" EnableColumnVirtualization="True"
+                              VirtualizingPanel.IsVirtualizing="True"
+                              VirtualizingPanel.VirtualizationMode="Recycling"
+                              ScrollViewer.CanContentScroll="True"
+                              CanUserSortColumns="True">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Time" Binding="{Binding Timestamp}" Width="1.3*" />
+                            <DataGridTextColumn Header="Stream" Binding="{Binding Stream}" Width="0.7*" />
+                            <DataGridTextColumn Header="Message" Binding="{Binding Message}" Width="4*" />
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Grid>
+            </TabItem>
+        </TabControl>
+
+        <TextBlock Grid.Row="3" x:Name="FooterText" Margin="0,10,0,0"
+                   Foreground="{DynamicResource MutedTextBrush}" />
+    </Grid>
+</Window>

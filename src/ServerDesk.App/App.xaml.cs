@@ -169,6 +169,8 @@ public partial class App : System.Windows.Application
         services.AddSingleton<IServerLogService, ServerLogService>();
         services.AddSingleton(DockerInventoryOptions.Default);
         services.AddSingleton<IDockerInventoryService, DockerInventoryService>();
+        services.AddSingleton(DockerContainerDiagnosticsOptions.Default);
+        services.AddSingleton<IDockerContainerDiagnosticsService, DockerContainerDiagnosticsService>();
 
         services.AddSingleton<INavigationService, NavigationService>();
         services.AddSingleton<IThemeService, WpfThemeService>();

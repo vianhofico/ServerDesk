@@ -50,6 +50,9 @@
             </StackPanel>
             <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Top">
                 <Button Content="Refresh" Click="RefreshOnClick" Style="{StaticResource DockerButton}" Margin="0" />
+                <Button x:Name="DiagnosticsButton" Content="Container diagnostics" Click="DiagnosticsOnClick"
+                        Style="{StaticResource DockerButton}" IsEnabled="False"
+                        ToolTip="Open inspect, stats and logs for the selected container." />
                 <Button Content="Cancel" Click="CancelOnClick" Style="{StaticResource DockerButton}" />
             </StackPanel>
         </Grid>
@@ -136,7 +139,9 @@
                           VirtualizingPanel.IsVirtualizing="True"
                           VirtualizingPanel.VirtualizationMode="Recycling"
                           ScrollViewer.CanContentScroll="True"
-                          CanUserSortColumns="True">
+                          CanUserSortColumns="True"
+                          SelectionChanged="ContainerGridOnSelectionChanged"
+                          MouseDoubleClick="ContainerGridOnMouseDoubleClick">
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="1.2*" />
                         <DataGridTextColumn Header="State" Binding="{Binding State}" Width="0.8*" />

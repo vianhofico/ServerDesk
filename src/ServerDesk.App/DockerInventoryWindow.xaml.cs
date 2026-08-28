@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using ServerDesk.Application.Docker;
 using ServerDesk.Domain.Errors;
 using ServerDesk.Domain.Servers;
@@ -10,6 +11,7 @@ namespace ServerDesk.App;
 public partial class DockerInventoryWindow : Window
 {
     private readonly IDockerInventoryService _service;
+    private readonly IDockerContainerDiagnosticsService _diagnosticsService;
     private readonly ServerProfile _profile;
     private readonly bool _initiallyConnected;
     private CancellationTokenSource? _refreshCancellation;
@@ -18,10 +20,12 @@ public partial class DockerInventoryWindow : Window
 
     public DockerInventoryWindow(
         IDockerInventoryService service,
+        IDockerContainerDiagnosticsService diagnosticsService,
         ServerProfile profile,
         bool initiallyConnected)
     {
         _service = service ?? throw new ArgumentNullException(nameof(service));
+        _diagnosticsService = diagnosticsService ?? throw new ArgumentNullException(nameof(diagnosticsService));
         _profile = profile ?? throw new ArgumentNullException(nameof(profile));
         _initiallyConnected = initiallyConnected;
         InitializeComponent();
@@ -32,7 +36,7 @@ public partial class DockerInventoryWindow : Window
             ? "Initial: refresh to detect Docker runtime access and load inventory."
             : "Disconnected: connect the server before inspecting Docker.";
         RuntimeDetailText.Text = "ServerDesk uses the remote Docker CLI over SSH; it never exposes or forwards the Docker socket.";
-        FooterText.Text = "Read-only Docker inventory. No container or data mutation is available in this slice.";
+        FooterText.Text = "Read-only Docker inventory. Select a container to open inspect, stats and logs.";
     }
 
     private async void WindowOnLoaded(object sender, RoutedEventArgs e)
@@ -51,6 +55,21 @@ public partial class DockerInventoryWindow : Window
 
     private async void RefreshOnClick(object sender, RoutedEventArgs e) => await RefreshAsync();
 
+    private void DiagnosticsOnClick(object sender, RoutedEventArgs e) => OpenSelectedDiagnostics();
+
+    private void ContainerGridOnSelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        DiagnosticsButton.IsEnabled = _initiallyConnected && ContainerGrid.SelectedItem is DockerContainerInfo;
+    }
+
+    private void ContainerGridOnMouseDoubleClick(object sender, MouseButtonEventArgs e)
+    {
+        if (ContainerGrid.SelectedItem is DockerContainerInfo)
+        {
+            OpenSelectedDiagnostics();
+        }
+    }
+
     private void CancelOnClick(object sender, RoutedEventArgs e)
     {
         CancelRefresh();
@@ -58,6 +77,25 @@ public partial class DockerInventoryWindow : Window
     }
 
     private void SearchBoxOnTextChanged(object sender, TextChangedEventArgs e) => ApplyFilter();
+
+    private void OpenSelectedDiagnostics()
+    {
+        if (ContainerGrid.SelectedItem is not DockerContainerInfo container)
+        {
+            StatusText.Text = "Select a container first.";
+            return;
+        }
+
+        var window = new DockerContainerDiagnosticsWindow(
+            _diagnosticsService,
+            _profile,
+            container,
+            _initiallyConnected)
+        {
+            Owner = this,
+        };
+        window.Show();
+    }
 
     private async Task RefreshAsync()
     {
@@ -179,6 +217,7 @@ public partial class DockerInventoryWindow : Window
             ImageGrid.ItemsSource = Array.Empty<DockerImageInfo>();
             VolumeGrid.ItemsSource = Array.Empty<DockerVolumeInfo>();
             NetworkGrid.ItemsSource = Array.Empty<DockerNetworkInfo>();
+            DiagnosticsButton.IsEnabled = false;
             FooterText.Text = "No Docker inventory is loaded.";
             return;
         }
@@ -192,8 +231,9 @@ public partial class DockerInventoryWindow : Window
         ImageGrid.ItemsSource = images;
         VolumeGrid.ItemsSource = volumes;
         NetworkGrid.ItemsSource = networks;
+        DiagnosticsButton.IsEnabled = _initiallyConnected && ContainerGrid.SelectedItem is DockerContainerInfo;
         FooterText.Text =
-            $"Visible: {containers.Count:N0} container(s), {images.Count:N0} image(s), {volumes.Count:N0} volume(s), {networks.Count:N0} network(s). Search is client-side.";
+            $"Visible: {containers.Count:N0} container(s), {images.Count:N0} image(s), {volumes.Count:N0} volume(s), {networks.Count:N0} network(s). Double-click a container for diagnostics.";
     }
 
     private void ApplyRuntimeUnavailable(DockerRuntimeState runtime)
@@ -236,6 +276,7 @@ public partial class DockerInventoryWindow : Window
         ImageGrid.ItemsSource = Array.Empty<DockerImageInfo>();
         VolumeGrid.ItemsSource = Array.Empty<DockerVolumeInfo>();
         NetworkGrid.ItemsSource = Array.Empty<DockerNetworkInfo>();
+        DiagnosticsButton.IsEnabled = false;
         FooterText.Text = "No Docker inventory is loaded.";
     }
 
