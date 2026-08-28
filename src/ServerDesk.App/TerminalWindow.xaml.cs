@@ -15,6 +15,8 @@ public partial class TerminalWindow : Window
     private readonly IRemoteTerminalSessionFactory _terminalFactory;
     private readonly IReadOnlyList<ServerProfile> _profiles;
     private readonly ServerProfile _initialProfile;
+    private readonly IRemoteTerminalSession? _preparedInitialSession;
+    private readonly string? _preparedInitialLabel;
     private readonly Dictionary<TabItem, TerminalTabHost> _hosts = [];
     private bool _loaded;
     private bool _closing;
@@ -25,11 +27,23 @@ public partial class TerminalWindow : Window
         IRemoteTerminalSessionFactory terminalFactory,
         IReadOnlyList<ServerProfile> profiles,
         ServerProfile initialProfile)
+        : this(terminalFactory, profiles, initialProfile, null, null)
+    {
+    }
+
+    public TerminalWindow(
+        IRemoteTerminalSessionFactory terminalFactory,
+        IReadOnlyList<ServerProfile> profiles,
+        ServerProfile initialProfile,
+        IRemoteTerminalSession? preparedInitialSession,
+        string? preparedInitialLabel)
     {
         InitializeComponent();
         _terminalFactory = terminalFactory ?? throw new ArgumentNullException(nameof(terminalFactory));
         _profiles = profiles ?? throw new ArgumentNullException(nameof(profiles));
         _initialProfile = initialProfile ?? throw new ArgumentNullException(nameof(initialProfile));
+        _preparedInitialSession = preparedInitialSession;
+        _preparedInitialLabel = preparedInitialLabel;
 
         ServerPicker.ItemsSource = _profiles;
         ServerPicker.SelectedItem = _profiles.FirstOrDefault(profile => profile.Id == initialProfile.Id) ?? initialProfile;
@@ -45,7 +59,7 @@ public partial class TerminalWindow : Window
         }
 
         _loaded = true;
-        await OpenTabAsync(_initialProfile).ConfigureAwait(true);
+        await OpenTabAsync(_initialProfile, _preparedInitialSession, _preparedInitialLabel).ConfigureAwait(true);
     }
 
     private async void NewTerminalOnClick(object sender, RoutedEventArgs e)
@@ -69,14 +83,18 @@ public partial class TerminalWindow : Window
         }
     }
 
-    private async Task OpenTabAsync(ServerProfile profile)
+    private async Task OpenTabAsync(
+        ServerProfile profile,
+        IRemoteTerminalSession? preparedSession = null,
+        string? label = null)
     {
-        var session = _terminalFactory.Create(profile);
+        var session = preparedSession ?? _terminalFactory.Create(profile);
         var host = new TerminalTabHost(session);
         var tabNumber = ++_tabSequence;
+        var baseLabel = string.IsNullOrWhiteSpace(label) ? profile.Name : label;
         var tab = new TabItem
         {
-            Header = $"{profile.Name} #{tabNumber} • connecting",
+            Header = $"{baseLabel} #{tabNumber} • connecting",
             Content = host,
         };
 
@@ -86,7 +104,7 @@ public partial class TerminalWindow : Window
             {
                 Dispatcher.BeginInvoke(() =>
                 {
-                    tab.Header = $"{profile.Name} #{tabNumber} • {state.ToString().ToLowerInvariant()}";
+                    tab.Header = $"{baseLabel} #{tabNumber} • {state.ToString().ToLowerInvariant()}";
                     if (ReferenceEquals(TerminalTabs.SelectedItem, tab))
                     {
                         StatusText.Text = $"{profile.Username}@{profile.Host}:{profile.Port} — {state}";
@@ -105,7 +123,7 @@ public partial class TerminalWindow : Window
         _hosts.Add(tab, host);
         TerminalTabs.Items.Add(tab);
         TerminalTabs.SelectedItem = tab;
-        StatusText.Text = $"Opening terminal for {profile.Name}…";
+        StatusText.Text = $"Opening terminal for {baseLabel}…";
 
         try
         {
@@ -114,7 +132,7 @@ public partial class TerminalWindow : Window
         }
         catch (OperationCanceledException)
         {
-            StatusText.Text = $"Terminal connection to {profile.Name} was cancelled.";
+            StatusText.Text = $"Terminal connection to {baseLabel} was cancelled.";
         }
         catch (TerminalSessionException exception)
         {
