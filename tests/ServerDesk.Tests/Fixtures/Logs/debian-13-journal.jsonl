@@ -1,0 +1,2 @@
+{"__REALTIME_TIMESTAMP":"1762000000123456","__CURSOR":"s=debian13;i=1","PRIORITY":"5","MESSAGE":"Reload requested","SYSLOG_IDENTIFIER":"systemd","_SYSTEMD_UNIT":"nginx.service","_PID":"1","_HOSTNAME":"debian-13"}
+{"__REALTIME_TIMESTAMP":"1762000001123456","__CURSOR":"s=debian13;i=2","PRIORITY":"6","MESSAGE":"Reload complete","SYSLOG_IDENTIFIER":"nginx","_SYSTEMD_UNIT":"nginx.service","_PID":"6262","_HOSTNAME":"debian-13"}
