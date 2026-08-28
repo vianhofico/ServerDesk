@@ -39,6 +39,12 @@ public sealed class LocalizationFoundationTests
     }
 
     [Fact]
+    public void NginxEnglishAndVietnameseResourcesHaveIdenticalKeys()
+    {
+        AssertResourceParity("Strings.Nginx.en.xaml", "Strings.Nginx.vi.xaml");
+    }
+
+    [Fact]
     public void ParameterizedResourceFormatsInBothLanguages()
     {
         var english = ReadResources("Strings.en.xaml");
@@ -68,6 +74,19 @@ public sealed class LocalizationFoundationTests
 
         Assert.Contains("3", englishText, StringComparison.Ordinal);
         Assert.Contains("3", vietnameseText, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void NginxParameterizedResourcesFormatInBothLanguages()
+    {
+        var english = ReadResources("Strings.Nginx.en.xaml");
+        var vietnamese = ReadResources("Strings.Nginx.vi.xaml");
+
+        var englishText = string.Format(CultureInfo.GetCultureInfo("en-US"), english["Loc.Nginx.Available"], "1.26", 2, 3);
+        var vietnameseText = string.Format(CultureInfo.GetCultureInfo("vi-VN"), vietnamese["Loc.Nginx.Available"], "1.26", 2, 3);
+
+        Assert.Contains("1.26", englishText, StringComparison.Ordinal);
+        Assert.Contains("1.26", vietnameseText, StringComparison.Ordinal);
     }
 
     [Fact]

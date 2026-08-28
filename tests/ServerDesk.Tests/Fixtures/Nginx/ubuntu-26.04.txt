@@ -1,0 +1,13 @@
+# configuration file /etc/nginx/nginx.conf:
+user www-data;
+events { worker_connections 768; }
+http { include /etc/nginx/conf.d/*.conf; }
+# configuration file /etc/nginx/conf.d/api.conf:
+server {
+    listen 8080 default_server;
+    server_name api.internal.test;
+    location / {
+        proxy_pass http://10.0.0.20:7000;
+    }
+    add_header X-Frame-Options SAMEORIGIN;
+}

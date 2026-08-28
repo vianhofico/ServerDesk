@@ -1,0 +1,33 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:system="clr-namespace:System;assembly=System.Runtime">
+    <system:String x:Key="Loc.Nginx.WindowTitle">nginx</system:String>
+    <system:String x:Key="Loc.Nginx.ActionTooltip">Inspect nginx sites and loaded configuration</system:String>
+    <system:String x:Key="Loc.Nginx.Title">nginx on {0}</system:String>
+    <system:String x:Key="Loc.Nginx.Subtitle">Read-only loaded configuration and reverse-proxy inventory</system:String>
+    <system:String x:Key="Loc.Nginx.Refresh">Refresh</system:String>
+    <system:String x:Key="Loc.Nginx.Cancel">Cancel</system:String>
+    <system:String x:Key="Loc.Nginx.Search">Search sites, sources, listeners or proxy targets</system:String>
+    <system:String x:Key="Loc.Nginx.Initial">Ready to inspect nginx.</system:String>
+    <system:String x:Key="Loc.Nginx.Loading">Inspecting nginx configuration…</system:String>
+    <system:String x:Key="Loc.Nginx.Disconnected">Connect to this server before inspecting nginx.</system:String>
+    <system:String x:Key="Loc.Nginx.Cancelled">nginx inspection cancelled.</system:String>
+    <system:String x:Key="Loc.Nginx.Error">Unable to inspect nginx: {0}</system:String>
+    <system:String x:Key="Loc.Nginx.Available">nginx {0} · {1} sites · {2} loaded files</system:String>
+    <system:String x:Key="Loc.Nginx.CliMissing">nginx CLI is not installed or not available in PATH.</system:String>
+    <system:String x:Key="Loc.Nginx.PermissionDenied">nginx is present, but the connected user cannot inspect the loaded configuration.</system:String>
+    <system:String x:Key="Loc.Nginx.InvalidConfiguration">nginx is present, but the current configuration is invalid.</system:String>
+    <system:String x:Key="Loc.Nginx.ProbeFailed">nginx could not be inspected reliably.</system:String>
+    <system:String x:Key="Loc.Nginx.Empty">No loaded server blocks were found.</system:String>
+    <system:String x:Key="Loc.Nginx.Site">Site</system:String>
+    <system:String x:Key="Loc.Nginx.Source">Source</system:String>
+    <system:String x:Key="Loc.Nginx.Listen">Listen</system:String>
+    <system:String x:Key="Loc.Nginx.ServerNames">Server names</system:String>
+    <system:String x:Key="Loc.Nginx.ProxyTargets">Proxy targets</system:String>
+    <system:String x:Key="Loc.Nginx.Tls">TLS</system:String>
+    <system:String x:Key="Loc.Nginx.Certificates">Certificates</system:String>
+    <system:String x:Key="Loc.Nginx.RawBlock">Raw server block</system:String>
+    <system:String x:Key="Loc.Nginx.SelectSite">Select a site to inspect its normalized and raw configuration.</system:String>
+    <system:String x:Key="Loc.Nginx.Yes">Yes</system:String>
+    <system:String x:Key="Loc.Nginx.No">No</system:String>
+</ResourceDictionary>
