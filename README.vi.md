@@ -25,14 +25,15 @@ Repository hiện đang ở giai đoạn bootstrap/foundation. Product plan, rà
 
 Nên đọc các tài liệu sau trước khi triển khai feature:
 
-1. [`AGENTS.md`](AGENTS.md) — workflow bắt buộc dành cho coding agent
-2. [`docs/PRODUCT_PLAN.md`](docs/PRODUCT_PLAN.md) — phạm vi sản phẩm đầy đủ
-3. [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — kiến trúc và các ranh giới hệ thống
-4. [`docs/UI_UX.md`](docs/UI_UX.md) — quy tắc tương tác và thiết kế giao diện
-5. [`docs/ROADMAP.md`](docs/ROADMAP.md) — thứ tự milestone và acceptance gate
-6. [`docs/SECURITY.md`](docs/SECURITY.md) — yêu cầu bảo mật
-7. [`docs/TESTING.md`](docs/TESTING.md) — chiến lược kiểm thử và compatibility gate
-8. [`docs/SUPPORT_MATRIX.md`](docs/SUPPORT_MATRIX.md) — các OS/capability được chứng nhận hỗ trợ
+1. [`AGENTS.vi.md`](AGENTS.vi.md) — workflow bắt buộc dành cho coding agent
+2. [`docs/PRODUCT_PLAN.vi.md`](docs/PRODUCT_PLAN.vi.md) — phạm vi sản phẩm đầy đủ
+3. [`docs/ARCHITECTURE.vi.md`](docs/ARCHITECTURE.vi.md) — kiến trúc và các ranh giới hệ thống
+4. [`docs/UI_UX.vi.md`](docs/UI_UX.vi.md) — quy tắc tương tác và thiết kế giao diện
+5. [`docs/ROADMAP.vi.md`](docs/ROADMAP.vi.md) — thứ tự milestone và acceptance gate
+6. [`docs/SECURITY.vi.md`](docs/SECURITY.vi.md) — yêu cầu bảo mật
+7. [`docs/TESTING.vi.md`](docs/TESTING.vi.md) — chiến lược kiểm thử và compatibility gate
+8. [`docs/SUPPORT_MATRIX.vi.md`](docs/SUPPORT_MATRIX.vi.md) — các OS/capability được chứng nhận hỗ trợ
+9. [`docs/CONNECTION_ROUTING.vi.md`](docs/CONNECTION_ROUTING.vi.md) — định tuyến SSH qua direct/proxy/bastion
 
 ## Nguyên tắc cốt lõi
 

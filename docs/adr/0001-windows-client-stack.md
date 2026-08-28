@@ -1,5 +1,7 @@
 # ADR 0001 — Windows client stack: .NET 10 + WPF
 
+**English** | [Tiếng Việt](0001-windows-client-stack.vi.md)
+
 - Status: Accepted
 - Date: 2026-08-27
 

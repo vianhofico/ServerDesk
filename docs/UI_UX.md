@@ -1,5 +1,7 @@
 # UI / UX Design Contract
 
+**English** | [Tiếng Việt](UI_UX.vi.md)
+
 ## 1. UX goal
 
 ServerDesk must feel like a native, modern Windows administration workspace rather than a web dashboard embedded in a desktop shell. The user should be able to discover common Linux operations by recognition, with advanced/raw views available when needed.

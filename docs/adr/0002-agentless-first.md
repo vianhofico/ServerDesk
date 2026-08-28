@@ -1,5 +1,7 @@
 # ADR 0002 — Agentless SSH/SFTP first
 
+**English** | [Tiếng Việt](0002-agentless-first.vi.md)
+
 - Status: Accepted
 - Date: 2026-08-27
 

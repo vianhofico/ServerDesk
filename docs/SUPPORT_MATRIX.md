@@ -1,5 +1,7 @@
 # Support Matrix
 
+**English** | [Tiếng Việt](SUPPORT_MATRIX.vi.md)
+
 ServerDesk distinguishes **certified**, **experimental/best-effort**, and **unsupported/unknown** behavior. A distro is certified only after the required automated/manual compatibility gates pass for the listed release.
 
 ## 1. Client platform

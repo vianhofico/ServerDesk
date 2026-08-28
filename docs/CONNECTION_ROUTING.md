@@ -1,5 +1,7 @@
 # Connection routing
 
+**English** | [Tiếng Việt](CONNECTION_ROUTING.vi.md)
+
 ServerDesk keeps route selection separate from SSH authentication. A server profile owns its SSH endpoint and authentication method; an optional route describes how the client reaches that endpoint.
 
 ## Supported routes

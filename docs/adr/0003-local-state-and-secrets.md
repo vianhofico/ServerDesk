@@ -1,5 +1,7 @@
 # ADR 0003 — Local state and secret storage
 
+**English** | [Tiếng Việt](0003-local-state-and-secrets.vi.md)
+
 Status: Accepted
 
 ## Context

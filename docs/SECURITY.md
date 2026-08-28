@@ -1,5 +1,7 @@
 # Security Requirements
 
+**English** | [Tiếng Việt](SECURITY.vi.md)
+
 ## 1. Security objectives
 
 ServerDesk will routinely operate against production servers. Security failures can cause credential compromise, remote code execution, data loss, server lockout, or unnoticed connection to an attacker-controlled host.

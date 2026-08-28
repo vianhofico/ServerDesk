@@ -1,5 +1,7 @@
 # Testing Strategy
 
+**English** | [Tiếng Việt](TESTING.vi.md)
+
 ## 1. Goal
 
 ServerDesk cannot claim reliability by unit tests alone because it depends on SSH behavior, Linux tooling, permissions, distro output, network failures, and destructive remote state transitions. The test strategy is layered so fast tests protect design and real-environment tests protect compatibility.

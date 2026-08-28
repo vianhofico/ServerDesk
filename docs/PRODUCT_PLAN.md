@@ -1,5 +1,7 @@
 # ServerDesk Product Plan
 
+**English** | [Tiếng Việt](PRODUCT_PLAN.vi.md)
+
 ## 1. Product definition
 
 ServerDesk is a Windows desktop application that provides a visual, Windows-like control surface for Linux servers while using standard secure remote administration mechanisms underneath.

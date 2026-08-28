@@ -1,5 +1,7 @@
 # Roadmap and Milestone Gates
 
+**English** | [Tiếng Việt](ROADMAP.vi.md)
+
 This roadmap is ordered. Later milestones must not be used to bypass unfinished architecture, security, test, or UX requirements in earlier milestones.
 
 ## M0 — Foundation

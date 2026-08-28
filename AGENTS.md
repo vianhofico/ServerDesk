@@ -1,5 +1,7 @@
 # AGENTS.md — ServerDesk Agent Contract
 
+**English** | [Tiếng Việt](AGENTS.vi.md)
+
 This file is mandatory for every coding agent working in this repository. It is an execution contract, not optional guidance.
 
 ## 1. Mission

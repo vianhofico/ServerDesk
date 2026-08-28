@@ -1,5 +1,7 @@
 # Architecture
 
+**English** | [Tiếng Việt](ARCHITECTURE.vi.md)
+
 ## 1. Architectural goals
 
 ServerDesk must remain maintainable as it grows from an SSH/SFTP client into a server-management desktop application. The architecture therefore separates UI, use cases, remote transport, Linux interpretation, persistence, and feature modules.
