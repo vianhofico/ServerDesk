@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Globalization;
+using ServerDesk.App.Localization;
 using ServerDesk.Application.Profiles;
 using ServerDesk.Application.Sessions;
 using ServerDesk.Application.Settings;
@@ -13,6 +14,9 @@ public sealed record NavigationItem(
     string Title,
     string Description,
     bool IsAvailable = true);
+
+public sealed record LocalizedSettingChoice<T>(T Value, string DisplayName)
+    where T : struct, Enum;
 
 public interface INavigationService
 {
@@ -307,6 +311,7 @@ public sealed class ShellViewModel : ObservableObject
 {
     private readonly INavigationService _navigationService;
     private readonly IThemeService _themeService;
+    private readonly ILocalizationService _localizationService;
     private readonly IAppSettingsStore _settingsStore;
     private readonly IServerProfileService _serverProfileService;
     private readonly IRemoteSessionFactory _remoteSessionFactory;
@@ -314,10 +319,12 @@ public sealed class ShellViewModel : ObservableObject
     private readonly Dictionary<Guid, IRemoteSession> _sessions = [];
     private readonly Dictionary<Guid, Action<RemoteSessionState>> _sessionHandlers = [];
     private readonly Dictionary<Guid, CancellationTokenSource> _connectionCancellations = [];
+    private readonly SemaphoreSlim _settingsSaveGate = new(1, 1);
     private NavigationItem _selectedNavigationItem;
     private ServerProfileListItemViewModel? _selectedServer;
     private ProfileEditorViewModel? _editor;
     private AppThemePreference _themePreference;
+    private AppLanguagePreference _languagePreference;
     private string? _settingsMessage;
     private string? _statusMessage;
     private string? _errorMessage;
@@ -327,12 +334,14 @@ public sealed class ShellViewModel : ObservableObject
     public ShellViewModel(
         INavigationService navigationService,
         IThemeService themeService,
+        ILocalizationService localizationService,
         IAppSettingsStore settingsStore,
         IServerProfileService serverProfileService,
         IRemoteSessionFactory remoteSessionFactory)
     {
         _navigationService = navigationService;
         _themeService = themeService;
+        _localizationService = localizationService;
         _settingsStore = settingsStore;
         _serverProfileService = serverProfileService;
         _remoteSessionFactory = remoteSessionFactory;
@@ -352,10 +361,14 @@ public sealed class ShellViewModel : ObservableObject
         ];
 
         Servers = [];
-        ThemeOptions = Enum.GetValues<AppThemePreference>();
+        ThemeOptions = [];
+        LanguageOptions = [];
         _selectedNavigationItem = NavigationItems[0];
         _themePreference = AppThemePreference.System;
+        _languagePreference = AppLanguagePreference.System;
+        RefreshLocalizedSettingOptions();
         _navigationService.CurrentChanged += OnCurrentNavigationChanged;
+        _localizationService.LanguageChanged += OnLanguageChanged;
 
         AddServerCommand = new RelayCommand(BeginAddServer, () => !IsBusy);
         EditServerCommand = new RelayCommand(
@@ -382,7 +395,9 @@ public sealed class ShellViewModel : ObservableObject
 
     public ObservableCollection<ServerProfileListItemViewModel> Servers { get; }
 
-    public IReadOnlyList<AppThemePreference> ThemeOptions { get; }
+    public ObservableCollection<LocalizedSettingChoice<AppThemePreference>> ThemeOptions { get; }
+
+    public ObservableCollection<LocalizedSettingChoice<AppLanguagePreference>> LanguageOptions { get; }
 
     public RelayCommand AddServerCommand { get; }
 
@@ -523,11 +538,29 @@ public sealed class ShellViewModel : ObservableObject
 
             _themeService.Apply(value);
             OnPropertyChanged(nameof(EffectiveTheme));
-            _ = PersistThemePreferenceAsync(value);
+            _ = PersistSettingsAsync();
+        }
+    }
+
+    public AppLanguagePreference LanguagePreference
+    {
+        get => _languagePreference;
+        set
+        {
+            if (!SetProperty(ref _languagePreference, value))
+            {
+                return;
+            }
+
+            _localizationService.Apply(value);
+            OnPropertyChanged(nameof(EffectiveLanguage));
+            _ = PersistSettingsAsync();
         }
     }
 
     public string EffectiveTheme => _themeService.EffectiveTheme.ToString();
+
+    public string EffectiveLanguage => _localizationService.EffectiveCultureCode;
 
     public string? SettingsMessage
     {
@@ -538,15 +571,22 @@ public sealed class ShellViewModel : ObservableObject
     public async ValueTask InitializeAsync(CancellationToken cancellationToken = default)
     {
         var settings = await _settingsStore.LoadAsync(cancellationToken).ConfigureAwait(true);
+        _languagePreference = settings.LanguagePreference;
+        OnPropertyChanged(nameof(LanguagePreference));
+        _localizationService.Apply(_languagePreference);
+        OnPropertyChanged(nameof(EffectiveLanguage));
+
         _themePreference = settings.ThemePreference;
         OnPropertyChanged(nameof(ThemePreference));
         _themeService.Apply(_themePreference);
         OnPropertyChanged(nameof(EffectiveTheme));
+
         await LoadProfilesAsync(selectedId: null, cancellationToken).ConfigureAwait(true);
     }
 
     public async ValueTask ShutdownAsync()
     {
+        _localizationService.LanguageChanged -= OnLanguageChanged;
         foreach (var cancellation in _connectionCancellations.Values)
         {
             cancellation.Cancel();
@@ -883,21 +923,50 @@ public sealed class ShellViewModel : ObservableObject
         OnPropertyChanged(nameof(ServerCountLabel));
     }
 
-    private async Task PersistThemePreferenceAsync(AppThemePreference preference)
+    private async Task PersistSettingsAsync()
     {
+        await _settingsSaveGate.WaitAsync().ConfigureAwait(true);
         try
         {
-            await _settingsStore.SaveAsync(new AppSettings(preference)).ConfigureAwait(true);
+            await _settingsStore.SaveAsync(
+                new AppSettings(_themePreference, _languagePreference)).ConfigureAwait(true);
             SettingsMessage = null;
         }
         catch (System.IO.IOException)
         {
-            SettingsMessage = "Theme changed for this session, but the preference could not be saved.";
+            SettingsMessage = _localizationService.Get("Loc.Settings.SaveFailed");
         }
         catch (UnauthorizedAccessException)
         {
-            SettingsMessage = "Theme changed for this session, but the preference could not be saved.";
+            SettingsMessage = _localizationService.Get("Loc.Settings.SaveFailed");
         }
+        finally
+        {
+            _settingsSaveGate.Release();
+        }
+    }
+
+    private void OnLanguageChanged()
+    {
+        RefreshLocalizedSettingOptions();
+        OnPropertyChanged(nameof(EffectiveLanguage));
+        if (SettingsMessage is not null)
+        {
+            SettingsMessage = _localizationService.Get("Loc.Settings.SaveFailed");
+        }
+    }
+
+    private void RefreshLocalizedSettingOptions()
+    {
+        ThemeOptions.Clear();
+        ThemeOptions.Add(new(AppThemePreference.System, _localizationService.Get("Loc.Theme.System")));
+        ThemeOptions.Add(new(AppThemePreference.Light, _localizationService.Get("Loc.Theme.Light")));
+        ThemeOptions.Add(new(AppThemePreference.Dark, _localizationService.Get("Loc.Theme.Dark")));
+
+        LanguageOptions.Clear();
+        LanguageOptions.Add(new(AppLanguagePreference.System, _localizationService.Get("Loc.Language.SystemDefault")));
+        LanguageOptions.Add(new(AppLanguagePreference.English, _localizationService.Get("Loc.Language.English")));
+        LanguageOptions.Add(new(AppLanguagePreference.Vietnamese, _localizationService.Get("Loc.Language.Vietnamese")));
     }
 
     private void OnCurrentNavigationChanged(NavigationItem item)
