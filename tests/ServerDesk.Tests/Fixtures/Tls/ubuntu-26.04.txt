@@ -1,0 +1,10 @@
+---OPENSSL---
+subject=CN = edge26.example.test
+issuer=O = Example Internal PKI, CN = Edge Root
+notBefore=Jul 15 08:30:00 2026 GMT
+notAfter=Jul 15 08:30:00 2027 GMT
+X509v3 Subject Alternative Name:
+    DNS:edge26.example.test
+sha256 Fingerprint=26:04:CC:DD
+---CERTBOT---
+No certificates found.
