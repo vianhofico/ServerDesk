@@ -11,18 +11,6 @@ namespace ServerDesk.Application.EnvironmentFiles;
 
 public sealed class EnvironmentFileService : IEnvironmentFileService
 {
-    private static readonly HashSet<string> DisallowedValidatorExecutables = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "sh",
-        "bash",
-        "dash",
-        "zsh",
-        "fish",
-        "env",
-        "source",
-        "eval",
-    };
-
     private readonly IRemoteFileEditorService _editor;
     private readonly EnvironmentFileOptions _options;
 
@@ -211,24 +199,12 @@ public sealed class EnvironmentFileService : IEnvironmentFileService
         }
 
         var executable = validation.Executable.Trim();
-        var separator = executable.LastIndexOf('/');
-        var executableName = separator >= 0 ? executable[(separator + 1)..] : executable;
-        if (DisallowedValidatorExecutables.Contains(executableName))
-        {
-            return ValidationFailure("Shell interpreters cannot be used as environment-file validators because raw env content must never be executed by ServerDesk.");
-        }
-
-        var containsFilePlaceholder = false;
-        foreach (var argument in validation.Arguments)
+        var arguments = validation.Arguments.ToArray();
+        foreach (var argument in arguments)
         {
             if (argument.IndexOfAny(['\r', '\n', '\0']) >= 0)
             {
                 return ValidationFailure("Environment-file validator arguments cannot contain control-line characters.");
-            }
-
-            if (argument.Contains("{file}", StringComparison.Ordinal))
-            {
-                containsFilePlaceholder = true;
             }
 
             var withoutFilePlaceholder = argument.Replace("{file}", string.Empty, StringComparison.Ordinal);
@@ -238,12 +214,34 @@ public sealed class EnvironmentFileService : IEnvironmentFileService
             }
         }
 
-        if (!containsFilePlaceholder)
+        if (!IsSupportedNonExecutingValidator(executable, arguments))
         {
-            return ValidationFailure("Environment-file validators must receive the staged file through a typed {file} argument.");
+            return ValidationFailure(
+                "Only explicitly supported non-executing environment-file validator shapes are allowed. Generic interpreters and arbitrary executables are rejected.");
         }
 
-        return new ValidationBuildResult(new RemoteEditValidationSpec(executable, validation.Arguments), null);
+        return new ValidationBuildResult(new RemoteEditValidationSpec(executable, arguments), null);
+    }
+
+    private static bool IsSupportedNonExecutingValidator(string executable, IReadOnlyList<string> arguments)
+    {
+        var separator = executable.LastIndexOf('/');
+        var executableName = separator >= 0 ? executable[(separator + 1)..] : executable;
+        if (string.Equals(executableName, "docker", StringComparison.OrdinalIgnoreCase))
+        {
+            return arguments.SequenceEqual(
+                ["compose", "--env-file", "{file}", "config", "--quiet"],
+                StringComparer.Ordinal);
+        }
+
+        if (string.Equals(executableName, "docker-compose", StringComparison.OrdinalIgnoreCase))
+        {
+            return arguments.SequenceEqual(
+                ["--env-file", "{file}", "config", "--quiet"],
+                StringComparer.Ordinal);
+        }
+
+        return false;
     }
 
     private static ValidationBuildResult ValidationFailure(string message) =>
