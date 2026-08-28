@@ -1,6 +1,6 @@
 # Yêu cầu bảo mật
 
-[English](SECURITY.md) | **Tiếng Việt**
+[English](https://github.com/vianhofico/ServerDesk/blob/main/docs/SECURITY.md) | **Tiếng Việt**
 
 > Bản English là source of truth khi có khác biệt ngoài ý muốn giữa hai bản dịch.
 
