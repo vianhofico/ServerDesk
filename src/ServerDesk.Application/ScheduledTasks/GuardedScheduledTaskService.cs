@@ -133,58 +133,66 @@ public sealed class GuardedScheduledTaskService : IScheduledTaskService
             return new ScheduledTaskMutationResult(false, exception.Error, exception.Error.Message);
         }
 
-        await using var executor = _commandFactory.Create(profile);
-        var reload = await executor.ExecuteAsync(
-                Command("systemctl", ["daemon-reload"], OperationRisk.Mutating),
-                cancellationToken)
-            .ConfigureAwait(false);
-        if (reload.Error is not null)
+        try
         {
-            return IsAmbiguousTransport(reload.Error.Code)
-                ? Ambiguous(
-                    $"Timer file '{expectedSourcePath}' was removed, but ServerDesk lost a reliable completion signal during systemd daemon-reload. Refresh before retrying.",
-                    reload.Error.TechnicalDetails)
-                : Ambiguous(
-                    $"Timer file '{expectedSourcePath}' was removed, but systemd daemon-reload failed. Refresh systemd state before retrying.",
-                    reload.Error.Message);
-        }
+            await using var executor = _commandFactory.Create(profile);
+            var reload = await executor.ExecuteAsync(
+                    Command("systemctl", ["daemon-reload"], OperationRisk.Mutating),
+                    cancellationToken)
+                .ConfigureAwait(false);
+            if (reload.Error is not null)
+            {
+                return IsAmbiguousTransport(reload.Error.Code)
+                    ? Ambiguous(
+                        $"Timer file '{expectedSourcePath}' was removed, but ServerDesk lost a reliable completion signal during systemd daemon-reload. Refresh before retrying.",
+                        reload.Error.TechnicalDetails)
+                    : Ambiguous(
+                        $"Timer file '{expectedSourcePath}' was removed, but systemd daemon-reload failed. Refresh systemd state before retrying.",
+                        reload.Error.Message);
+            }
 
-        if (reload.Command!.ExitCode != 0)
+            if (reload.Command!.ExitCode != 0)
+            {
+                return Ambiguous(
+                    $"Timer file '{expectedSourcePath}' was removed, but systemd daemon-reload returned exit code {reload.Command.ExitCode}. Refresh systemd state before retrying.");
+            }
+
+            var show = await executor.ExecuteAsync(
+                    Command(
+                        "systemctl",
+                        ["show", unit, "--no-pager", "--property=LoadState"],
+                        OperationRisk.ReadOnly),
+                    cancellationToken)
+                .ConfigureAwait(false);
+            if (show.Error is not null)
+            {
+                return Ambiguous(
+                    $"Timer file '{expectedSourcePath}' was removed, but ServerDesk could not verify that systemd forgot '{unit}'. Refresh before retrying.",
+                    show.Error.Message);
+            }
+
+            var absent = show.Command!.ExitCode == 0 &&
+                         show.Command.StandardOutput.Contains(
+                             "LoadState=not-found",
+                             StringComparison.OrdinalIgnoreCase);
+            if (!absent)
+            {
+                return Ambiguous(
+                    $"Timer file '{expectedSourcePath}' was removed, but systemd still reports '{unit}' as present. Refresh before retrying.");
+            }
+
+            var snapshot = await _inner.InspectAsync(profile, cancellationToken).ConfigureAwait(false);
+            return new ScheduledTaskMutationResult(
+                true,
+                null,
+                $"systemd timer '{unit}' was deleted and verified absent. Its trigger service was left unchanged.",
+                snapshot.Snapshot);
+        }
+        catch (OperationCanceledException)
         {
             return Ambiguous(
-                $"Timer file '{expectedSourcePath}' was removed, but systemd daemon-reload returned exit code {reload.Command.ExitCode}. Refresh systemd state before retrying.");
+                $"Timer file '{expectedSourcePath}' was already removed when cancellation was observed. Refresh before deciding whether to retry.");
         }
-
-        var show = await executor.ExecuteAsync(
-                Command(
-                    "systemctl",
-                    ["show", unit, "--no-pager", "--property=LoadState"],
-                    OperationRisk.ReadOnly),
-                cancellationToken)
-            .ConfigureAwait(false);
-        if (show.Error is not null)
-        {
-            return Ambiguous(
-                $"Timer file '{expectedSourcePath}' was removed, but ServerDesk could not verify that systemd forgot '{unit}'. Refresh before retrying.",
-                show.Error.Message);
-        }
-
-        var absent = show.Command!.ExitCode == 0 &&
-                     show.Command.StandardOutput.Contains(
-                         "LoadState=not-found",
-                         StringComparison.OrdinalIgnoreCase);
-        if (!absent)
-        {
-            return Ambiguous(
-                $"Timer file '{expectedSourcePath}' was removed, but systemd still reports '{unit}' as present. Refresh before retrying.");
-        }
-
-        var snapshot = await _inner.InspectAsync(profile, cancellationToken).ConfigureAwait(false);
-        return new ScheduledTaskMutationResult(
-            true,
-            null,
-            $"systemd timer '{unit}' was deleted and verified absent. Its trigger service was left unchanged.",
-            snapshot.Snapshot);
     }
 
     private RemoteCommandSpec Command(
