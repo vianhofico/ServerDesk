@@ -31,10 +31,17 @@
                            TextWrapping="Wrap" />
             </StackPanel>
             <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Top">
+                <Button x:Name="EditButton"
+                        Content="{DynamicResource Loc.Nginx.Edit}"
+                        MinWidth="92"
+                        Padding="14,7"
+                        IsEnabled="False"
+                        Click="EditOnClick" />
                 <Button x:Name="RefreshButton"
                         Content="{DynamicResource Loc.Nginx.Refresh}"
                         MinWidth="92"
                         Padding="14,7"
+                        Margin="8,0,0,0"
                         Click="RefreshOnClick" />
                 <Button x:Name="CancelButton"
                         Content="{DynamicResource Loc.Nginx.Cancel}"
