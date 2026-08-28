@@ -346,3 +346,21 @@ M8 Optional ServerDesk Agent
 ```
 
 See `docs/ROADMAP.md` for exact acceptance gates.
+
+## 13. Localization contract
+
+After the localization foundation is present, every new user-facing UI string must use localization resources rather than adding new hard-coded English presentation text.
+
+Rules:
+
+- supported V1 preferences are `System`, English (`en`), and Vietnamese (`vi`);
+- English is the fallback for unsupported system cultures and missing translated values;
+- persist stable values such as `system`, `en`, and `vi`, never localized display strings;
+- keep localization in the presentation/settings boundary; do not push English/Vietnamese UI text into Domain or infrastructure errors;
+- use complete parameterized resource strings instead of concatenating translated sentence fragments where practical;
+- do not translate technical identifiers such as executable names, paths, protocols, API/type identifiers, raw terminal output, or raw server logs when translation would change technical meaning;
+- when touching an existing feature, migrate the user-facing text in that touched slice instead of requiring a giant whole-app translation PR;
+- new layouts must tolerate longer Vietnamese text with flexible sizing/wrapping where appropriate;
+- language switching must not reconnect SSH sessions or discard active workspace state.
+
+Read `docs/LOCALIZATION.md` before adding or modifying user-facing UI.
