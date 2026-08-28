@@ -1,0 +1,15 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:system="clr-namespace:System;assembly=System.Runtime">
+    <system:String x:Key="Loc.Deploy.RollbackPotential">If this Compose-only plan creates a previously absent project and a later health check fails, ServerDesk can offer a verified compose-down rollback.</system:String>
+    <system:String x:Key="Loc.Deploy.OutcomeSucceeded">Succeeded</system:String>
+    <system:String x:Key="Loc.Deploy.OutcomeFailed">Failed</system:String>
+    <system:String x:Key="Loc.Deploy.OutcomeSkipped">Skipped</system:String>
+    <system:String x:Key="Loc.Deploy.OutcomeUnknown">Unknown</system:String>
+    <system:String x:Key="Loc.Deploy.OutcomeCancelled">Cancelled</system:String>
+    <system:String x:Key="Loc.Deploy.ResultSucceeded">Step completed and its required state was verified.</system:String>
+    <system:String x:Key="Loc.Deploy.ResultFailed">Step failed; the deployment workflow stopped.</system:String>
+    <system:String x:Key="Loc.Deploy.ResultSkipped">Step was safely skipped because its condition did not require mutation.</system:String>
+    <system:String x:Key="Loc.Deploy.ResultUnknown">Completion is unknown; the workflow stopped and must not be blindly retried.</system:String>
+    <system:String x:Key="Loc.Deploy.ResultCancelled">Read-only verification was cancelled before the next mutation.</system:String>
+</ResourceDictionary>
