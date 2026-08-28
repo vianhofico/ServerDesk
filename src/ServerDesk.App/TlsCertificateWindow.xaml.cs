@@ -409,11 +409,6 @@ public partial class TlsCertificateWindow : Window
         DomainsTextBox.IsEnabled = !_busy;
         EmailTextBox.IsEnabled = !_busy;
         TermsCheckBox.IsEnabled = !_busy;
-
-        if (_requiresRefreshAfterAmbiguous && !_busy)
-        {
-            SetStatus("Loc.Tls.RefreshRequired");
-        }
     }
 
     private string HealthLabel(TlsCertificateHealth health) =>
