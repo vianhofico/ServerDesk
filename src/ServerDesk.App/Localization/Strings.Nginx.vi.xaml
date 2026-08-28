@@ -47,6 +47,8 @@
     <system:String x:Key="Loc.Nginx.Editor.RawWarning">Chế độ thô giữ nguyên chính xác nội dung đã sửa. File có thể chứa giá trị kỹ thuật nhạy cảm; ServerDesk không ghi nội dung candidate vào audit.</system:String>
     <system:String x:Key="Loc.Nginx.Editor.Diff">Thay đổi: {0} dòng sửa · {1} dòng thêm · {2} dòng xóa</system:String>
     <system:String x:Key="Loc.Nginx.Editor.Reload">Nạp lại file</system:String>
+    <system:String x:Key="Loc.Nginx.Editor.ReloadConfirmTitle">Bỏ các chỉnh sửa nginx chưa lưu?</system:String>
+    <system:String x:Key="Loc.Nginx.Editor.ReloadConfirmMessage">Nạp lại file remote sẽ bỏ candidate hiện tại chưa được lưu. Tiếp tục?</system:String>
     <system:String x:Key="Loc.Nginx.Editor.Apply">Xác thực &amp; áp dụng</system:String>
     <system:String x:Key="Loc.Nginx.Editor.Loading">Đang tải file nginx đã resolve…</system:String>
     <system:String x:Key="Loc.Nginx.Editor.Ready">Hãy kiểm tra candidate trước khi áp dụng.</system:String>
