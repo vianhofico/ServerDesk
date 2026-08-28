@@ -159,7 +159,7 @@ public static class DockerComposeParser
     private static IReadOnlyList<JsonElement> ParseArrayOrJsonLines(string output)
     {
         var trimmed = output.Trim();
-        if (trimmed.StartsWith('[', StringComparison.Ordinal))
+        if (trimmed.StartsWith("[", StringComparison.Ordinal))
         {
             using var document = JsonDocument.Parse(trimmed);
             if (document.RootElement.ValueKind != JsonValueKind.Array)
