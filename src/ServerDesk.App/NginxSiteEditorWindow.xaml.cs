@@ -296,7 +296,7 @@ public partial class NginxSiteEditorWindow : Window
     private void SetStatus(string key, params object[] arguments) =>
         SetStatus(key, arguments, technicalStatus: null);
 
-    private void SetStatus(string key, string technicalStatus) =>
+    private void SetStatus(string key, string? technicalStatus) =>
         SetStatus(key, [], technicalStatus);
 
     private void SetStatus(string key, object[]? arguments = null, string? technicalStatus = null)
