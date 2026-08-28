@@ -1,6 +1,6 @@
 # Security Requirements
 
-**English** | [Tiếng Việt](SECURITY.vi.md)
+**English** | [Tiếng Việt](/vianhofico/ServerDesk/blob/main/docs/SECURITY.vi.md)
 
 ## 1. Security objectives
 
