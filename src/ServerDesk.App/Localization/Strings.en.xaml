@@ -1,0 +1,23 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <x:String x:Key="Loc.AppSubtitle">Visual Linux server administration</x:String>
+    <x:String x:Key="Loc.Header.Milestone">M3 DevOps</x:String>
+    <x:String x:Key="Loc.Settings">Settings</x:String>
+    <x:String x:Key="Loc.Theme">Theme</x:String>
+    <x:String x:Key="Loc.Language">Language</x:String>
+    <x:String x:Key="Loc.Theme.System">System</x:String>
+    <x:String x:Key="Loc.Theme.Light">Light</x:String>
+    <x:String x:Key="Loc.Theme.Dark">Dark</x:String>
+    <x:String x:Key="Loc.Language.SystemDefault">System default</x:String>
+    <x:String x:Key="Loc.Language.English">English</x:String>
+    <x:String x:Key="Loc.Language.Vietnamese">Vietnamese</x:String>
+    <x:String x:Key="Loc.Servers">SERVERS</x:String>
+    <x:String x:Key="Loc.Workspace">WORKSPACE</x:String>
+    <x:String x:Key="Loc.Common.Add">+ Add</x:String>
+    <x:String x:Key="Loc.SecurityBoundary">Security boundary</x:String>
+    <x:String x:Key="Loc.Security.SecretsStore">Secrets → Windows Credential Manager</x:String>
+    <x:String x:Key="Loc.Security.HostTrustStore">Host trust → SQLite</x:String>
+    <x:String x:Key="Loc.Security.Transport">Transport → SSH.NET</x:String>
+    <x:String x:Key="Loc.Settings.SaveFailed">Settings changed for this session, but the preference could not be saved.</x:String>
+    <x:String x:Key="Loc.Format.UnableToConnectServer">Unable to connect to {0}.</x:String>
+</ResourceDictionary>
