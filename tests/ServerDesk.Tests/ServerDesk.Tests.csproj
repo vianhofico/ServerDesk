@@ -9,6 +9,7 @@
     <PackageReference Include="xunit.v3.mtp-v2" Version="4.0.0" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\src\ServerDesk.App\ServerDesk.App.csproj" />
     <ProjectReference Include="..\..\src\ServerDesk.Application\ServerDesk.Application.csproj" />
     <ProjectReference Include="..\..\src\ServerDesk.Domain\ServerDesk.Domain.csproj" />
     <ProjectReference Include="..\..\src\ServerDesk.Infrastructure.Persistence\ServerDesk.Infrastructure.Persistence.csproj" />
