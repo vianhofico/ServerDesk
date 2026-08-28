@@ -59,7 +59,7 @@ public sealed class DockerContainerDiagnosticsTests
     [Fact]
     public void InspectParserSanitizesRemoteControlCharacters()
     {
-        var json = InspectJson.Replace("Production", "Prod\\u001b[31m", StringComparison.Ordinal);
+        var json = InspectJson.Replace("Production", "Prod\u001b[31m", StringComparison.Ordinal);
 
         var details = DockerContainerDiagnosticsParser.ParseInspect(json);
 
@@ -95,7 +95,7 @@ public sealed class DockerContainerDiagnosticsTests
     [Fact]
     public void LogParserKeepsStreamsAsPlainTextAndOrdersByTimestamp()
     {
-        var stdout = "2026-08-28T04:00:02.000000000Z second\\u001b[31m\n";
+        var stdout = "2026-08-28T04:00:02.000000000Z second\u001b[31m\n";
         var stderr = "2026-08-28T04:00:01.000000000Z first-error\n";
 
         var logs = DockerContainerDiagnosticsParser.ParseLogs(stdout, stderr);
@@ -105,6 +105,7 @@ public sealed class DockerContainerDiagnosticsTests
         Assert.Equal("first-error", logs[0].Message);
         Assert.Equal(DockerLogStream.Stdout, logs[1].Stream);
         Assert.DoesNotContain('\u001b', logs[1].Message);
+        Assert.Contains('\uFFFD', logs[1].Message);
     }
 
     [Fact]
@@ -222,15 +223,20 @@ public sealed class DockerContainerDiagnosticsTests
     }
 
     [Fact]
-    public void SinceTimestampRejectsOptionLikeOrMalformedInput()
+    public async Task SinceTimestampRejectsOptionLikeOrMalformedInput()
     {
+        var cancellationToken = TestContext.Current.CancellationToken;
         var profile = ServerProfile.Create("Docker", "example.invalid", 22, "dev");
         var service = new DockerContainerDiagnosticsService(
             new HandlerFactory(profile.Id, _ => throw new InvalidOperationException()),
             DockerContainerDiagnosticsOptions.Default);
 
-        Assert.Throws<ArgumentException>(() =>
-            service.ReadLogsSinceAsync(profile, ContainerId, "--since=forever"));
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            service.ReadLogsSinceAsync(
+                profile,
+                ContainerId,
+                "--since=forever",
+                cancellationToken: cancellationToken));
     }
 
     private static DockerContainerLogEntry Entry(string token, DockerLogStream stream, string message) =>
