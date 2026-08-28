@@ -46,15 +46,15 @@ public static class DockerComposeParser
             .ToArray();
     }
 
-    public static IReadOnlyList<DockerComposeService> ParseServices(string output)
+    public static IReadOnlyList<DockerComposeServiceInfo> ParseServices(string output)
     {
         if (string.IsNullOrWhiteSpace(output))
         {
-            return Array.Empty<DockerComposeService>();
+            return Array.Empty<DockerComposeServiceInfo>();
         }
 
         var elements = ParseArrayOrJsonLines(output);
-        var services = new List<DockerComposeService>();
+        var services = new List<DockerComposeServiceInfo>();
         foreach (var element in elements)
         {
             var name = ReadString(element, "Name", "name") ?? string.Empty;
@@ -64,7 +64,7 @@ public static class DockerComposeParser
                 continue;
             }
 
-            services.Add(new DockerComposeService(
+            services.Add(new DockerComposeServiceInfo(
                 Sanitize(ReadString(element, "ID", "Id", "id") ?? string.Empty),
                 Sanitize(name),
                 Sanitize(service),
