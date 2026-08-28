@@ -1,0 +1,9 @@
+{
+  "root": "/srv/jobs",
+  "status": "# branch.oid cccccccccccccccccccccccccccccccccccccccc\u0000# branch.head main\u0000# branch.upstream origin/main\u0000# branch.ab +0 -1\u00002 R. N... 100644 100644 100644 cccccccccccccccccccccccccccccccccccccccc cccccccccccccccccccccccccccccccccccccccc R100 new-name.txt\u0000old-name.txt\u0000",
+  "remotes": "remote.origin.url file:///srv/git/jobs.git\n",
+  "expectedBranch": "main",
+  "expectedAhead": 0,
+  "expectedBehind": 1,
+  "expectedChanges": 1
+}
