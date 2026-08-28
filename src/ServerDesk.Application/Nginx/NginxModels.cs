@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using ServerDesk.Domain.Errors;
 
 namespace ServerDesk.Application.Nginx;
@@ -25,12 +26,17 @@ public sealed record NginxSiteInfo(
     public string DisplayName => ServerNames.FirstOrDefault() ?? $"server #{SourceOrdinal + 1}";
 
     public bool UsesTls => CertificatePaths.Count > 0 || ListenEndpoints.Any(value => value.Contains("ssl", StringComparison.OrdinalIgnoreCase));
+
+    public string PresentationRawBlock => NginxSensitiveText.RedactUriUserInfo(RawBlock);
 }
 
 public sealed record NginxConfigSource(
     string Path,
     string RawContent,
-    int ServerBlockCount);
+    int ServerBlockCount)
+{
+    public string PresentationRawContent => NginxSensitiveText.RedactUriUserInfo(RawContent);
+}
 
 public sealed record NginxInventorySnapshot(
     NginxRuntimeState RuntimeState,
@@ -38,7 +44,10 @@ public sealed record NginxInventorySnapshot(
     IReadOnlyList<NginxSiteInfo> Sites,
     IReadOnlyList<NginxConfigSource> Sources,
     string RawDump,
-    string? RuntimeDetail = null);
+    string? RuntimeDetail = null)
+{
+    public string PresentationRawDump => NginxSensitiveText.RedactUriUserInfo(RawDump);
+}
 
 public sealed record NginxInventoryResult(
     NginxInventorySnapshot? Snapshot,
@@ -58,4 +67,17 @@ public sealed record NginxInventoryOptions(
         2 * 1024 * 1024,
         256,
         256);
+}
+
+public static class NginxSensitiveText
+{
+    private static readonly Regex UriUserInfoPattern = new(
+        @"(?<scheme>[A-Za-z][A-Za-z0-9+.-]*://)(?<userinfo>[^\s/@]+(?::[^\s/@]*)?)@",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
+    public static string RedactUriUserInfo(string value)
+    {
+        ArgumentNullException.ThrowIfNull(value);
+        return UriUserInfoPattern.Replace(value, "${scheme}***@");
+    }
 }
