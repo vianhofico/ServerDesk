@@ -135,7 +135,7 @@ public sealed class ServerStorageService : IServerStorageService
     {
         ArgumentNullException.ThrowIfNull(profile);
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
-        if (!path.StartsWith('/', StringComparison.Ordinal))
+        if (!path.StartsWith("/", StringComparison.Ordinal))
         {
             return new ServerDirectoryAnalysisResult(
                 [],
