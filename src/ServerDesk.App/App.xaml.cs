@@ -18,6 +18,7 @@ using ServerDesk.Application.Secrets;
 using ServerDesk.Application.Services;
 using ServerDesk.Application.Sessions;
 using ServerDesk.Application.Settings;
+using ServerDesk.Application.Storage;
 using ServerDesk.Application.Terminal;
 using ServerDesk.Infrastructure.Persistence.Sqlite;
 using ServerDesk.Infrastructure.Ssh;
@@ -158,6 +159,7 @@ public partial class App : System.Windows.Application
             new AuditedServerServiceManager(
                 provider.GetRequiredService<SystemdServiceManager>(),
                 provider.GetRequiredService<IOperationAudit>()));
+        services.AddSingleton<IServerStorageService, ServerStorageService>();
 
         services.AddSingleton<INavigationService, NavigationService>();
         services.AddSingleton<IThemeService, WpfThemeService>();
