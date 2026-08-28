@@ -1,0 +1,1 @@
+[{"ifindex":1,"ifname":"lo","mtu":65536,"operstate":"UNKNOWN","address":"00:00:00:00:00:00","addr_info":[{"family":"inet","local":"127.0.0.1","prefixlen":8,"scope":"host"}]},{"ifindex":2,"ifname":"enp1s0","mtu":1500,"operstate":"DOWN","address":"de:ad:be:ef:00:01","addr_info":[]}]

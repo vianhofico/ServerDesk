@@ -7,6 +7,7 @@ using ServerDesk.Application.Capabilities;
 using ServerDesk.Application.Dashboard;
 using ServerDesk.Application.History;
 using ServerDesk.Application.HostTrust;
+using ServerDesk.Application.Networking;
 using ServerDesk.Application.PortForwarding;
 using ServerDesk.Application.Processes;
 using ServerDesk.Application.Profiles;
@@ -160,6 +161,8 @@ public partial class App : System.Windows.Application
                 provider.GetRequiredService<SystemdServiceManager>(),
                 provider.GetRequiredService<IOperationAudit>()));
         services.AddSingleton<IServerStorageService, ServerStorageService>();
+        services.AddSingleton(ServerNetworkOptions.Default);
+        services.AddSingleton<IServerNetworkService, ServerNetworkService>();
 
         services.AddSingleton<INavigationService, NavigationService>();
         services.AddSingleton<IThemeService, WpfThemeService>();
