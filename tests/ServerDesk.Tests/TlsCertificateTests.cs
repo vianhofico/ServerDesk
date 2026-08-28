@@ -111,7 +111,7 @@ public sealed class TlsCertificateTests
         Assert.False(result.IsSuccess);
         Assert.True(result.AmbiguousState);
         Assert.Equal(RemoteErrorCode.AmbiguousState, result.Error?.Code);
-        Assert.Single(state.Commands.Where(command => command.Arguments.Contains("renew")));
+        Assert.Single(state.Commands, command => command.Arguments.Contains("renew"));
     }
 
     [Fact]
