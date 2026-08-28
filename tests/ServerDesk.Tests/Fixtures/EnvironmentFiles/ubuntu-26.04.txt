@@ -1,0 +1,7 @@
+# Ubuntu 26.04 deployment sample
+APP_ENV = production
+PUBLIC_URL = https://edge26.example.test
+PUBLIC_VALUE=eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJzZXJ2ZXJkZXNrIn0.qwertyuiopasdfghjkl
+EMPTY_VALUE=
+# Preserve ordering around comments
+WORKERS=4
