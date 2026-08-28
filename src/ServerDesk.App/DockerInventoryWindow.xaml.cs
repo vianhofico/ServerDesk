@@ -221,7 +221,7 @@ public partial class DockerInventoryWindow : Window
             RemoteErrorCode.ParseFailed => $"Malformed/partial Docker output: {error.Message}",
             _ => $"Recoverable error ({error.Code}): {error.Message}",
         };
-        RuntimeDetailText.Text = error.TechnicalDetail ?? string.Empty;
+        RuntimeDetailText.Text = error.TechnicalDetails ?? string.Empty;
     }
 
     private void ClearInventory()
