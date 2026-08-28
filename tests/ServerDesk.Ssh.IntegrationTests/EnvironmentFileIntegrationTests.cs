@@ -30,8 +30,9 @@ public sealed class EnvironmentFileIntegrationTests
     public async Task GuardedApplyPreservesMetadataBlocksLostUpdateAndNeverExecutesEnvContent()
     {
         var cancellationToken = TestContext.Current.CancellationToken;
-        var fixture = CreateFixture();
         var root = RemotePath.Parse($"{Home}/serverdesk-env-{Guid.NewGuid():N}");
+        var privilegeFixture = root.Combine("env-sudo-fixture.sh");
+        var fixture = CreateFixture(privilegeFixture);
         var target = root.Combine(".env");
         var marker = root.Combine("must-not-exist");
         const string originalText = """
@@ -45,6 +46,8 @@ public sealed class EnvironmentFileIntegrationTests
         {
             await fileSystem.ConnectAsync(cancellationToken);
             await fileSystem.CreateDirectoryAsync(root, cancellationToken);
+            await UploadFixtureAsync(fileSystem, privilegeFixture, cancellationToken);
+            await fileSystem.SetPermissionsAsync(privilegeFixture, RemoteUnixPermissions.FromMode(700), cancellationToken);
             await UploadTextAsync(fileSystem, target, originalText, cancellationToken);
             await fileSystem.SetPermissionsAsync(target, RemoteUnixPermissions.FromMode(640), cancellationToken);
         }
@@ -112,7 +115,7 @@ public sealed class EnvironmentFileIntegrationTests
         }
     }
 
-    private static Fixture CreateFixture()
+    private static Fixture CreateFixture(RemotePath privilegeFixture)
     {
         var profileId = Guid.NewGuid();
         var reference = SecretReference.ForServerProfile(profileId);
@@ -133,10 +136,22 @@ public sealed class EnvironmentFileIntegrationTests
             TimeSpan.FromSeconds(2),
             TimeSpan.FromMilliseconds(250));
         var fileSystemFactory = new SftpRemoteFileSystemFactory(secretStore, trust, prompt, options);
-        var commandFactory = new SshRemoteCommandExecutorFactory(secretStore, trust, prompt, options);
+        IRemoteCommandExecutorFactory commandFactory = new ExecutableRewriteFactory(
+            new SshRemoteCommandExecutorFactory(secretStore, trust, prompt, options),
+            privilegeFixture);
         IRemoteFileEditorService editor = new GuardedRemoteFileEditorService(fileSystemFactory, commandFactory);
         var service = new EnvironmentFileService(editor, EnvironmentFileOptions.Default);
         return new Fixture(profile, fileSystemFactory, editor, service);
+    }
+
+    private static async Task UploadFixtureAsync(
+        IRemoteFileSystem fileSystem,
+        RemotePath target,
+        CancellationToken cancellationToken)
+    {
+        var localPath = Path.Combine(AppContext.BaseDirectory, "Fixtures", "env-sudo-fixture.sh");
+        var text = await File.ReadAllTextAsync(localPath, cancellationToken);
+        await UploadTextAsync(fileSystem, target, text, cancellationToken);
     }
 
     private static async Task UploadTextAsync(
@@ -200,6 +215,47 @@ public sealed class EnvironmentFileIntegrationTests
         IRemoteFileSystemFactory FileSystemFactory,
         IRemoteFileEditorService Editor,
         EnvironmentFileService Service);
+
+    private sealed class ExecutableRewriteFactory : IRemoteCommandExecutorFactory
+    {
+        private readonly IRemoteCommandExecutorFactory _inner;
+        private readonly RemotePath _privilegeFixture;
+
+        public ExecutableRewriteFactory(IRemoteCommandExecutorFactory inner, RemotePath privilegeFixture)
+        {
+            _inner = inner;
+            _privilegeFixture = privilegeFixture;
+        }
+
+        public IRemoteCommandExecutor Create(ServerProfile profile) =>
+            new ExecutableRewriteExecutor(_inner.Create(profile), _privilegeFixture);
+    }
+
+    private sealed class ExecutableRewriteExecutor : IRemoteCommandExecutor
+    {
+        private readonly IRemoteCommandExecutor _inner;
+        private readonly RemotePath _privilegeFixture;
+
+        public ExecutableRewriteExecutor(IRemoteCommandExecutor inner, RemotePath privilegeFixture)
+        {
+            _inner = inner;
+            _privilegeFixture = privilegeFixture;
+        }
+
+        public Guid ServerProfileId => _inner.ServerProfileId;
+
+        public Task<RemoteExecutionResult> ExecuteAsync(
+            RemoteCommandSpec command,
+            CancellationToken cancellationToken = default)
+        {
+            var rewritten = string.Equals(command.Executable, "sudo", StringComparison.Ordinal)
+                ? command with { Executable = _privilegeFixture.Value }
+                : command;
+            return _inner.ExecuteAsync(rewritten, cancellationToken);
+        }
+
+        public ValueTask DisposeAsync() => _inner.DisposeAsync();
+    }
 
     private sealed class MemorySecretStore : ISecretStore
     {
