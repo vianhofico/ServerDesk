@@ -31,7 +31,7 @@ public sealed record DockerComposeProject(
     public string PrimaryConfigFile => ConfigFiles.FirstOrDefault() ?? string.Empty;
 }
 
-public sealed record DockerComposeService(
+public sealed record DockerComposeServiceInfo(
     string Id,
     string Name,
     string Service,
@@ -42,7 +42,7 @@ public sealed record DockerComposeService(
 
 public sealed record DockerComposeProjectDetails(
     DockerComposeProject Project,
-    IReadOnlyList<DockerComposeService> Services,
+    IReadOnlyList<DockerComposeServiceInfo> Services,
     string NormalizedConfigJson);
 
 public sealed record DockerComposeSnapshot(
