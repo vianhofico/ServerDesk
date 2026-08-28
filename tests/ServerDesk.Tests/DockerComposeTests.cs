@@ -45,7 +45,7 @@ public sealed class DockerComposeTests
     [InlineData(" demo ")]
     public void HostileProjectNamesAreRejected(string value)
     {
-        Assert.ThrowsAny<ArgumentException>(() => DockerComposeIdentity.NormalizeProjectName(value));
+        Assert.Throws<FormatException>(() => DockerComposeIdentity.NormalizeProjectName(value));
     }
 
     [Theory]
@@ -54,7 +54,7 @@ public sealed class DockerComposeTests
     [InlineData("/srv/demo/compose.yaml\n--project-name")]
     public void UnsafeConfigPathsAreRejected(string value)
     {
-        Assert.ThrowsAny<ArgumentException>(() => DockerComposeIdentity.NormalizeConfigPath(value));
+        Assert.Throws<FormatException>(() => DockerComposeIdentity.NormalizeConfigPath(value));
     }
 
     [Fact]
