@@ -1,0 +1,5 @@
+{
+  "projects": [{"name":"edge-stack","status":"running(1)","configFiles":["/opt/edge/compose.yml","/opt/edge/compose.prod.yml"]}],
+  "services": [{"id":"cccccccccccccccc","name":"edge-stack-web-1","service":"web","image":"nginx:1.29","state":"running","status":"Up 20 seconds","publishers":[{"url":"::","targetPort":80,"publishedPort":8080,"protocol":"tcp"}]}],
+  "config": {"name":"edge-stack","services":{"web":{"image":"nginx:1.29"}}}
+}
