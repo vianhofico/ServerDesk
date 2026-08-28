@@ -138,7 +138,7 @@ public sealed class NginxSiteEditingTests
         var service = CreateService(state);
         var loaded = await service.LoadAsync(Profile(), RemotePath.Parse("/etc/nginx/sites-enabled/app"), TestContext.Current.CancellationToken);
 
-        var result = await service.ApplyAsync(Profile(), loaded.Document!, state.CandidateText, TestContext.Current.CancellationToken);
+        var result = await service.ApplyAsync(Profile(), loaded.Document!, State.CandidateText, TestContext.Current.CancellationToken);
 
         Assert.False(result.IsSuccess);
         Assert.True(result.AmbiguousState);
@@ -155,11 +155,11 @@ public sealed class NginxSiteEditingTests
         var service = CreateService(state);
         var loaded = await service.LoadAsync(Profile(), RemotePath.Parse("/etc/nginx/sites-enabled/app"), TestContext.Current.CancellationToken);
 
-        var result = await service.ApplyAsync(Profile(), loaded.Document!, state.CandidateText, TestContext.Current.CancellationToken);
+        var result = await service.ApplyAsync(Profile(), loaded.Document!, State.CandidateText, TestContext.Current.CancellationToken);
 
         Assert.False(result.IsSuccess);
         Assert.True(result.RolledBack);
-        Assert.Equal(state.OriginalText, state.Editor.Current.Text);
+        Assert.Equal(State.OriginalText, state.Editor.Current.Text);
         Assert.Contains(state.Commands, command => command.Arguments.Contains("mv"));
         Assert.DoesNotContain(state.Commands, command => command.Arguments.Contains("reload"));
     }
