@@ -174,10 +174,10 @@ public partial class DockerContainerDiagnosticsWindow
         if (action is DockerContainerAction.Kill or DockerContainerAction.Remove)
         {
             var identity = string.IsNullOrWhiteSpace(details.Name) ? details.Id[..12] : details.Name;
-            var consequence = action == DockerContainerAction.Kill
+            var destructiveConsequence = action == DockerContainerAction.Kill
                 ? $"SIGKILL immediately terminates '{identity}' without graceful shutdown. Data not flushed by the process may be lost."
                 : $"Removing '{identity}' deletes the stopped container object. ServerDesk does not use --force and does not delete attached volumes.";
-            var dialog = new DockerDestructiveConfirmationWindow(verb, identity, consequence)
+            var dialog = new DockerDestructiveConfirmationWindow(verb, identity, destructiveConsequence)
             {
                 Owner = this,
             };
