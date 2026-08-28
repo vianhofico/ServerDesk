@@ -328,7 +328,7 @@ public sealed class DockerComposeService : IDockerComposeService
         return arguments;
     }
 
-    private static ValueTask<RemoteExecutionResult> ExecuteAsync(
+    private static Task<RemoteExecutionResult> ExecuteAsync(
         IRemoteCommandExecutor executor,
         IReadOnlyList<string> arguments,
         OperationRisk risk,
