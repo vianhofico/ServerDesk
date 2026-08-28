@@ -140,8 +140,9 @@ public static class ScheduledTaskParser
         var calendar = NullIfBlank(Get(properties, "TimersCalendar", string.Empty));
         var trigger = NullIfBlank(Get(properties, "Triggers", string.Empty));
         var fragmentPath = NullIfBlank(Get(properties, "FragmentPath", string.Empty));
-        var enabled = unitFileState.StartsWith("enabled", StringComparison.OrdinalIgnoreCase) ||
-                      unitFileState.StartsWith("linked", StringComparison.OrdinalIgnoreCase);
+        var effectiveUnitFileState = Get(properties, "UnitFileState", unitFileState);
+        var enabled = effectiveUnitFileState.StartsWith("enabled", StringComparison.OrdinalIgnoreCase) ||
+                      effectiveUnitFileState.StartsWith("linked", StringComparison.OrdinalIgnoreCase);
         var active = string.Equals(activeState, "active", StringComparison.OrdinalIgnoreCase);
         var schedule = calendar ?? next ?? "systemd timer";
         var raw = Sanitize(output);
