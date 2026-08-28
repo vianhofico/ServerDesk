@@ -1,0 +1,5 @@
+{
+  "crontab": "MAILTO=ops@example.invalid\n*/5 * * * * /srv/app/health-check\n# serverdesk-disabled 0 2 * * * /srv/app/nightly\n@reboot /srv/app/bootstrap\n",
+  "unitFiles": "apt-daily.timer enabled enabled\nserverdesk-report.timer disabled enabled\n",
+  "timerShow": "Id=serverdesk-report.timer\nLoadState=loaded\nActiveState=inactive\nUnitFileState=disabled\nNextElapseUSecRealtime=Sat 2026-08-29 07:00:00 UTC\nLastTriggerUSec=Fri 2026-08-28 07:00:01 UTC\nTimersCalendar={ OnCalendar=*-*-* 07:00:00 ; next_elapse=Sat 2026-08-29 07:00:00 UTC }\nTriggers=serverdesk-report.service\nFragmentPath=/etc/systemd/system/serverdesk-report.timer\n"
+}

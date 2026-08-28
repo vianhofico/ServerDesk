@@ -1,0 +1,5 @@
+{
+  "crontab": "15 1 * * 1-5 /opt/jobs/weekday\n",
+  "unitFiles": "logrotate.timer static -\nbackup.timer enabled enabled\n",
+  "timerShow": "Id=backup.timer\nLoadState=loaded\nActiveState=active\nUnitFileState=enabled\nNextElapseUSecRealtime=Sat 2026-08-29 01:15:00 UTC\nLastTriggerUSec=Fri 2026-08-28 01:15:00 UTC\nTimersCalendar={ OnCalendar=*-*-* 01:15:00 ; next_elapse=Sat 2026-08-29 01:15:00 UTC }\nTriggers=backup.service\nFragmentPath=/etc/systemd/system/backup.timer\n"
+}

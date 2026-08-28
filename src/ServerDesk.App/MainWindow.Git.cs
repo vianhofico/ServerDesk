@@ -13,6 +13,7 @@ public partial class MainWindow
     {
         base.OnContentRendered(e);
         EnsureGitActionButton();
+        EnsureScheduledTasksActionButton();
     }
 
     private void EnsureGitActionButton()
