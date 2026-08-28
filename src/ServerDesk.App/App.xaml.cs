@@ -7,6 +7,7 @@ using ServerDesk.Application.Audit;
 using ServerDesk.Application.Capabilities;
 using ServerDesk.Application.Dashboard;
 using ServerDesk.Application.Docker;
+using ServerDesk.Application.Git;
 using ServerDesk.Application.History;
 using ServerDesk.Application.HostTrust;
 using ServerDesk.Application.Logs;
@@ -138,7 +139,6 @@ public partial class App : System.Windows.Application
             new ConnectionHistoryRemoteSessionFactory(
                 provider.GetRequiredService<RouteAwareRemoteSessionFactory>(),
                 provider.GetRequiredService<IConnectionHistoryRepository>(),
-                provider.GetRequiredService<IConnectionRouteRepository>(),
                 provider.GetRequiredService<IProfileRepository>()));
         services.AddSingleton<IRemoteCommandExecutorFactory, RouteAwareRemoteCommandExecutorFactory>();
         services.AddSingleton<IRemoteFileSystemFactory, RouteAwareSftpRemoteFileSystemFactory>();
@@ -182,6 +182,12 @@ public partial class App : System.Windows.Application
         services.AddSingleton<IDockerComposeService>(provider =>
             new AuditedDockerComposeService(
                 provider.GetRequiredService<DockerComposeService>(),
+                provider.GetRequiredService<IOperationAudit>()));
+        services.AddSingleton(GitOperationsOptions.Default);
+        services.AddSingleton<GitOperationsService>();
+        services.AddSingleton<IGitOperationsService>(provider =>
+            new AuditedGitOperationsService(
+                provider.GetRequiredService<GitOperationsService>(),
                 provider.GetRequiredService<IOperationAudit>()));
 
         services.AddSingleton<INavigationService, NavigationService>();
