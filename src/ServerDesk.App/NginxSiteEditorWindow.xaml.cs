@@ -127,7 +127,11 @@ public partial class NginxSiteEditorWindow : Window
             RenderApplyResult(result);
             if (result.IsSuccess)
             {
-                await LoadDocumentAsync(confirmDiscard: false).ConfigureAwait(true);
+                _document = _document with
+                {
+                    Document = _document.Document with { Text = RawTextBox.Text },
+                };
+                UpdateDiff();
                 SetStatus(
                     "Loc.Nginx.Editor.ApplySuccess",
                     technicalStatus: result.RecoveryBackupPath is null
