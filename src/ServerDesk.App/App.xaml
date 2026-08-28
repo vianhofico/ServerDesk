@@ -6,6 +6,7 @@
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="/ServerDesk.App;component/Themes/Light.xaml" />
                 <ResourceDictionary Source="/ServerDesk.App;component/Localization/Strings.en.xaml" />
+                <ResourceDictionary Source="/ServerDesk.App;component/Localization/Strings.Tasks.en.xaml" />
             </ResourceDictionary.MergedDictionaries>
 
             <Style TargetType="Window">
