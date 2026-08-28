@@ -1,0 +1,24 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:system="clr-namespace:System;assembly=System.Runtime">
+    <system:String x:Key="Loc.AppSubtitle">Quản trị máy chủ Linux trực quan</system:String>
+    <system:String x:Key="Loc.Header.Milestone">M3 DevOps</system:String>
+    <system:String x:Key="Loc.Settings">Cài đặt</system:String>
+    <system:String x:Key="Loc.Theme">Giao diện</system:String>
+    <system:String x:Key="Loc.Language">Ngôn ngữ</system:String>
+    <system:String x:Key="Loc.Theme.System">Hệ thống</system:String>
+    <system:String x:Key="Loc.Theme.Light">Sáng</system:String>
+    <system:String x:Key="Loc.Theme.Dark">Tối</system:String>
+    <system:String x:Key="Loc.Language.SystemDefault">Mặc định hệ thống</system:String>
+    <system:String x:Key="Loc.Language.English">English</system:String>
+    <system:String x:Key="Loc.Language.Vietnamese">Tiếng Việt</system:String>
+    <system:String x:Key="Loc.Servers">MÁY CHỦ</system:String>
+    <system:String x:Key="Loc.Workspace">KHÔNG GIAN LÀM VIỆC</system:String>
+    <system:String x:Key="Loc.Common.Add">+ Thêm</system:String>
+    <system:String x:Key="Loc.SecurityBoundary">Ranh giới bảo mật</system:String>
+    <system:String x:Key="Loc.Security.SecretsStore">Credentials → Windows Credential Manager</system:String>
+    <system:String x:Key="Loc.Security.HostTrustStore">Tin cậy máy chủ → SQLite</system:String>
+    <system:String x:Key="Loc.Security.Transport">Kết nối → SSH.NET</system:String>
+    <system:String x:Key="Loc.Settings.SaveFailed">Cài đặt đã đổi trong phiên này nhưng không thể lưu tùy chọn.</system:String>
+    <system:String x:Key="Loc.Format.UnableToConnectServer">Không thể kết nối tới {0}.</system:String>
+</ResourceDictionary>

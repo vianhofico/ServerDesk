@@ -9,6 +9,7 @@
     <PackageReference Include="xunit.v3.mtp-v2" Version="4.0.0" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\src\ServerDesk.App\ServerDesk.App.csproj" />
     <ProjectReference Include="..\..\src\ServerDesk.Application\ServerDesk.Application.csproj" />
     <ProjectReference Include="..\..\src\ServerDesk.Domain\ServerDesk.Domain.csproj" />
     <ProjectReference Include="..\..\src\ServerDesk.Infrastructure.Persistence\ServerDesk.Infrastructure.Persistence.csproj" />
@@ -29,6 +30,10 @@
           CopyToOutputDirectory="PreserveNewest"
           CopyToPublishDirectory="Never" />
     <None Include="Fixtures\Docker\**\*"
+          CopyToOutputDirectory="PreserveNewest"
+          CopyToPublishDirectory="Never" />
+    <None Include="..\..\src\ServerDesk.App\Localization\Strings.*.xaml"
+          Link="Fixtures\Localization\%(Filename)%(Extension)"
           CopyToOutputDirectory="PreserveNewest"
           CopyToPublishDirectory="Never" />
   </ItemGroup>

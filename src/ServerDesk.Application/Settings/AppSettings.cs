@@ -13,9 +13,24 @@ public enum AppThemeKind
     Dark,
 }
 
-public sealed record AppSettings(AppThemePreference ThemePreference)
+public enum AppLanguagePreference
 {
-    public static AppSettings Default { get; } = new(AppThemePreference.System);
+    System,
+    English,
+    Vietnamese,
+}
+
+public enum AppLanguageKind
+{
+    English,
+    Vietnamese,
+}
+
+public sealed record AppSettings(
+    AppThemePreference ThemePreference,
+    AppLanguagePreference LanguagePreference = AppLanguagePreference.System)
+{
+    public static AppSettings Default { get; } = new(AppThemePreference.System, AppLanguagePreference.System);
 }
 
 public interface IAppSettingsStore
@@ -30,6 +45,11 @@ public interface ISystemThemeDetector
     AppThemeKind GetCurrentTheme();
 }
 
+public interface ISystemCultureDetector
+{
+    string GetCurrentCultureName();
+}
+
 public static class ThemePreferenceResolver
 {
     public static AppThemeKind Resolve(
@@ -42,4 +62,42 @@ public static class ThemePreferenceResolver
             AppThemePreference.Dark => AppThemeKind.Dark,
             _ => throw new ArgumentOutOfRangeException(nameof(preference), preference, null),
         };
+}
+
+public static class LanguagePreferenceResolver
+{
+    public const string EnglishCode = "en";
+    public const string VietnameseCode = "vi";
+
+    public static AppLanguageKind Resolve(
+        AppLanguagePreference preference,
+        string? systemCultureName) =>
+        preference switch
+        {
+            AppLanguagePreference.System => IsVietnamese(systemCultureName)
+                ? AppLanguageKind.Vietnamese
+                : AppLanguageKind.English,
+            AppLanguagePreference.English => AppLanguageKind.English,
+            AppLanguagePreference.Vietnamese => AppLanguageKind.Vietnamese,
+            _ => throw new ArgumentOutOfRangeException(nameof(preference), preference, null),
+        };
+
+    public static string GetCultureCode(AppLanguageKind language) =>
+        language switch
+        {
+            AppLanguageKind.English => EnglishCode,
+            AppLanguageKind.Vietnamese => VietnameseCode,
+            _ => throw new ArgumentOutOfRangeException(nameof(language), language, null),
+        };
+
+    private static bool IsVietnamese(string? cultureName)
+    {
+        if (string.IsNullOrWhiteSpace(cultureName))
+        {
+            return false;
+        }
+
+        return cultureName.Equals(VietnameseCode, StringComparison.OrdinalIgnoreCase) ||
+               cultureName.StartsWith(VietnameseCode + "-", StringComparison.OrdinalIgnoreCase);
+    }
 }

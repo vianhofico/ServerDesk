@@ -1,4 +1,6 @@
+using System.Globalization;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.Win32;
 using ServerDesk.Application.Abstractions;
 using ServerDesk.Application.Settings;
@@ -43,6 +45,7 @@ public sealed class JsonAppSettingsStore : IAppSettingsStore
     private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web)
     {
         WriteIndented = true,
+        Converters = { new AppLanguagePreferenceJsonConverter() },
     };
 
     private readonly IAppPaths _appPaths;
@@ -98,6 +101,49 @@ public sealed class JsonAppSettingsStore : IAppSettingsStore
 
         File.Move(temporaryPath, _appPaths.SettingsFilePath, true);
     }
+
+    private sealed class AppLanguagePreferenceJsonConverter : JsonConverter<AppLanguagePreference>
+    {
+        public override AppLanguagePreference Read(
+            ref Utf8JsonReader reader,
+            Type typeToConvert,
+            JsonSerializerOptions options)
+        {
+            if (reader.TokenType == JsonTokenType.String)
+            {
+                return reader.GetString()?.Trim().ToLowerInvariant() switch
+                {
+                    "system" => AppLanguagePreference.System,
+                    "en" or "english" => AppLanguagePreference.English,
+                    "vi" or "vietnamese" => AppLanguagePreference.Vietnamese,
+                    _ => AppLanguagePreference.System,
+                };
+            }
+
+            if (reader.TokenType == JsonTokenType.Number &&
+                reader.TryGetInt32(out var raw) &&
+                Enum.IsDefined(typeof(AppLanguagePreference), raw))
+            {
+                return (AppLanguagePreference)raw;
+            }
+
+            return AppLanguagePreference.System;
+        }
+
+        public override void Write(
+            Utf8JsonWriter writer,
+            AppLanguagePreference value,
+            JsonSerializerOptions options)
+        {
+            writer.WriteStringValue(value switch
+            {
+                AppLanguagePreference.System => "system",
+                AppLanguagePreference.English => LanguagePreferenceResolver.EnglishCode,
+                AppLanguagePreference.Vietnamese => LanguagePreferenceResolver.VietnameseCode,
+                _ => "system",
+            });
+        }
+    }
 }
 
 public sealed class WindowsSystemThemeDetector : ISystemThemeDetector
@@ -124,4 +170,9 @@ public sealed class WindowsSystemThemeDetector : ISystemThemeDetector
             return AppThemeKind.Light;
         }
     }
+}
+
+public sealed class WindowsSystemCultureDetector : ISystemCultureDetector
+{
+    public string GetCurrentCultureName() => CultureInfo.CurrentUICulture.Name;
 }
