@@ -53,7 +53,7 @@
     <system:String x:Key="Loc.Nginx.Editor.Loading">Loading the resolved nginx file…</system:String>
     <system:String x:Key="Loc.Nginx.Editor.Ready">Review the candidate before applying.</system:String>
     <system:String x:Key="Loc.Nginx.Editor.SimpleApplied">Simple fields were applied to the raw candidate. Review the diff before applying.</system:String>
-    <system:String x:Key="Loc.Nginx.Editor.SimpleFailed">Simple mode cannot patch this site: {0}</system:String>
+    <system:String x:Key="Loc.Nginx.Editor.SimpleFailed">Simple mode cannot patch this site.</system:String>
     <system:String x:Key="Loc.Nginx.Editor.Applying">Validating the candidate in live nginx context, then applying and verifying…</system:String>
     <system:String x:Key="Loc.Nginx.Editor.ConfirmTitle">Apply nginx configuration?</system:String>
     <system:String x:Key="Loc.Nginx.Editor.ConfirmMessage">This can reload nginx and affect active traffic. Target: {0}\n{1}\n\nServerDesk validates before replacement and will not blindly retry an ambiguous mutation. Continue?</system:String>
@@ -63,6 +63,6 @@
     <system:String x:Key="Loc.Nginx.Editor.Ambiguous">Completion state is ambiguous. Do not retry until the live file and nginx runtime are refreshed.</system:String>
     <system:String x:Key="Loc.Nginx.Editor.ApplyFailed">nginx apply failed.</system:String>
     <system:String x:Key="Loc.Nginx.Editor.Cancelled">Operation cancelled.</system:String>
-    <system:String x:Key="Loc.Nginx.Editor.LoadFailed">Unable to load the nginx file: {0}</system:String>
+    <system:String x:Key="Loc.Nginx.Editor.LoadFailed">Unable to load the nginx file.</system:String>
     <system:String x:Key="Loc.Nginx.Editor.Backup">Recovery backup: {0}</system:String>
 </ResourceDictionary>
