@@ -808,7 +808,7 @@ public static class DockerContainerDiagnosticsParser
         }
 
         if (index == 0 || !double.TryParse(
-                text[..index].Replace(',', '.', StringComparison.Ordinal),
+                text[..index].Replace(',', '.'),
                 NumberStyles.Float,
                 CultureInfo.InvariantCulture,
                 out var number) || number < 0)
