@@ -32,6 +32,7 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
@@ -50,12 +51,31 @@
                     Style="{StaticResource DockerDiagButton}" Margin="0" VerticalAlignment="Top" />
         </Grid>
 
-        <Border Grid.Row="1" Margin="0,14,0,10" Padding="10" CornerRadius="7"
+        <WrapPanel Grid.Row="1" Margin="0,12,0,0">
+            <Button x:Name="StartButton" Content="Start" Tag="Start" Click="ContainerActionOnClick"
+                    Style="{StaticResource DockerDiagButton}" Margin="0" />
+            <Button x:Name="StopButton" Content="Stop" Tag="Stop" Click="ContainerActionOnClick"
+                    Style="{StaticResource DockerDiagButton}" />
+            <Button x:Name="RestartButton" Content="Restart" Tag="Restart" Click="ContainerActionOnClick"
+                    Style="{StaticResource DockerDiagButton}" />
+            <Button x:Name="PauseButton" Content="Pause" Tag="Pause" Click="ContainerActionOnClick"
+                    Style="{StaticResource DockerDiagButton}" />
+            <Button x:Name="UnpauseButton" Content="Unpause" Tag="Unpause" Click="ContainerActionOnClick"
+                    Style="{StaticResource DockerDiagButton}" />
+            <Button x:Name="KillButton" Content="Kill (SIGKILL)" Tag="Kill" Click="ContainerActionOnClick"
+                    Style="{StaticResource DockerDiagButton}" />
+            <Button x:Name="RemoveButton" Content="Remove" Tag="Remove" Click="ContainerActionOnClick"
+                    Style="{StaticResource DockerDiagButton}" />
+            <Button x:Name="ExecButton" Content="Exec /bin/sh" Click="ExecOnClick"
+                    Style="{StaticResource DockerDiagButton}" />
+        </WrapPanel>
+
+        <Border Grid.Row="2" Margin="0,12,0,10" Padding="10" CornerRadius="7"
                 Background="{DynamicResource SurfaceSecondaryBrush}">
             <TextBlock x:Name="StatusText" TextWrapping="Wrap" />
         </Border>
 
-        <TabControl Grid.Row="2" x:Name="DiagnosticsTabs">
+        <TabControl Grid.Row="3" x:Name="DiagnosticsTabs">
             <TabItem Header="Details">
                 <Grid Margin="12">
                     <Grid.RowDefinitions>
@@ -243,7 +263,7 @@
             </TabItem>
         </TabControl>
 
-        <TextBlock Grid.Row="3" x:Name="FooterText" Margin="0,10,0,0"
+        <TextBlock Grid.Row="4" x:Name="FooterText" Margin="0,10,0,0"
                    Foreground="{DynamicResource MutedTextBrush}" />
     </Grid>
 </Window>

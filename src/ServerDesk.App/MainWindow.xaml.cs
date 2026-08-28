@@ -32,6 +32,8 @@ public partial class MainWindow : Window
     private readonly IServerServiceManager _serviceManager;
     private readonly IDockerInventoryService _dockerInventoryService;
     private readonly IDockerContainerDiagnosticsService _dockerDiagnosticsService;
+    private readonly IDockerContainerActionService _dockerActionService;
+    private readonly IDockerExecTerminalSessionFactory _dockerExecTerminalSessionFactory;
     private readonly IServerStorageService _storageService;
     private readonly IServerNetworkService _networkService;
     private readonly IServerLogService _logService;
@@ -54,6 +56,8 @@ public partial class MainWindow : Window
         IServerServiceManager serviceManager,
         IDockerInventoryService dockerInventoryService,
         IDockerContainerDiagnosticsService dockerDiagnosticsService,
+        IDockerContainerActionService dockerActionService,
+        IDockerExecTerminalSessionFactory dockerExecTerminalSessionFactory,
         IServerStorageService storageService,
         IServerNetworkService networkService,
         IServerLogService logService,
@@ -73,6 +77,8 @@ public partial class MainWindow : Window
         _serviceManager = serviceManager;
         _dockerInventoryService = dockerInventoryService;
         _dockerDiagnosticsService = dockerDiagnosticsService;
+        _dockerActionService = dockerActionService;
+        _dockerExecTerminalSessionFactory = dockerExecTerminalSessionFactory;
         _storageService = storageService;
         _networkService = networkService;
         _logService = logService;
@@ -137,7 +143,7 @@ public partial class MainWindow : Window
             OpenServicesOnClick);
         var dockerButton = CreateActionButton(
             "Docker",
-            "Detect Docker runtime access and inspect containers, images, volumes and networks without exposing the Docker socket.",
+            "Inspect Docker resources, verified container lifecycle actions and container exec without exposing the Docker socket.",
             OpenDockerOnClick);
         var storageButton = CreateActionButton(
             "Storage",
@@ -293,6 +299,8 @@ public partial class MainWindow : Window
             selected.Profile,
             selected.ConnectionState == RemoteSessionState.Connected)
         {
+            ActionService = _dockerActionService,
+            ExecTerminalSessionFactory = _dockerExecTerminalSessionFactory,
             Owner = this,
         };
         window.Show();

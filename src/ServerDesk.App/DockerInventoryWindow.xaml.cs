@@ -36,8 +36,12 @@ public partial class DockerInventoryWindow : Window
             ? "Initial: refresh to detect Docker runtime access and load inventory."
             : "Disconnected: connect the server before inspecting Docker.";
         RuntimeDetailText.Text = "ServerDesk uses the remote Docker CLI over SSH; it never exposes or forwards the Docker socket.";
-        FooterText.Text = "Read-only Docker inventory. Select a container to open inspect, stats and logs.";
+        FooterText.Text = "Docker inventory is read-only. Select a container for diagnostics, confirmed lifecycle actions and exec.";
     }
+
+    public IDockerContainerActionService? ActionService { get; set; }
+
+    public IDockerExecTerminalSessionFactory? ExecTerminalSessionFactory { get; set; }
 
     private async void WindowOnLoaded(object sender, RoutedEventArgs e)
     {
@@ -92,6 +96,8 @@ public partial class DockerInventoryWindow : Window
             container,
             _initiallyConnected)
         {
+            ActionService = ActionService,
+            ExecTerminalSessionFactory = ExecTerminalSessionFactory,
             Owner = this,
         };
         window.Show();
@@ -233,7 +239,7 @@ public partial class DockerInventoryWindow : Window
         NetworkGrid.ItemsSource = networks;
         DiagnosticsButton.IsEnabled = _initiallyConnected && ContainerGrid.SelectedItem is DockerContainerInfo;
         FooterText.Text =
-            $"Visible: {containers.Count:N0} container(s), {images.Count:N0} image(s), {volumes.Count:N0} volume(s), {networks.Count:N0} network(s). Double-click a container for diagnostics.";
+            $"Visible: {containers.Count:N0} container(s), {images.Count:N0} image(s), {volumes.Count:N0} volume(s), {networks.Count:N0} network(s). Double-click a container for diagnostics and management.";
     }
 
     private void ApplyRuntimeUnavailable(DockerRuntimeState runtime)

@@ -40,9 +40,10 @@ public partial class DockerContainerDiagnosticsWindow : Window
         LogStreamBox.ItemsSource = new[] { "All", DockerLogStream.Stdout.ToString(), DockerLogStream.Stderr.ToString() };
         LogStreamBox.SelectedIndex = 0;
         StatusText.Text = initiallyConnected
-            ? "Initial: loading read-only container diagnostics."
-            : "Disconnected: connect the server before reading container diagnostics.";
-        FooterText.Text = "Read-only diagnostics. Secret-like environment values are discarded and shown redacted.";
+            ? "Initial: loading container diagnostics and verified state."
+            : "Disconnected: connect the server before reading or managing this container.";
+        FooterText.Text = "Diagnostics plus confirmed container actions. Secret-like environment values are discarded and shown redacted.";
+        SetManagementButtonsEnabled(false);
     }
 
     private async void WindowOnLoaded(object sender, RoutedEventArgs e)
@@ -98,7 +99,7 @@ public partial class DockerContainerDiagnosticsWindow : Window
     private void CancelAllOnClick(object sender, RoutedEventArgs e)
     {
         CancelAll();
-        StatusText.Text = "Cancelled: active Docker diagnostic reads were stopped.";
+        StatusText.Text = "Cancelled: active Docker work was stopped. If a mutation was in flight, refresh state before deciding whether to retry.";
     }
 
     private void LogFilterOnChanged(object sender, TextChangedEventArgs e) => ApplyLogFilter();
@@ -384,6 +385,7 @@ public partial class DockerContainerDiagnosticsWindow : Window
         var sensitive = details.Environment.Count(variable => variable.IsSensitive);
         FooterText.Text =
             $"Details: {details.Environment.Count:N0} env var(s), {sensitive:N0} redacted; {details.Mounts.Count:N0} mount(s); {details.Networks.Count:N0} network(s).";
+        UpdateManagementButtons(details);
     }
 
     private void ApplyStats(DockerContainerStats stats)
@@ -418,6 +420,8 @@ public partial class DockerContainerDiagnosticsWindow : Window
         {
             RemoteErrorCode.PermissionDenied or RemoteErrorCode.SudoRequired => $"{area} permission denied: {error.Message}",
             RemoteErrorCode.PathNotFound => $"{area} not found: the container may have been removed. {error.Message}",
+            RemoteErrorCode.PathConflict => $"{area} state conflict: {error.Message}",
+            RemoteErrorCode.AmbiguousState => $"{area} ambiguous state: {error.Message}",
             RemoteErrorCode.CapabilityUnavailable or RemoteErrorCode.CommandNotFound => $"{area} capability unavailable: {error.Message}",
             RemoteErrorCode.UnsupportedVersion => $"{area} unsupported: {error.Message}",
             RemoteErrorCode.NetworkInterrupted or RemoteErrorCode.ConnectionFailed => $"{area} disconnected: {error.Message}",
@@ -429,14 +433,14 @@ public partial class DockerContainerDiagnosticsWindow : Window
 
     private bool CanRead()
     {
-        if (_closed)
+        if (_closed || _containerRemoved)
         {
             return false;
         }
 
         if (!_initiallyConnected)
         {
-            StatusText.Text = "Disconnected: connect the server before reading container diagnostics.";
+            StatusText.Text = "Disconnected: connect the server before reading or managing this container.";
             return false;
         }
 
