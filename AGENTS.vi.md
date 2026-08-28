@@ -348,3 +348,21 @@ M8 Optional ServerDesk Agent
 ```
 
 Xem `docs/ROADMAP.vi.md` để biết acceptance gate chính xác.
+
+## 13. Contract localization
+
+Sau khi localization foundation tồn tại, mọi user-facing UI string mới phải dùng localization resources thay vì thêm presentation text English hard-code mới.
+
+Quy tắc:
+
+- V1 hỗ trợ `System`, English (`en`) và Vietnamese (`vi`);
+- English là fallback cho unsupported system culture và translated value bị thiếu;
+- persist giá trị ổn định như `system`, `en`, `vi`, không lưu localized display string;
+- giữ localization trong presentation/settings boundary; không đưa chuỗi UI English/Vietnamese vào Domain hoặc infrastructure error;
+- ưu tiên complete parameterized resource string thay vì concat các mảnh câu đã dịch;
+- không dịch technical identifier như executable name, path, protocol, API/type identifier, raw terminal output hoặc raw server log nếu việc dịch làm thay đổi technical meaning;
+- khi chạm existing feature, migrate user-facing text trong slice được chạm tới thay vì yêu cầu một giant whole-app translation PR;
+- layout mới phải chịu được text tiếng Việt dài hơn bằng flexible sizing/wrapping khi phù hợp;
+- đổi ngôn ngữ không được reconnect SSH session hoặc làm mất active workspace state.
+
+Đọc `docs/LOCALIZATION.vi.md` trước khi thêm hoặc sửa user-facing UI.
