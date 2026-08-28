@@ -31,6 +31,7 @@ public partial class MainWindow : Window
     private readonly IServerProcessService _processService;
     private readonly IServerServiceManager _serviceManager;
     private readonly IDockerInventoryService _dockerInventoryService;
+    private readonly IDockerContainerDiagnosticsService _dockerDiagnosticsService;
     private readonly IServerStorageService _storageService;
     private readonly IServerNetworkService _networkService;
     private readonly IServerLogService _logService;
@@ -52,6 +53,7 @@ public partial class MainWindow : Window
         IServerProcessService processService,
         IServerServiceManager serviceManager,
         IDockerInventoryService dockerInventoryService,
+        IDockerContainerDiagnosticsService dockerDiagnosticsService,
         IServerStorageService storageService,
         IServerNetworkService networkService,
         IServerLogService logService,
@@ -70,6 +72,7 @@ public partial class MainWindow : Window
         _processService = processService;
         _serviceManager = serviceManager;
         _dockerInventoryService = dockerInventoryService;
+        _dockerDiagnosticsService = dockerDiagnosticsService;
         _storageService = storageService;
         _networkService = networkService;
         _logService = logService;
@@ -286,6 +289,7 @@ public partial class MainWindow : Window
 
         var window = new DockerInventoryWindow(
             _dockerInventoryService,
+            _dockerDiagnosticsService,
             selected.Profile,
             selected.ConnectionState == RemoteSessionState.Connected)
         {
