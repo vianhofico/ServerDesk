@@ -150,7 +150,7 @@ public partial class NginxInventoryWindow : Window
         if (!string.IsNullOrWhiteSpace(_snapshot.RuntimeDetail) &&
             _snapshot.RuntimeState != NginxRuntimeState.Available)
         {
-            StatusText.Text += Environment.NewLine + _snapshot.RuntimeDetail;
+            StatusText.Text += Environment.NewLine + NginxSensitiveText.RedactUriUserInfo(_snapshot.RuntimeDetail);
         }
     }
 
@@ -173,7 +173,7 @@ public partial class NginxInventoryWindow : Window
         ProxyTargetsText.Text = $"{_localization.Get("Loc.Nginx.ProxyTargets")}: {Join(site.ProxyTargets)}";
         TlsText.Text = $"{_localization.Get("Loc.Nginx.Tls")}: {_localization.Get(site.UsesTls ? "Loc.Nginx.Yes" : "Loc.Nginx.No")}";
         CertificatesText.Text = $"{_localization.Get("Loc.Nginx.Certificates")}: {Join(site.CertificatePaths)}";
-        RawBlockTextBox.Text = site.RawBlock;
+        RawBlockTextBox.Text = site.PresentationRawBlock;
     }
 
     private void LocalizationOnLanguageChanged()
@@ -203,11 +203,11 @@ public partial class NginxInventoryWindow : Window
         public string SourcePath => Site.SourcePath;
         public string ListenDisplay => Join(Site.ListenEndpoints);
         public string SearchText => string.Join(
-            '\n',
+            "\n",
             Site.DisplayName,
             Site.SourcePath,
-            string.Join(' ', Site.ServerNames),
-            string.Join(' ', Site.ListenEndpoints),
-            string.Join(' ', Site.ProxyTargets));
+            string.Join(" ", Site.ServerNames),
+            string.Join(" ", Site.ListenEndpoints),
+            string.Join(" ", Site.ProxyTargets));
     }
 }
