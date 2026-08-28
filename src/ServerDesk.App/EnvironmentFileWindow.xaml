@@ -1,0 +1,248 @@
+<Window x:Class="ServerDesk.App.EnvironmentFileWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="{DynamicResource Loc.Env.WindowTitle}"
+        Width="1400"
+        Height="860"
+        MinWidth="1080"
+        MinHeight="700"
+        WindowStartupLocation="CenterOwner">
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <Grid Grid.Row="0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <StackPanel>
+                <TextBlock x:Name="TitleText" FontSize="24" FontWeight="SemiBold" />
+                <TextBlock Text="{DynamicResource Loc.Env.Subtitle}"
+                           Margin="0,4,0,0"
+                           Opacity="0.72"
+                           TextWrapping="Wrap" />
+                <TextBlock x:Name="StatusText" Margin="0,8,0,0" TextWrapping="Wrap" />
+            </StackPanel>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Top">
+                <Button x:Name="RefreshButton"
+                        Content="{DynamicResource Loc.Env.Refresh}"
+                        MinWidth="120"
+                        Padding="14,7"
+                        IsEnabled="False"
+                        Click="RefreshOnClick" />
+                <Button x:Name="CancelButton"
+                        Content="{DynamicResource Loc.Env.Cancel}"
+                        MinWidth="92"
+                        Padding="14,7"
+                        Margin="8,0,0,0"
+                        IsEnabled="False"
+                        Click="CancelOnClick" />
+            </StackPanel>
+        </Grid>
+
+        <Border Grid.Row="1"
+                Margin="0,14,0,12"
+                Padding="12"
+                BorderThickness="1"
+                BorderBrush="#22000000"
+                CornerRadius="6">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="{DynamicResource Loc.Env.Path}"
+                           VerticalAlignment="Center"
+                           FontWeight="SemiBold" />
+                <TextBox x:Name="PathTextBox"
+                         Grid.Column="1"
+                         Margin="12,0"
+                         MinHeight="34"
+                         Padding="8,5"
+                         ToolTip="{DynamicResource Loc.Env.PathHint}" />
+                <Button x:Name="LoadButton"
+                        Grid.Column="2"
+                        Content="{DynamicResource Loc.Env.Load}"
+                        MinWidth="90"
+                        Padding="14,7"
+                        Click="LoadOnClick" />
+            </Grid>
+        </Border>
+
+        <Grid Grid.Row="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="7*" />
+                <ColumnDefinition Width="12" />
+                <ColumnDefinition Width="5*" />
+            </Grid.ColumnDefinitions>
+
+            <Grid Grid.Column="0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <TextBlock Text="{DynamicResource Loc.Env.Entries}" FontWeight="SemiBold" />
+                <DataGrid x:Name="EntryGrid"
+                          Grid.Row="1"
+                          Margin="0,8,0,0"
+                          AutoGenerateColumns="False"
+                          IsReadOnly="True"
+                          SelectionMode="Single"
+                          HeadersVisibility="Column"
+                          EnableRowVirtualization="True"
+                          EnableColumnVirtualization="True"
+                          SelectionChanged="EntrySelectionChanged">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="{DynamicResource Loc.Env.Line}" Binding="{Binding LineNumber}" Width="64" />
+                        <DataGridTextColumn Header="{DynamicResource Loc.Env.Key}" Binding="{Binding Key}" Width="2*" />
+                        <DataGridTextColumn Header="{DynamicResource Loc.Env.Value}" Binding="{Binding DisplayValue}" Width="3*" />
+                        <DataGridTextColumn Header="{DynamicResource Loc.Env.Secret}" Binding="{Binding SecretLabel}" Width="84" />
+                    </DataGrid.Columns>
+                </DataGrid>
+                <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,10,0,0">
+                    <Button x:Name="RevealButton"
+                            Content="{DynamicResource Loc.Env.Reveal}"
+                            MinWidth="118"
+                            Padding="12,6"
+                            IsEnabled="False"
+                            Click="RevealOnClick" />
+                    <Button x:Name="CopyButton"
+                            Content="{DynamicResource Loc.Env.CopyValue}"
+                            MinWidth="105"
+                            Padding="12,6"
+                            Margin="8,0,0,0"
+                            IsEnabled="False"
+                            Click="CopyOnClick" />
+                </StackPanel>
+                <StackPanel Grid.Row="3" Margin="0,10,0,0">
+                    <TextBlock Text="{DynamicResource Loc.Env.SecretMasked}" Opacity="0.72" TextWrapping="Wrap" />
+                    <TextBlock x:Name="UnsupportedWarningText"
+                               Text="{DynamicResource Loc.Env.UnsupportedWarning}"
+                               Margin="0,4,0,0"
+                               Visibility="Collapsed"
+                               TextWrapping="Wrap"
+                               FontWeight="SemiBold" />
+                </StackPanel>
+            </Grid>
+
+            <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto">
+                <StackPanel>
+                    <GroupBox Header="{DynamicResource Loc.Env.SelectedEntry}" Padding="12">
+                        <StackPanel>
+                            <TextBlock Text="{DynamicResource Loc.Env.Key}" FontWeight="SemiBold" />
+                            <TextBox x:Name="KeyTextBox"
+                                     MinHeight="34"
+                                     Margin="0,4,0,0"
+                                     Padding="8,5"
+                                     ToolTip="{DynamicResource Loc.Env.KeyHint}" />
+                            <TextBlock Text="{DynamicResource Loc.Env.Value}" Margin="0,10,0,0" FontWeight="SemiBold" />
+                            <TextBox x:Name="ValueTextBox"
+                                     MinHeight="34"
+                                     Margin="0,4,0,0"
+                                     Padding="8,5"
+                                     ToolTip="{DynamicResource Loc.Env.ValueHint}" />
+                            <WrapPanel Margin="0,12,0,0">
+                                <Button x:Name="SetValueButton"
+                                        Content="{DynamicResource Loc.Env.SetValue}"
+                                        Padding="12,7"
+                                        IsEnabled="False"
+                                        Click="SetValueOnClick" />
+                                <Button x:Name="AddKeyButton"
+                                        Content="{DynamicResource Loc.Env.AddKey}"
+                                        Padding="12,7"
+                                        Margin="8,0,0,0"
+                                        Click="AddKeyOnClick" />
+                                <Button x:Name="DeleteKeyButton"
+                                        Content="{DynamicResource Loc.Env.DeleteKey}"
+                                        Padding="12,7"
+                                        Margin="8,0,0,0"
+                                        IsEnabled="False"
+                                        Click="DeleteKeyOnClick" />
+                            </WrapPanel>
+                        </StackPanel>
+                    </GroupBox>
+
+                    <Button x:Name="RawAdvancedButton"
+                            Content="{DynamicResource Loc.Env.RawAdvanced}"
+                            Margin="0,12,0,0"
+                            Padding="12,7"
+                            HorizontalAlignment="Left"
+                            IsEnabled="False"
+                            Click="RawAdvancedOnClick" />
+
+                    <Border x:Name="RawPanel"
+                            Margin="0,8,0,0"
+                            Padding="10"
+                            BorderThickness="1"
+                            BorderBrush="#22000000"
+                            CornerRadius="6"
+                            Visibility="Collapsed">
+                        <StackPanel>
+                            <TextBlock Text="{DynamicResource Loc.Env.RawEditor}" FontWeight="SemiBold" />
+                            <TextBlock Text="{DynamicResource Loc.Env.RawEditorHint}"
+                                       Margin="0,3,0,8"
+                                       Opacity="0.72"
+                                       TextWrapping="Wrap" />
+                            <TextBox x:Name="RawTextBox"
+                                     AcceptsReturn="True"
+                                     AcceptsTab="True"
+                                     FontFamily="Consolas"
+                                     MinHeight="190"
+                                     MaxHeight="300"
+                                     VerticalScrollBarVisibility="Auto"
+                                     HorizontalScrollBarVisibility="Auto"
+                                     TextChanged="RawTextChanged" />
+                        </StackPanel>
+                    </Border>
+
+                    <GroupBox Header="{DynamicResource Loc.Env.Validator}" Margin="0,12,0,0" Padding="12">
+                        <StackPanel>
+                            <TextBlock Text="{DynamicResource Loc.Env.ValidatorExecutable}" FontWeight="SemiBold" />
+                            <TextBox x:Name="ValidatorExecutableTextBox"
+                                     MinHeight="32"
+                                     Margin="0,4,0,0"
+                                     Padding="8,5"
+                                     ToolTip="{DynamicResource Loc.Env.ValidatorExecutableHint}" />
+                            <TextBlock Text="{DynamicResource Loc.Env.ValidatorArguments}" Margin="0,10,0,0" FontWeight="SemiBold" />
+                            <TextBox x:Name="ValidatorArgumentsTextBox"
+                                     AcceptsReturn="True"
+                                     MinHeight="100"
+                                     Margin="0,4,0,0"
+                                     Padding="8,5"
+                                     FontFamily="Consolas"
+                                     VerticalScrollBarVisibility="Auto"
+                                     ToolTip="{DynamicResource Loc.Env.ValidatorArgumentsHint}" />
+                            <TextBlock Text="{DynamicResource Loc.Env.ValidatorSafety}"
+                                       Margin="0,6,0,0"
+                                       Opacity="0.72"
+                                       TextWrapping="Wrap" />
+                        </StackPanel>
+                    </GroupBox>
+
+                    <Button x:Name="ApplyButton"
+                            Content="{DynamicResource Loc.Env.Apply}"
+                            Margin="0,14,0,0"
+                            Padding="14,8"
+                            MinWidth="170"
+                            HorizontalAlignment="Left"
+                            IsEnabled="False"
+                            Click="ApplyOnClick" />
+                </StackPanel>
+            </ScrollViewer>
+        </Grid>
+
+        <TextBlock Grid.Row="3"
+                   Margin="0,12,0,0"
+                   Text="{DynamicResource Loc.Env.SafetyFooter}"
+                   Opacity="0.72"
+                   TextWrapping="Wrap" />
+    </Grid>
+</Window>

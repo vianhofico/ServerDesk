@@ -1,0 +1,6 @@
+# Debian 13 deployment sample
+APP_ENV=production
+APP_URL=https://legacy13.example.test
+CONNECTION=postgres://deploy:db-secret@db.internal/app
+this is intentionally unsupported syntax
+CACHE_ENABLED=false

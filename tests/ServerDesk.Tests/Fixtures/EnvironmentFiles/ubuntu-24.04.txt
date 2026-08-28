@@ -1,0 +1,6 @@
+# Ubuntu 24.04 deployment sample
+APP_ENV=production
+APP_URL=https://app24.example.test
+DATABASE_PASSWORD=ubuntu24-secret
+export LEGACY_SETTING=preserve-this-raw-line
+FEATURE_FLAG=true
