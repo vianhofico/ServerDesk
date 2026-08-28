@@ -10,20 +10,18 @@ shift
 command_name=$(basename "$command_path")
 
 if [ "$command_name" = "install" ]; then
-  filtered=""
-  while [ "$#" -gt 0 ]; do
-    case "$1" in
-      -o|-g)
-        shift
-        [ "$#" -gt 0 ] && shift
-        ;;
-      *)
-        filtered="$filtered $(printf '%s' "$1" | sed "s/'/'\\''/g" | sed "s/^/'/;s/$/'/")"
-        shift
-        ;;
-    esac
-  done
-  eval "exec install $filtered"
+  [ "${1:-}" = "-m" ] || exit 64
+  mode=${2:?missing mode}
+  shift 2
+  [ "${1:-}" = "-o" ] || exit 64
+  shift 2
+  [ "${1:-}" = "-g" ] || exit 64
+  shift 2
+  [ "${1:-}" = "--" ] || exit 64
+  shift
+  source_path=${1:?missing source}
+  destination_path=${2:?missing destination}
+  exec install -m "$mode" -- "$source_path" "$destination_path"
 fi
 
 exec "$command_path" "$@"
