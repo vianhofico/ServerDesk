@@ -99,16 +99,39 @@ public sealed class PersistenceFoundationTests
     }
 
     [Fact]
-    public async Task JsonSettingsRoundTripPersistsThemePreference()
+    public async Task JsonSettingsRoundTripPersistsThemeAndStableLanguageCode()
     {
         var cancellationToken = TestContext.Current.CancellationToken;
         using var paths = new TemporaryAppPaths();
         var store = new JsonAppSettingsStore(paths);
 
-        await store.SaveAsync(new AppSettings(AppThemePreference.Dark), cancellationToken);
+        await store.SaveAsync(
+            new AppSettings(AppThemePreference.Dark, AppLanguagePreference.Vietnamese),
+            cancellationToken);
+        var loaded = await store.LoadAsync(cancellationToken);
+        var json = await File.ReadAllTextAsync(paths.SettingsFilePath, cancellationToken);
+
+        Assert.Equal(AppThemePreference.Dark, loaded.ThemePreference);
+        Assert.Equal(AppLanguagePreference.Vietnamese, loaded.LanguagePreference);
+        Assert.Contains("\"languagePreference\": \"vi\"", json, StringComparison.Ordinal);
+        Assert.DoesNotContain("Tiếng Việt", json, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task JsonSettingsWithoutLanguageRemainBackwardCompatible()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        using var paths = new TemporaryAppPaths();
+        await File.WriteAllTextAsync(
+            paths.SettingsFilePath,
+            "{\"themePreference\":2}",
+            cancellationToken);
+        var store = new JsonAppSettingsStore(paths);
+
         var loaded = await store.LoadAsync(cancellationToken);
 
         Assert.Equal(AppThemePreference.Dark, loaded.ThemePreference);
+        Assert.Equal(AppLanguagePreference.System, loaded.LanguagePreference);
     }
 
     private sealed class TemporaryAppPaths : IAppPaths, IDisposable
