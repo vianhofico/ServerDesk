@@ -50,6 +50,21 @@ public sealed class NetworkTests
         Assert.Equal(3200, item.TxBytes);
     }
 
+    [Theory]
+    [InlineData("ubuntu-24.04-ip.json")]
+    [InlineData("ubuntu-26.04-ip.json")]
+    [InlineData("debian-13-ip.json")]
+    public void CertifiedIpJsonFixturesParseWithoutGuessing(string fileName)
+    {
+        var json = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Fixtures", "Network", fileName));
+        var counters = new Dictionary<string, NetworkCounter>();
+
+        var result = NetworkParser.ParseInterfaces(json, counters, counters, TimeSpan.FromSeconds(1));
+
+        Assert.Contains(result, item => item.Name == "lo");
+        Assert.All(result, item => Assert.False(string.IsNullOrWhiteSpace(item.Name)));
+    }
+
     [Fact]
     public void ListeningSocketParserHandlesIpv4Ipv6AndOwnerVisibility()
     {
