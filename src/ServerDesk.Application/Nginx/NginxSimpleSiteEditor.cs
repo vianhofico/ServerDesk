@@ -114,7 +114,7 @@ public static class NginxSimpleSiteEditor
 
     private static Regex DirectivePattern(string directive) =>
         new(
-            $@"(?m)^(?<indent>[ \t]*){Regex.Escape(directive)}[ \t]+[^;\r\n]*;(?<tail>[^\r\n]*)$",
+            $@"(?m)^(?<indent>[ \t]*){Regex.Escape(directive)}[ \t]+[^;\r\n]*;(?<tail>[^\r\n]*)(?=\r?$)",
             RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     private static IReadOnlyList<TextSpan> FindServerBlocks(string text)
