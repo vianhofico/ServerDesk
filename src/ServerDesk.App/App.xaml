@@ -10,6 +10,7 @@
             </ResourceDictionary.MergedDictionaries>
 
             <Style TargetType="Window">
+                <Setter Property="Icon" Value="/ServerDesk.App;component/Assets/Branding/serverdesk.ico" />
                 <Setter Property="FontFamily" Value="Segoe UI Variable Text, Segoe UI" />
                 <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}" />
                 <Setter Property="Background" Value="{DynamicResource WindowBackgroundBrush}" />
