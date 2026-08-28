@@ -14,6 +14,7 @@ public partial class MainWindow
         base.OnContentRendered(e);
         EnsureGitActionButton();
         EnsureScheduledTasksActionButton();
+        EnsureNginxActionButton();
     }
 
     private void EnsureGitActionButton()
