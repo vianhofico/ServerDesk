@@ -319,7 +319,7 @@ public static class DeploymentTargetPolicy
     private static DeploymentHealthCheck NormalizeTcp(DeploymentHealthCheck check)
     {
         var host = NormalizeLabel(check.Target, nameof(check.Target), 253);
-        if (host.StartsWith('-', StringComparison.Ordinal) ||
+        if (host.StartsWith("-", StringComparison.Ordinal) ||
             !(IPAddress.TryParse(host, out _) || Uri.CheckHostName(host) is UriHostNameType.Dns or UriHostNameType.IPv4 or UriHostNameType.IPv6))
         {
             throw new FormatException("TCP health checks require a normalized DNS name or IP address.");
