@@ -1,0 +1,2 @@
+{"__REALTIME_TIMESTAMP":1761000000123456,"__CURSOR":"s=ubuntu26;i=1","PRIORITY":3,"MESSAGE":"Worker exited with failure","SYSLOG_IDENTIFIER":"serverdesk-worker","_SYSTEMD_UNIT":"serverdesk-worker.service","_PID":5151,"_HOSTNAME":"ubuntu-2604"}
+{"__REALTIME_TIMESTAMP":"1761000001123456","__CURSOR":"s=ubuntu26;i=2","PRIORITY":"7","MESSAGE":"Debug context","SYSLOG_IDENTIFIER":"serverdesk-worker","_SYSTEMD_UNIT":"serverdesk-worker.service","_HOSTNAME":"ubuntu-2604"}
