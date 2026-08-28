@@ -107,7 +107,7 @@ public sealed class DockerCapabilityAlignmentTests
             return Success(0, "Docker version 27.5.1, build fixture\n");
         }
 
-        if (spec.Executable == "docker" && spec.Arguments.SequenceEqual(["version", "--format", "{{json .}}"] ))
+        if (spec.Executable == "docker" && spec.Arguments.SequenceEqual(["version", "--format", "{{json .}}"]))
         {
             return scenario switch
             {
