@@ -28,7 +28,7 @@ public partial class DockerInventoryWindow
     {
         if (System.Windows.Application.Current is not App app)
         {
-            StatusText.Text = "ServerDesk composition root is unavailable.";
+            StatusText.SetResourceReference(TextBlock.TextProperty, "Loc.Compose.UnknownError");
             return;
         }
 
