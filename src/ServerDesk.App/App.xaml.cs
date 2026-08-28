@@ -193,9 +193,15 @@ public partial class App : System.Windows.Application
                 provider.GetRequiredService<IOperationAudit>()));
         services.AddSingleton(ScheduledTaskOptions.Default);
         services.AddSingleton<ScheduledTaskService>();
+        services.AddSingleton<GuardedScheduledTaskService>(provider =>
+            new GuardedScheduledTaskService(
+                provider.GetRequiredService<ScheduledTaskService>(),
+                provider.GetRequiredService<IRemoteCommandExecutorFactory>(),
+                provider.GetRequiredService<IRemoteFileSystemFactory>(),
+                provider.GetRequiredService<ScheduledTaskOptions>()));
         services.AddSingleton<IScheduledTaskService>(provider =>
             new AuditedScheduledTaskService(
-                provider.GetRequiredService<ScheduledTaskService>(),
+                provider.GetRequiredService<GuardedScheduledTaskService>(),
                 provider.GetRequiredService<IOperationAudit>()));
 
         services.AddSingleton<INavigationService, NavigationService>();
