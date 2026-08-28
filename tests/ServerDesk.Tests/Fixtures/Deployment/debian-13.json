@@ -1,0 +1,11 @@
+{
+  "distro": "debian-13",
+  "targetId": "jobs-prod",
+  "environment": "prod",
+  "kind": "Compose",
+  "composeProject": "jobs",
+  "composeConfig": "/opt/jobs/compose.yaml",
+  "healthKind": "Tcp",
+  "healthTarget": "127.0.0.1",
+  "healthPort": 9090
+}
