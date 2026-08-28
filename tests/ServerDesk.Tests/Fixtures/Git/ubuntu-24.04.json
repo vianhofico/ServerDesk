@@ -1,0 +1,9 @@
+{
+  "root": "/srv/serverdesk-demo",
+  "status": "# branch.oid aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\u0000# branch.head main\u0000# branch.upstream origin/main\u0000# branch.ab +0 -2\u0000",
+  "remotes": "remote.origin.url https://token-value@example.invalid/team/demo.git\n",
+  "expectedBranch": "main",
+  "expectedAhead": 0,
+  "expectedBehind": 2,
+  "expectedChanges": 0
+}
