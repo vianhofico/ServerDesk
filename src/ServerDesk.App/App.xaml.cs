@@ -7,6 +7,7 @@ using ServerDesk.Application.Audit;
 using ServerDesk.Application.Capabilities;
 using ServerDesk.Application.Dashboard;
 using ServerDesk.Application.Docker;
+using ServerDesk.Application.EnvironmentFiles;
 using ServerDesk.Application.Git;
 using ServerDesk.Application.History;
 using ServerDesk.Application.HostTrust;
@@ -219,6 +220,12 @@ public partial class App : System.Windows.Application
         services.AddSingleton<ITlsCertificateService>(provider =>
             new AuditedTlsCertificateService(
                 provider.GetRequiredService<TlsCertificateService>(),
+                provider.GetRequiredService<IOperationAudit>()));
+        services.AddSingleton(EnvironmentFileOptions.Default);
+        services.AddSingleton<EnvironmentFileService>();
+        services.AddSingleton<IEnvironmentFileService>(provider =>
+            new AuditedEnvironmentFileService(
+                provider.GetRequiredService<EnvironmentFileService>(),
                 provider.GetRequiredService<IOperationAudit>()));
 
         services.AddSingleton<INavigationService, NavigationService>();
