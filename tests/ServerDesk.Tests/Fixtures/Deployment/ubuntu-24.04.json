@@ -1,0 +1,11 @@
+{
+  "distro": "ubuntu-24.04",
+  "targetId": "api-prod",
+  "environment": "prod",
+  "kind": "GitCompose",
+  "repositoryPath": "/srv/api",
+  "composeProject": "api",
+  "composeConfig": "/srv/api/compose.yaml",
+  "healthKind": "Http",
+  "healthTarget": "http://127.0.0.1:8080/health"
+}
