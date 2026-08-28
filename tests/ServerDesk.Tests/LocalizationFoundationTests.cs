@@ -45,6 +45,12 @@ public sealed class LocalizationFoundationTests
     }
 
     [Fact]
+    public void TlsEnglishAndVietnameseResourcesHaveIdenticalKeys()
+    {
+        AssertResourceParity("Strings.Tls.en.xaml", "Strings.Tls.vi.xaml");
+    }
+
+    [Fact]
     public void ParameterizedResourceFormatsInBothLanguages()
     {
         var english = ReadResources("Strings.en.xaml");
@@ -87,6 +93,19 @@ public sealed class LocalizationFoundationTests
 
         Assert.Contains("1.26", englishText, StringComparison.Ordinal);
         Assert.Contains("1.26", vietnameseText, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void TlsParameterizedResourcesFormatInBothLanguages()
+    {
+        var english = ReadResources("Strings.Tls.en.xaml");
+        var vietnamese = ReadResources("Strings.Tls.vi.xaml");
+
+        var englishText = string.Format(CultureInfo.GetCultureInfo("en-US"), english["Loc.Tls.Loaded"], 2);
+        var vietnameseText = string.Format(CultureInfo.GetCultureInfo("vi-VN"), vietnamese["Loc.Tls.Loaded"], 2);
+
+        Assert.Contains("2", englishText, StringComparison.Ordinal);
+        Assert.Contains("2", vietnameseText, StringComparison.Ordinal);
     }
 
     [Fact]
