@@ -10,6 +10,8 @@
     <system:String x:Key="Loc.Tasks.List">Scheduled tasks</system:String>
     <system:String x:Key="Loc.Tasks.SearchHint">Filter loaded tasks locally by name, schedule or command/unit.</system:String>
     <system:String x:Key="Loc.Tasks.Type">Type</system:String>
+    <system:String x:Key="Loc.Tasks.Kind.Cron">Cron</system:String>
+    <system:String x:Key="Loc.Tasks.Kind.SystemdTimer">systemd timer</system:String>
     <system:String x:Key="Loc.Tasks.Name">Name</system:String>
     <system:String x:Key="Loc.Tasks.Schedule">Schedule</system:String>
     <system:String x:Key="Loc.Tasks.Enabled">Enabled</system:String>
