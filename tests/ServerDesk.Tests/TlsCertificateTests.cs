@@ -44,6 +44,35 @@ public sealed class TlsCertificateTests
         Assert.Equal("/etc/letsencrypt/live/example.test/privkey.pem", managed.PrivateKeyPath);
     }
 
+    [Theory]
+    [InlineData("ubuntu-24.04", "app24.example.test", 1, 2026, 10, 30)]
+    [InlineData("ubuntu-26.04", "edge26.example.test", 0, 2027, 7, 15)]
+    [InlineData("debian-13", "legacy13.example.test", 1, 2026, 8, 20)]
+    public void CertifiedDistroFixturesNormalizeOpenSslAndCertbotOutputs(
+        string distro,
+        string expectedDnsName,
+        int expectedManagedCount,
+        int expiryYear,
+        int expiryMonth,
+        int expiryDay)
+    {
+        var fixture = ReadCertifiedFixture(distro);
+
+        var certificate = OpenSslCertificateParser.Parse(fixture.OpenSslOutput);
+        var managed = CertbotOutputParser.ParseCertificates(fixture.CertbotOutput, 10);
+
+        Assert.Contains(expectedDnsName, certificate.SubjectAlternativeNames);
+        Assert.Equal(
+            new DateTimeOffset(expiryYear, expiryMonth, expiryDay, certificate.NotAfterUtc.Hour, certificate.NotAfterUtc.Minute, certificate.NotAfterUtc.Second, TimeSpan.Zero),
+            certificate.NotAfterUtc);
+        Assert.Equal(expectedManagedCount, managed.Count);
+        Assert.All(managed, item =>
+        {
+            Assert.StartsWith("/", item.CertificatePath, StringComparison.Ordinal);
+            Assert.StartsWith("/", item.PrivateKeyPath, StringComparison.Ordinal);
+        });
+    }
+
     [Fact]
     public async Task InventoryClassifiesExpiryAndNeverReadsPrivateKeyContent()
     {
@@ -151,6 +180,31 @@ public sealed class TlsCertificateTests
             DNS:example.test, DNS:www.example.test
         sha256 Fingerprint=AA:BB:CC
         """;
+
+    private static CertifiedFixture ReadCertifiedFixture(string distro)
+    {
+        var path = Path.Combine(AppContext.BaseDirectory, "Fixtures", "Tls", distro + ".txt");
+        var content = File.ReadAllText(path);
+        const string openSslMarker = "---OPENSSL---\n";
+        const string certbotMarker = "---CERTBOT---\n";
+        var normalized = content.Replace("\r\n", "\n", StringComparison.Ordinal);
+        if (!normalized.StartsWith(openSslMarker, StringComparison.Ordinal))
+        {
+            throw new InvalidDataException($"TLS fixture '{distro}' is missing the OpenSSL section.");
+        }
+
+        var certbotIndex = normalized.IndexOf(certbotMarker, StringComparison.Ordinal);
+        if (certbotIndex < 0)
+        {
+            throw new InvalidDataException($"TLS fixture '{distro}' is missing the Certbot section.");
+        }
+
+        return new CertifiedFixture(
+            normalized[openSslMarker.Length..certbotIndex],
+            normalized[(certbotIndex + certbotMarker.Length)..]);
+    }
+
+    private sealed record CertifiedFixture(string OpenSslOutput, string CertbotOutput);
 
     private sealed class FixedTimeProvider : TimeProvider
     {
