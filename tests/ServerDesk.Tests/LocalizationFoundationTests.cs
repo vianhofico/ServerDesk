@@ -29,13 +29,13 @@ public sealed class LocalizationFoundationTests
     [Fact]
     public void EnglishAndVietnameseResourceDictionariesHaveIdenticalKeys()
     {
-        var english = ReadResources("Strings.en.xaml");
-        var vietnamese = ReadResources("Strings.vi.xaml");
+        AssertResourceParity("Strings.en.xaml", "Strings.vi.xaml");
+    }
 
-        Assert.NotEmpty(english);
-        Assert.Equal(
-            english.Keys.OrderBy(key => key, StringComparer.Ordinal),
-            vietnamese.Keys.OrderBy(key => key, StringComparer.Ordinal));
+    [Fact]
+    public void ScheduledTaskEnglishAndVietnameseResourcesHaveIdenticalKeys()
+    {
+        AssertResourceParity("Strings.Tasks.en.xaml", "Strings.Tasks.vi.xaml");
     }
 
     [Fact]
@@ -58,6 +58,19 @@ public sealed class LocalizationFoundationTests
     }
 
     [Fact]
+    public void ScheduledTaskParameterizedResourcesFormatInBothLanguages()
+    {
+        var english = ReadResources("Strings.Tasks.en.xaml");
+        var vietnamese = ReadResources("Strings.Tasks.vi.xaml");
+
+        var englishText = string.Format(CultureInfo.GetCultureInfo("en-US"), english["Loc.Tasks.Loaded"], 3);
+        var vietnameseText = string.Format(CultureInfo.GetCultureInfo("vi-VN"), vietnamese["Loc.Tasks.Loaded"], 3);
+
+        Assert.Contains("3", englishText, StringComparison.Ordinal);
+        Assert.Contains("3", vietnameseText, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void MissingResourceFallsBackToKeyWithoutThrowing()
     {
         var service = new WpfLocalizationService(new StubSystemCultureDetector("en-US"));
@@ -65,6 +78,17 @@ public sealed class LocalizationFoundationTests
         var value = service.Get("Loc.DoesNotExist");
 
         Assert.Equal("Loc.DoesNotExist", value);
+    }
+
+    private static void AssertResourceParity(string englishFile, string vietnameseFile)
+    {
+        var english = ReadResources(englishFile);
+        var vietnamese = ReadResources(vietnameseFile);
+
+        Assert.NotEmpty(english);
+        Assert.Equal(
+            english.Keys.OrderBy(key => key, StringComparer.Ordinal),
+            vietnamese.Keys.OrderBy(key => key, StringComparer.Ordinal));
     }
 
     private static IReadOnlyDictionary<string, string> ReadResources(string fileName)
