@@ -159,7 +159,10 @@ public sealed class LogTests
         var factory = new CaptureExecutorFactory((_, _) => Success(string.Empty));
         var service = new ServerLogService(factory, ServerLogOptions.Default);
 
-        await Assert.ThrowsAsync<ArgumentException>(() => service.ReadFileTailAsync(Profile(), path));
+        await Assert.ThrowsAsync<ArgumentException>(() => service.ReadFileTailAsync(
+            Profile(),
+            path,
+            cancellationToken: TestContext.Current.CancellationToken));
         Assert.Empty(factory.Commands);
     }
 
@@ -192,7 +195,10 @@ public sealed class LogTests
         var factory = new CaptureExecutorFactory((_, _) => Success(string.Empty));
         var service = new ServerLogService(factory, ServerLogOptions.Default);
 
-        await Assert.ThrowsAsync<ArgumentException>(() => service.ReadJournalAsync(Profile(), unit: "nginx.service;reboot"));
+        await Assert.ThrowsAsync<ArgumentException>(() => service.ReadJournalAsync(
+            Profile(),
+            unit: "nginx.service;reboot",
+            cancellationToken: TestContext.Current.CancellationToken));
         Assert.Empty(factory.Commands);
     }
 
