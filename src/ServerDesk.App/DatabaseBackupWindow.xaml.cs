@@ -16,6 +16,7 @@ public partial class DatabaseBackupWindow : Window
     private readonly DatabaseConnectionProfile _databaseProfile;
     private readonly bool _connected;
     private readonly ObservableCollection<BackupHistoryRow> _history = [];
+    private IReadOnlyList<DatabaseBackupManifest> _lastHistory = [];
     private bool _busy;
 
     public DatabaseBackupWindow(
@@ -50,8 +51,6 @@ public partial class DatabaseBackupWindow : Window
         ApplyHistoryRows(_lastHistory);
     }
 
-    private IReadOnlyList<DatabaseBackupManifest> _lastHistory = [];
-
     private void ApplyLocalizedState()
     {
         TitleText.Text = _localization.Format("Loc.DatabaseBackups.Title", _databaseProfile.Name);
@@ -62,6 +61,7 @@ public partial class DatabaseBackupWindow : Window
             _databaseProfile.RemoteHost,
             _databaseProfile.RemotePort);
         CreateButton.IsEnabled = !_busy && _connected;
+        RefreshButton.IsEnabled = !_busy;
         if (!_connected && string.IsNullOrWhiteSpace(StatusText.Text))
         {
             StatusText.Text = _localization.Get("Loc.DatabaseBackups.Disconnected");
@@ -101,10 +101,10 @@ public partial class DatabaseBackupWindow : Window
 
             if (result.IsSuccess && result.Manifest is not null)
             {
+                await RefreshHistorySafeAsync().ConfigureAwait(true);
                 StatusText.Text = _localization.Format(
                     "Loc.DatabaseBackups.Success",
                     result.Manifest.BackupPath.Value);
-                await RefreshHistorySafeAsync().ConfigureAwait(true);
                 return;
             }
 
@@ -128,18 +128,28 @@ public partial class DatabaseBackupWindow : Window
         }
     }
 
-    private async void RefreshOnClick(object sender, RoutedEventArgs e) =>
-        await RefreshHistorySafeAsync().ConfigureAwait(true);
-
-    private void CloseOnClick(object sender, RoutedEventArgs e) => Close();
-
-    private async Task RefreshHistorySafeAsync()
+    private async void RefreshOnClick(object sender, RoutedEventArgs e)
     {
         if (_busy)
         {
             return;
         }
 
+        SetBusy(true);
+        try
+        {
+            await RefreshHistorySafeAsync().ConfigureAwait(true);
+        }
+        finally
+        {
+            SetBusy(false);
+        }
+    }
+
+    private void CloseOnClick(object sender, RoutedEventArgs e) => Close();
+
+    private async Task RefreshHistorySafeAsync()
+    {
         StatusText.Text = _localization.Get("Loc.DatabaseBackups.Loading");
         try
         {
@@ -183,6 +193,7 @@ public partial class DatabaseBackupWindow : Window
     {
         _busy = value;
         CreateButton.IsEnabled = !value && _connected;
+        RefreshButton.IsEnabled = !value;
         DatabaseNameBox.IsEnabled = !value;
         DestinationBox.IsEnabled = !value;
     }
