@@ -9,6 +9,7 @@ namespace ServerDesk.App;
 public partial class FirewallInventoryWindow : Window
 {
     private readonly IFirewallManager _service;
+    private readonly IFirewallMutationService _mutationService;
     private readonly ILocalizationService _localization;
     private readonly ServerProfile _profile;
     private readonly bool _initiallyConnected;
@@ -18,15 +19,18 @@ public partial class FirewallInventoryWindow : Window
 
     public FirewallInventoryWindow(
         IFirewallManager service,
+        IFirewallMutationService mutationService,
         ILocalizationService localization,
         ServerProfile profile,
         bool connected)
     {
         _service = service ?? throw new ArgumentNullException(nameof(service));
+        _mutationService = mutationService ?? throw new ArgumentNullException(nameof(mutationService));
         _localization = localization ?? throw new ArgumentNullException(nameof(localization));
         _profile = profile ?? throw new ArgumentNullException(nameof(profile));
         _initiallyConnected = connected;
         InitializeComponent();
+        MutationsButton.IsEnabled = connected;
         RefreshLocalizedPresentation();
     }
 
@@ -51,6 +55,27 @@ public partial class FirewallInventoryWindow : Window
     private async void RefreshOnClick(object sender, RoutedEventArgs e) =>
         await RefreshAsync().ConfigureAwait(true);
 
+    private async void MutationsOnClick(object sender, RoutedEventArgs e)
+    {
+        if (!_initiallyConnected)
+        {
+            return;
+        }
+
+        var selectedRule = (RuleGrid.SelectedItem as RuleRow)?.Rule;
+        var window = new FirewallMutationWindow(
+            _mutationService,
+            _localization,
+            _profile,
+            _snapshot,
+            selectedRule)
+        {
+            Owner = this,
+        };
+        window.ShowDialog();
+        await RefreshAsync().ConfigureAwait(true);
+    }
+
     private void CancelOnClick(object sender, RoutedEventArgs e) =>
         _refreshCancellation?.Cancel();
 
@@ -71,6 +96,7 @@ public partial class FirewallInventoryWindow : Window
         _refreshCancellation?.Dispose();
         _refreshCancellation = new CancellationTokenSource();
         RefreshButton.IsEnabled = false;
+        MutationsButton.IsEnabled = false;
         CancelButton.IsEnabled = true;
         StatusText.Text = _localization.Get("Loc.Firewall.Loading");
 
@@ -102,6 +128,7 @@ public partial class FirewallInventoryWindow : Window
         finally
         {
             RefreshButton.IsEnabled = true;
+            MutationsButton.IsEnabled = true;
             CancelButton.IsEnabled = false;
             RenderSelectedRule();
         }

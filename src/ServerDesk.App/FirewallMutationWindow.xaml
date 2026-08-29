@@ -1,0 +1,136 @@
+<Window x:Class="ServerDesk.App.FirewallMutationWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="{DynamicResource Loc.FirewallMutation.WindowTitle}"
+        Width="1040"
+        Height="820"
+        MinWidth="900"
+        MinHeight="700"
+        WindowStartupLocation="CenterOwner">
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0">
+            <TextBlock x:Name="TitleText" FontSize="24" FontWeight="SemiBold" />
+            <TextBlock Text="{DynamicResource Loc.FirewallMutation.Subtitle}"
+                       Margin="0,4,0,0"
+                       Opacity="0.75"
+                       TextWrapping="Wrap" />
+            <Border Margin="0,10,0,0"
+                    Padding="10"
+                    BorderThickness="1"
+                    BorderBrush="#44D97706"
+                    CornerRadius="6">
+                <TextBlock Text="{DynamicResource Loc.FirewallMutation.NoGuarantee}"
+                           TextWrapping="Wrap"
+                           FontWeight="SemiBold" />
+            </Border>
+        </StackPanel>
+
+        <GroupBox Grid.Row="1"
+                  Margin="0,14,0,0"
+                  Header="{DynamicResource Loc.FirewallMutation.Configure}">
+            <Grid Margin="12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="220" />
+                    <ColumnDefinition Width="20" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="220" />
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <TextBlock Grid.Row="0" Grid.Column="0" VerticalAlignment="Center" Text="{DynamicResource Loc.FirewallMutation.Kind}" />
+                <ComboBox x:Name="KindComboBox" Grid.Row="0" Grid.Column="1" Margin="10,3,0,3"
+                          DisplayMemberPath="Text" SelectedValuePath="Value"
+                          SelectionChanged="EditorOnChanged" />
+                <TextBlock Grid.Row="0" Grid.Column="3" VerticalAlignment="Center" Text="{DynamicResource Loc.FirewallMutation.Adapter}" />
+                <ComboBox x:Name="AdapterComboBox" Grid.Row="0" Grid.Column="4" Margin="10,3,0,3"
+                          DisplayMemberPath="Text" SelectedValuePath="Value"
+                          SelectionChanged="EditorOnChanged" />
+
+                <TextBlock Grid.Row="1" Grid.Column="0" VerticalAlignment="Center" Text="{DynamicResource Loc.FirewallMutation.Action}" />
+                <ComboBox x:Name="ActionComboBox" Grid.Row="1" Grid.Column="1" Margin="10,3,0,3"
+                          DisplayMemberPath="Text" SelectedValuePath="Value"
+                          SelectionChanged="EditorOnChanged" />
+                <TextBlock Grid.Row="1" Grid.Column="3" VerticalAlignment="Center" Text="{DynamicResource Loc.FirewallMutation.Direction}" />
+                <ComboBox x:Name="DirectionComboBox" Grid.Row="1" Grid.Column="4" Margin="10,3,0,3"
+                          DisplayMemberPath="Text" SelectedValuePath="Value"
+                          SelectionChanged="EditorOnChanged" />
+
+                <TextBlock Grid.Row="2" Grid.Column="0" VerticalAlignment="Center" Text="{DynamicResource Loc.FirewallMutation.Protocol}" />
+                <ComboBox x:Name="ProtocolComboBox" Grid.Row="2" Grid.Column="1" Margin="10,3,0,3"
+                          SelectionChanged="EditorOnChanged" />
+                <TextBlock Grid.Row="2" Grid.Column="3" VerticalAlignment="Center" Text="{DynamicResource Loc.FirewallMutation.PortService}" />
+                <TextBox x:Name="PortServiceTextBox" Grid.Row="2" Grid.Column="4" Margin="10,3,0,3"
+                         TextChanged="EditorTextOnChanged" />
+
+                <TextBlock Grid.Row="3" Grid.Column="0" VerticalAlignment="Center" Text="{DynamicResource Loc.FirewallMutation.Source}" />
+                <TextBox x:Name="SourceTextBox" Grid.Row="3" Grid.Column="1" Margin="10,3,0,3"
+                         TextChanged="EditorTextOnChanged" />
+                <TextBlock Grid.Row="3" Grid.Column="3" VerticalAlignment="Center" Text="{DynamicResource Loc.FirewallMutation.Zone}" />
+                <TextBox x:Name="ZoneTextBox" Grid.Row="3" Grid.Column="4" Margin="10,3,0,3"
+                         TextChanged="EditorTextOnChanged" />
+
+                <TextBlock Grid.Row="4" Grid.Column="0" VerticalAlignment="Top" Margin="0,6,0,0"
+                           Text="{DynamicResource Loc.FirewallMutation.SelectedRule}" />
+                <TextBlock x:Name="SelectedRuleText" Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="4"
+                           Margin="10,6,0,0" TextWrapping="Wrap" />
+            </Grid>
+        </GroupBox>
+
+        <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,12,0,12">
+            <Button x:Name="PreviewButton"
+                    Content="{DynamicResource Loc.FirewallMutation.Preview}"
+                    MinWidth="130" Padding="14,7" Click="PreviewOnClick" />
+            <Button x:Name="ExecuteButton"
+                    Content="{DynamicResource Loc.FirewallMutation.Execute}"
+                    MinWidth="130" Padding="14,7" Margin="8,0,0,0"
+                    IsEnabled="False" Click="ExecuteOnClick" />
+            <Button x:Name="CancelButton"
+                    Content="{DynamicResource Loc.FirewallMutation.Cancel}"
+                    MinWidth="100" Padding="14,7" Margin="8,0,0,0"
+                    IsEnabled="False" Click="CancelOnClick" />
+        </StackPanel>
+
+        <Grid Grid.Row="3">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+            <TextBlock x:Name="StatusText" FontWeight="SemiBold" TextWrapping="Wrap" />
+            <TextBlock x:Name="SshText" Grid.Row="1" Margin="0,8,0,0" TextWrapping="Wrap" />
+            <TextBlock x:Name="ImpactText" Grid.Row="2" Margin="0,8,0,0" TextWrapping="Wrap" FontWeight="SemiBold" />
+            <GroupBox Grid.Row="3" Margin="0,12,0,0" Header="{DynamicResource Loc.FirewallMutation.ExactCommand}">
+                <TextBox x:Name="CommandTextBox"
+                         Margin="10"
+                         IsReadOnly="True"
+                         AcceptsReturn="True"
+                         FontFamily="Cascadia Mono, Consolas"
+                         FontSize="12"
+                         TextWrapping="Wrap"
+                         VerticalScrollBarVisibility="Auto" />
+            </GroupBox>
+        </Grid>
+
+        <TextBlock Grid.Row="4"
+                   Margin="0,12,0,0"
+                   Text="{DynamicResource Loc.FirewallMutation.SafetyFooter}"
+                   Opacity="0.75"
+                   TextWrapping="Wrap" />
+    </Grid>
+</Window>

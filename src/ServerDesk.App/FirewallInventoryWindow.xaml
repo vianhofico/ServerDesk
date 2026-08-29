@@ -37,6 +37,12 @@
                         MinWidth="92"
                         Padding="14,7"
                         Click="RefreshOnClick" />
+                <Button x:Name="MutationsButton"
+                        Content="{DynamicResource Loc.FirewallMutation.Open}"
+                        MinWidth="138"
+                        Padding="14,7"
+                        Margin="8,0,0,0"
+                        Click="MutationsOnClick" />
                 <Button x:Name="CancelButton"
                         Content="{DynamicResource Loc.Firewall.Cancel}"
                         MinWidth="92"
