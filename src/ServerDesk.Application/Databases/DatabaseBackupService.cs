@@ -672,9 +672,10 @@ public sealed class DatabaseBackupService : IDatabaseBackupService
         }
 
         if (!string.Equals(value, value.Trim(), StringComparison.Ordinal) ||
-            value.Length > 128 || value.Any(char.IsControl))
+            value.Length > 128 || value.Any(char.IsControl) ||
+            value.StartsWith("-", StringComparison.Ordinal))
         {
-            throw new ArgumentException("Database/schema identity must be 1-128 printable characters without leading/trailing whitespace.", nameof(value));
+            throw new ArgumentException("Database/schema identity must be 1-128 printable characters without leading/trailing whitespace and cannot begin with '-'.", nameof(value));
         }
 
         return value;
