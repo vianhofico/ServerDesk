@@ -16,6 +16,7 @@ public sealed class AuthorizedKeyAdministrationService : IAuthorizedKeyAdministr
 {
     private static readonly IReadOnlyDictionary<string, string> StableEnvironment =
         new Dictionary<string, string>(StringComparer.Ordinal) { ["LC_ALL"] = "C" };
+
     private static readonly string[] PublicKeyTypePrefixes =
     [
         "ssh-ed25519",
@@ -48,19 +49,19 @@ public sealed class AuthorizedKeyAdministrationService : IAuthorizedKeyAdministr
     {
         ArgumentNullException.ThrowIfNull(profile);
         ArgumentNullException.ThrowIfNull(user);
-        if (!TryResolvePaths(user, out var directory, out var file, out var pathError))
+        if (!TryResolvePaths(user, out var directory, out var file, out var error))
         {
-            return LoadFailure(RemoteErrorCode.InvalidEndpoint, pathError!);
+            return LoadFailure(RemoteErrorCode.InvalidEndpoint, error!);
         }
 
         await using var executor = _commandFactory.Create(profile);
-        var directoryStat = await ReadStatAsync(executor, directory!, cancellationToken).ConfigureAwait(false);
+        var directoryStat = await ReadStatAsync(executor, directory, cancellationToken).ConfigureAwait(false);
         if (directoryStat.Error is not null)
         {
             return new AuthorizedKeyLoadResult(null, directoryStat.Error);
         }
 
-        var fileStat = await ReadStatAsync(executor, file!, cancellationToken).ConfigureAwait(false);
+        var fileStat = await ReadStatAsync(executor, file, cancellationToken).ConfigureAwait(false);
         if (fileStat.Error is not null)
         {
             return new AuthorizedKeyLoadResult(null, fileStat.Error);
@@ -69,28 +70,27 @@ public sealed class AuthorizedKeyAdministrationService : IAuthorizedKeyAdministr
         var text = string.Empty;
         if (fileStat.Exists)
         {
-            var content = await executor.ExecuteAsync(
-                    ReadOnly(_options.PrivilegeExecutable, ["-n", "cat", "--", file!.Value]),
+            var read = await executor.ExecuteAsync(
+                    ReadOnly(_options.PrivilegeExecutable, ["-n", "cat", "--", file.Value]),
                     cancellationToken)
                 .ConfigureAwait(false);
-            if (content.Error is not null)
+            if (read.Error is not null)
             {
-                return new AuthorizedKeyLoadResult(null, content.Error);
+                return new AuthorizedKeyLoadResult(null, read.Error);
             }
 
-            if (content.Command!.ExitCode != 0)
+            if (read.Command!.ExitCode != 0)
             {
-                return LoadFailure(
-                    ClassifyFailure(FirstUseful(content.Command.StandardError, content.Command.StandardOutput, "authorized_keys read failed.")),
-                    FirstUseful(content.Command.StandardError, content.Command.StandardOutput, "authorized_keys read failed."));
+                var detail = FirstUseful(read.Command.StandardError, read.Command.StandardOutput, "authorized_keys read failed.");
+                return LoadFailure(ClassifyFailure(detail), detail);
             }
 
-            if (Encoding.UTF8.GetByteCount(content.Command.StandardOutput) > _options.MaximumFileBytes)
+            if (Encoding.UTF8.GetByteCount(read.Command.StandardOutput) > _options.MaximumFileBytes)
             {
                 return LoadFailure(RemoteErrorCode.CapabilityUnavailable, "authorized_keys exceeds the configured safety bound.");
             }
 
-            text = NormalizeNewlines(content.Command.StandardOutput);
+            text = NormalizeNewlines(read.Command.StandardOutput);
         }
 
         var parsed = ParseKeys(text);
@@ -104,8 +104,8 @@ public sealed class AuthorizedKeyAdministrationService : IAuthorizedKeyAdministr
             user.UserId,
             user.PrimaryGroupId,
             user.Home,
-            directory!.Value,
-            file!.Value,
+            directory.Value,
+            file.Value,
             directoryStat.Exists,
             fileStat.Exists,
             directoryStat.Mode,
@@ -116,7 +116,9 @@ public sealed class AuthorizedKeyAdministrationService : IAuthorizedKeyAdministr
             text,
             string.Empty,
             parsed.HasUnparsedContent);
-        return new AuthorizedKeyLoadResult(snapshot with { StateFingerprint = StateFingerprint(snapshot) }, null);
+        return new AuthorizedKeyLoadResult(
+            snapshot with { StateFingerprint = StateFingerprint(snapshot) },
+            null);
     }
 
     public async Task<AuthorizedKeyMutationPreviewResult> PreviewAsync(
@@ -137,15 +139,15 @@ public sealed class AuthorizedKeyAdministrationService : IAuthorizedKeyAdministr
             return PreviewFailure(RemoteErrorCode.InvalidEndpoint, exception.Message);
         }
 
-        var load = await LoadAsync(profile, user, cancellationToken).ConfigureAwait(false);
-        if (!load.IsSuccess || load.Snapshot is null)
+        var loaded = await LoadAsync(profile, user, cancellationToken).ConfigureAwait(false);
+        if (!loaded.IsSuccess || loaded.Snapshot is null)
         {
-            return new AuthorizedKeyMutationPreviewResult(null, load.Error ?? new RemoteError(
-                RemoteErrorCode.CommandFailed,
-                "authorized_keys state could not be loaded."));
+            return new AuthorizedKeyMutationPreviewResult(
+                null,
+                loaded.Error ?? new RemoteError(RemoteErrorCode.CommandFailed, "authorized_keys state could not be loaded."));
         }
 
-        var before = load.Snapshot;
+        var before = loaded.Snapshot;
         if (before.HasUnparsedContent)
         {
             return PreviewFailure(
@@ -174,7 +176,8 @@ public sealed class AuthorizedKeyAdministrationService : IAuthorizedKeyAdministr
 
             if (matches.Length != 1)
             {
-                return PreviewFailure(RemoteErrorCode.PathConflict,
+                return PreviewFailure(
+                    RemoteErrorCode.PathConflict,
                     "The same public-key fingerprint appears multiple times. Resolve duplicates before guarded removal.");
             }
 
@@ -182,14 +185,13 @@ public sealed class AuthorizedKeyAdministrationService : IAuthorizedKeyAdministr
         }
 
         var planId = Guid.NewGuid();
-        var impact = AnalyzeImpact(profile, user, normalized);
         var provisional = new AuthorizedKeyMutationPreview(
             planId,
             string.Empty,
             normalized,
             before.StateFingerprint,
             boundKey,
-            impact,
+            AnalyzeImpact(profile, user, normalized),
             normalized.Kind == AuthorizedKeyMutationKind.Remove ? OperationRisk.Destructive : OperationRisk.Mutating,
             normalized.Kind == AuthorizedKeyMutationKind.Add
                 ? $"Add public key {ParseSinglePublicKey(normalized.PublicKeyLine!).Fingerprint} to {before.FilePath}"
@@ -209,25 +211,30 @@ public sealed class AuthorizedKeyAdministrationService : IAuthorizedKeyAdministr
         ArgumentNullException.ThrowIfNull(profile);
         ArgumentNullException.ThrowIfNull(user);
         ArgumentNullException.ThrowIfNull(preview);
-        var actualFingerprint = PreviewFingerprint(preview with { Fingerprint = string.Empty });
-        if (!_capabilities.TryRemove(preview.PlanId, out var expectedFingerprint) ||
-            !FixedTimeEquals(preview.Fingerprint, expectedFingerprint) ||
-            !FixedTimeEquals(preview.Fingerprint, actualFingerprint))
+
+        var actual = PreviewFingerprint(preview with { Fingerprint = string.Empty });
+        if (!_capabilities.TryRemove(preview.PlanId, out var expected) ||
+            !FixedTimeEquals(preview.Fingerprint, expected) ||
+            !FixedTimeEquals(preview.Fingerprint, actual))
         {
-            return MutationFailure(RemoteErrorCode.PathConflict,
+            return MutationFailure(
+                RemoteErrorCode.PathConflict,
                 "Authorized-key Preview is missing, replayed or modified. Reload keys and preview again.");
         }
 
         var current = await LoadAsync(profile, user, cancellationToken).ConfigureAwait(false);
         if (!current.IsSuccess || current.Snapshot is null)
         {
-            return MutationFailure(current.Error ?? new RemoteError(RemoteErrorCode.CommandFailed, "authorized_keys could not be reloaded before mutation."));
+            return MutationFailure(current.Error ?? new RemoteError(
+                RemoteErrorCode.CommandFailed,
+                "authorized_keys could not be reloaded before mutation."));
         }
 
         var before = current.Snapshot;
         if (!string.Equals(before.StateFingerprint, preview.BeforeStateFingerprint, StringComparison.Ordinal))
         {
-            return MutationFailure(RemoteErrorCode.PathConflict,
+            return MutationFailure(
+                RemoteErrorCode.PathConflict,
                 "authorized_keys content or metadata changed after Preview. Reload before mutation.");
         }
 
@@ -308,8 +315,7 @@ public sealed class AuthorizedKeyAdministrationService : IAuthorizedKeyAdministr
             throw new ArgumentException("The authorized public-key blob size is outside the safe range.", nameof(line));
         }
 
-        var hash = SHA256.HashData(blob);
-        var fingerprint = "SHA256:" + Convert.ToBase64String(hash).TrimEnd('=');
+        var fingerprint = "SHA256:" + Convert.ToBase64String(SHA256.HashData(blob)).TrimEnd('=');
         var comment = typeIndex + 2 < parts.Length
             ? string.Join(' ', parts.Skip(typeIndex + 2))
             : string.Empty;
@@ -332,8 +338,8 @@ public sealed class AuthorizedKeyAdministrationService : IAuthorizedKeyAdministr
 
         var token = Guid.NewGuid().ToString("N");
         var userStage = RemotePath.Parse($"/tmp/serverdesk-authorized-{token}.tmp");
-        var target = RemotePath.Parse(before.FilePath);
         var directory = RemotePath.Parse(before.DirectoryPath);
+        var target = RemotePath.Parse(before.FilePath);
         var privilegedStage = directory.Combine($".serverdesk-authorized-{token}.new");
         var mutationStarted = false;
         var privilegedStageCreated = false;
@@ -347,14 +353,19 @@ public sealed class AuthorizedKeyAdministrationService : IAuthorizedKeyAdministr
             await using (var source = new MemoryStream(content, writable: false))
             {
                 await fileSystem.UploadAsync(
-                    source,
-                    userStage,
-                    content.Length,
-                    overwrite: false,
-                    cancellationToken: cancellationToken).ConfigureAwait(false);
+                        source,
+                        userStage,
+                        content.Length,
+                        overwrite: false,
+                        cancellationToken: cancellationToken)
+                    .ConfigureAwait(false);
             }
 
-            await fileSystem.SetPermissionsAsync(userStage, RemoteUnixPermissions.FromMode(600), cancellationToken).ConfigureAwait(false);
+            await fileSystem.SetPermissionsAsync(
+                    userStage,
+                    RemoteUnixPermissions.FromMode(600),
+                    cancellationToken)
+                .ConfigureAwait(false);
 
             mutationStarted = true;
             var ensureDirectory = await ExecuteMutationAsync(
@@ -367,9 +378,9 @@ public sealed class AuthorizedKeyAdministrationService : IAuthorizedKeyAdministr
                 ],
                 OperationRisk.Mutating,
                 cancellationToken).ConfigureAwait(false);
-            if (ensureDirectory.Error is not null)
+            if (ensureDirectory is not null)
             {
-                return await HandleWriteFailureAsync(profile, user, before, ensureDirectory.Error, mutationStarted, cancellationToken).ConfigureAwait(false);
+                return await HandleFailureAsync(profile, user, before, ensureDirectory, cancellationToken).ConfigureAwait(false);
             }
 
             var installFile = await ExecuteMutationAsync(
@@ -382,9 +393,9 @@ public sealed class AuthorizedKeyAdministrationService : IAuthorizedKeyAdministr
                 ],
                 OperationRisk.Mutating,
                 cancellationToken).ConfigureAwait(false);
-            if (installFile.Error is not null)
+            if (installFile is not null)
             {
-                return await HandleWriteFailureAsync(profile, user, before, installFile.Error, mutationStarted, cancellationToken).ConfigureAwait(false);
+                return await HandleFailureAsync(profile, user, before, installFile, cancellationToken).ConfigureAwait(false);
             }
 
             privilegedStageCreated = true;
@@ -393,9 +404,9 @@ public sealed class AuthorizedKeyAdministrationService : IAuthorizedKeyAdministr
                 ["-n", "mv", "-f", "--", privilegedStage.Value, target.Value],
                 preview.Risk,
                 cancellationToken).ConfigureAwait(false);
-            if (replace.Error is not null)
+            if (replace is not null)
             {
-                return await HandleWriteFailureAsync(profile, user, before, replace.Error, mutationStarted, cancellationToken).ConfigureAwait(false);
+                return await HandleFailureAsync(profile, user, before, replace, cancellationToken).ConfigureAwait(false);
             }
 
             committed = true;
@@ -483,22 +494,32 @@ public sealed class AuthorizedKeyAdministrationService : IAuthorizedKeyAdministr
             after);
     }
 
-    private async Task<AuthorizedKeyMutationResult> HandleWriteFailureAsync(
+    private async Task<AuthorizedKeyMutationResult> HandleFailureAsync(
         ServerProfile profile,
         LocalUserInfo user,
         AuthorizedKeySnapshot before,
         RemoteError error,
-        bool mutationStarted,
         CancellationToken cancellationToken)
     {
-        if (mutationStarted && IsAmbiguous(error.Code))
+        if (IsAmbiguous(error.Code))
         {
             return Ambiguous(
                 "ServerDesk lost a reliable completion signal after authorized-key mutation began. Do not retry until keys and permissions are reloaded.",
                 error.TechnicalDetails);
         }
 
-        var verification = await LoadAsync(profile, user, CancellationToken.None).ConfigureAwait(false);
+        AuthorizedKeyLoadResult verification;
+        try
+        {
+            verification = await LoadAsync(profile, user, CancellationToken.None).ConfigureAwait(false);
+        }
+        catch
+        {
+            return Ambiguous(
+                "The authorized-key command reported failure, but live key content/metadata could not be verified. Reload before retrying.",
+                error.TechnicalDetails);
+        }
+
         if (!verification.IsSuccess || verification.Snapshot is null ||
             !string.Equals(verification.Snapshot.StateFingerprint, before.StateFingerprint, StringComparison.Ordinal))
         {
@@ -510,32 +531,36 @@ public sealed class AuthorizedKeyAdministrationService : IAuthorizedKeyAdministr
         return new AuthorizedKeyMutationResult(false, false, error.Message, error, verification.Snapshot);
     }
 
-    private async Task<MutationStep> ExecuteMutationAsync(
+    private async Task<RemoteError?> ExecuteMutationAsync(
         IRemoteCommandExecutor executor,
         IReadOnlyList<string> arguments,
         OperationRisk risk,
         CancellationToken cancellationToken)
     {
         var result = await executor.ExecuteAsync(
-            new RemoteCommandSpec(
-                _options.PrivilegeExecutable,
-                arguments,
-                _options.CommandTimeout,
-                risk,
-                StableEnvironment),
-            cancellationToken).ConfigureAwait(false);
+                new RemoteCommandSpec(
+                    _options.PrivilegeExecutable,
+                    arguments,
+                    _options.CommandTimeout,
+                    risk,
+                    StableEnvironment),
+                cancellationToken)
+            .ConfigureAwait(false);
         if (result.Error is not null)
         {
-            return new MutationStep(result.Error);
+            return result.Error;
         }
 
         if (result.Command!.ExitCode == 0)
         {
-            return new MutationStep(null);
+            return null;
         }
 
-        var detail = FirstUseful(result.Command.StandardError, result.Command.StandardOutput, "Authorized-key mutation command failed.");
-        return new MutationStep(new RemoteError(ClassifyFailure(detail), detail));
+        var detail = FirstUseful(
+            result.Command.StandardError,
+            result.Command.StandardOutput,
+            "Authorized-key mutation command failed.");
+        return new RemoteError(ClassifyFailure(detail), detail);
     }
 
     private async Task<StatResult> ReadStatAsync(
@@ -544,8 +569,11 @@ public sealed class AuthorizedKeyAdministrationService : IAuthorizedKeyAdministr
         CancellationToken cancellationToken)
     {
         var result = await executor.ExecuteAsync(
-            ReadOnly(_options.PrivilegeExecutable, ["-n", "stat", "--printf=%u:%g:%a", "--", path.Value]),
-            cancellationToken).ConfigureAwait(false);
+                ReadOnly(
+                    _options.PrivilegeExecutable,
+                    ["-n", "stat", "--printf=%u:%g:%a", "--", path.Value]),
+                cancellationToken)
+            .ConfigureAwait(false);
         if (result.Error is not null)
         {
             return new StatResult(false, null, null, null, result.Error);
@@ -554,13 +582,17 @@ public sealed class AuthorizedKeyAdministrationService : IAuthorizedKeyAdministr
         if (result.Command!.ExitCode != 0)
         {
             var detail = FirstUseful(result.Command.StandardError, result.Command.StandardOutput, "stat failed.");
-            if (detail.Contains("No such file", StringComparison.OrdinalIgnoreCase) ||
-                detail.Contains("cannot stat", StringComparison.OrdinalIgnoreCase))
+            if (detail.Contains("No such file or directory", StringComparison.OrdinalIgnoreCase))
             {
                 return new StatResult(false, null, null, null, null);
             }
 
-            return new StatResult(false, null, null, null, new RemoteError(ClassifyFailure(detail), detail));
+            return new StatResult(
+                false,
+                null,
+                null,
+                null,
+                new RemoteError(ClassifyFailure(detail), detail));
         }
 
         var parts = result.Command.StandardOutput.Trim().Split(':');
@@ -569,7 +601,11 @@ public sealed class AuthorizedKeyAdministrationService : IAuthorizedKeyAdministr
             !uint.TryParse(parts[1], NumberStyles.None, CultureInfo.InvariantCulture, out var gid) ||
             !int.TryParse(parts[2], NumberStyles.None, CultureInfo.InvariantCulture, out var mode))
         {
-            return new StatResult(false, null, null, null,
+            return new StatResult(
+                false,
+                null,
+                null,
+                null,
                 new RemoteError(RemoteErrorCode.ParseFailed, "stat returned unrecognized ownership/mode output."));
         }
 
@@ -579,7 +615,9 @@ public sealed class AuthorizedKeyAdministrationService : IAuthorizedKeyAdministr
     private RemoteCommandSpec ReadOnly(string executable, IReadOnlyList<string> arguments) =>
         new(executable, arguments, _options.CommandTimeout, OperationRisk.ReadOnly, StableEnvironment);
 
-    private static AuthorizedKeyMutationRequest NormalizeRequest(LocalUserInfo user, AuthorizedKeyMutationRequest request)
+    private static AuthorizedKeyMutationRequest NormalizeRequest(
+        LocalUserInfo user,
+        AuthorizedKeyMutationRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
         var username = request.Username?.Trim() ?? string.Empty;
@@ -629,24 +667,26 @@ public sealed class AuthorizedKeyAdministrationService : IAuthorizedKeyAdministr
         LocalUserInfo user,
         AuthorizedKeyMutationRequest request)
     {
-        const string suffix = " This analysis cannot guarantee that the current SSH session or a future reconnect will remain available.";
+        const string noGuarantee = " This analysis cannot guarantee that the current SSH session or a future reconnect will remain available.";
         if (!string.Equals(profile.Username, user.Username, StringComparison.Ordinal))
         {
             return new ConnectedUserImpact(
                 ConnectedUserImpactKind.NoKnownRestriction,
-                "The key mutation does not target the connected account." + suffix);
+                "The key mutation does not target the connected account." + noGuarantee);
         }
 
         return request.Kind == AuthorizedKeyMutationKind.Remove
             ? new ConnectedUserImpact(
                 ConnectedUserImpactKind.PossibleRestriction,
-                "Removing an authorized key from the connected account may remove credentials needed for a future SSH reconnect." + suffix)
+                "Removing an authorized key from the connected account may remove credentials needed for a future SSH reconnect." + noGuarantee)
             : new ConnectedUserImpact(
                 ConnectedUserImpactKind.NoKnownRestriction,
-                "Adding a public key does not directly remove the connected account's existing key access." + suffix);
+                "Adding a public key does not directly remove the connected account's existing key access." + noGuarantee);
     }
 
-    private static string BuildEditedText(AuthorizedKeySnapshot before, AuthorizedKeyMutationPreview preview)
+    private static string BuildEditedText(
+        AuthorizedKeySnapshot before,
+        AuthorizedKeyMutationPreview preview)
     {
         if (preview.Request.Kind == AuthorizedKeyMutationKind.Add)
         {
@@ -660,11 +700,11 @@ public sealed class AuthorizedKeyAdministrationService : IAuthorizedKeyAdministr
             return text + line + "\n";
         }
 
-        var bound = preview.BoundKey ?? throw new InvalidOperationException("Authorized-key removal lost its exact bound key identity.");
+        var bound = preview.BoundKey ??
+            throw new InvalidOperationException("Authorized-key removal lost its exact bound key identity.");
         var removed = false;
-        var lines = NormalizeNewlines(before.OriginalText).Split('\n', StringSplitOptions.None);
-        var output = new List<string>(lines.Length);
-        foreach (var line in lines)
+        var output = new List<string>();
+        foreach (var line in NormalizeNewlines(before.OriginalText).Split('\n', StringSplitOptions.None))
         {
             if (!removed && line.Trim().Length > 0)
             {
@@ -713,24 +753,25 @@ public sealed class AuthorizedKeyAdministrationService : IAuthorizedKeyAdministr
 
     private static bool TryResolvePaths(
         LocalUserInfo user,
-        out RemotePath? directory,
-        out RemotePath? file,
+        out RemotePath directory,
+        out RemotePath file,
         out string? error)
     {
-        directory = null;
-        file = null;
+        directory = default;
+        file = default;
         error = null;
         try
         {
             var home = RemotePath.Parse(user.Home);
-            if (!home.IsAbsolute || !string.Equals(home.Value, user.Home.TrimEnd('/'), StringComparison.Ordinal))
+            if (!home.IsAbsolute ||
+                !string.Equals(home.Value, user.Home.TrimEnd('/'), StringComparison.Ordinal))
             {
                 error = "The selected user's home path is not a normalized absolute path.";
                 return false;
             }
 
             directory = home.Combine(".ssh");
-            file = directory.Value.Combine("authorized_keys");
+            file = directory.Combine("authorized_keys");
             return true;
         }
         catch (ArgumentException exception)
@@ -816,7 +857,7 @@ public sealed class AuthorizedKeyAdministrationService : IAuthorizedKeyAdministr
             return RemoteErrorCode.PermissionDenied;
         }
 
-        if (detail.Contains("No such file", StringComparison.OrdinalIgnoreCase) ||
+        if (detail.Contains("No such file or directory", StringComparison.OrdinalIgnoreCase) ||
             detail.Contains("not found", StringComparison.OrdinalIgnoreCase))
         {
             return RemoteErrorCode.PathNotFound;
@@ -860,8 +901,6 @@ public sealed class AuthorizedKeyAdministrationService : IAuthorizedKeyAdministr
         uint? GroupId,
         int? Mode,
         RemoteError? Error);
-
-    private sealed record MutationStep(RemoteError? Error);
 }
 
 public sealed class AuditedAuthorizedKeyAdministrationService : IAuthorizedKeyAdministrationService
@@ -907,7 +946,10 @@ public sealed class AuditedAuthorizedKeyAdministrationService : IAuthorizedKeyAd
             var persisted = await TryAuditAsync(profile, preview, outcome, cancellationToken).ConfigureAwait(false);
             return persisted
                 ? result
-                : result with { Message = result.Message + " Audit persistence failed; do not repeat the key mutation solely for audit." };
+                : result with
+                {
+                    Message = result.Message + " Audit persistence failed; do not repeat the key mutation solely for audit.",
+                };
         }
         catch (OperationCanceledException)
         {
