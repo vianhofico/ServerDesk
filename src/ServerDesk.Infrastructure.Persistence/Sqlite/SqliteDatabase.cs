@@ -27,7 +27,7 @@ public sealed class SqliteConnectionFactory
 
 public sealed class SqliteDatabaseInitializer
 {
-    public const int CurrentSchemaVersion = 6;
+    public const int CurrentSchemaVersion = 7;
 
     private readonly SqliteConnectionFactory _connectionFactory;
 
@@ -260,6 +260,46 @@ public sealed class SqliteDatabaseInitializer
                     ON connection_history(server_profile_id, started_utc DESC);
 
                 UPDATE schema_info SET version = 6 WHERE singleton_id = 1;
+                """;
+
+            await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+            transaction.Commit();
+            version = 6;
+        }
+
+        if (version < 7)
+        {
+            using var transaction = connection.BeginTransaction();
+            await using var command = connection.CreateCommand();
+            command.Transaction = transaction;
+            command.CommandText =
+                """
+                CREATE TABLE database_profiles (
+                    id TEXT NOT NULL PRIMARY KEY,
+                    server_profile_id TEXT NOT NULL,
+                    name TEXT NOT NULL,
+                    engine INTEGER NOT NULL CHECK (engine BETWEEN 0 AND 3),
+                    remote_host TEXT NOT NULL,
+                    remote_port INTEGER NOT NULL CHECK (remote_port BETWEEN 1 AND 65535),
+                    database_name TEXT NULL,
+                    username TEXT NULL,
+                    authentication_kind INTEGER NOT NULL CHECK (authentication_kind BETWEEN 0 AND 1),
+                    credential_reference TEXT NULL,
+                    created_utc TEXT NOT NULL,
+                    updated_utc TEXT NOT NULL,
+                    CHECK (
+                        (authentication_kind = 0 AND credential_reference IS NULL) OR
+                        (authentication_kind = 1 AND credential_reference IS NOT NULL)
+                    ),
+                    FOREIGN KEY(server_profile_id) REFERENCES server_profiles(id) ON DELETE RESTRICT
+                );
+
+                CREATE INDEX ix_database_profiles_server
+                    ON database_profiles(server_profile_id, name COLLATE NOCASE);
+                CREATE INDEX ix_database_profiles_engine
+                    ON database_profiles(engine, server_profile_id);
+
+                UPDATE schema_info SET version = 7 WHERE singleton_id = 1;
                 """;
 
             await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
