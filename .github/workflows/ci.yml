@@ -159,7 +159,7 @@ jobs:
             -e MYSQL_PASSWORD="$SERVERDESK_DB_PASSWORD" \
             -e MYSQL_ROOT_PASSWORD=serverdesk-root-password \
             -p 127.0.0.1:${SERVERDESK_MYSQL_PORT}:3306 \
-            mysql:8.4.12
+            mysql:8.4.11
           docker run -d --name serverdesk-mariadb \
             -e MARIADB_DATABASE=serverdesk \
             -e MARIADB_USER=serverdesk \
