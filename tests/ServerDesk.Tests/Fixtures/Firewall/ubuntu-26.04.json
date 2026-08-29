@@ -1,0 +1,5 @@
+{
+  "adapter": "ufw",
+  "version": "ufw 0.36.3",
+  "status": "Status: active\n\n     To                         Action      From\n     --                         ------      ----\n[ 1] OpenSSH                    ALLOW IN    10.30.0.0/16\n[ 2] 8080/tcp                   ALLOW IN    203.0.113.0/24\n[ 3] 8443/tcp                   REJECT IN   Anywhere"
+}
