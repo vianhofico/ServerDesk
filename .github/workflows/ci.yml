@@ -224,6 +224,40 @@ jobs:
           sudo chmod 0755 /usr/local/bin/pg_dump /usr/local/bin/pg_restore /usr/local/bin/mysqldump /usr/local/bin/mariadb-dump
           sudo -u serverdesk_ci docker version >/dev/null
 
+      - name: Configure certified database restore targets and tool wrappers
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          docker exec serverdesk-postgres psql -v ON_ERROR_STOP=1 -U serverdesk -d postgres \
+            -c 'DROP DATABASE IF EXISTS serverdesk_restore' \
+            -c 'CREATE DATABASE serverdesk_restore'
+          docker exec serverdesk-mysql mysql -uroot -pserverdesk-root-password \
+            -e "DROP DATABASE IF EXISTS serverdesk_restore; CREATE DATABASE serverdesk_restore; GRANT ALL PRIVILEGES ON serverdesk_restore.* TO 'serverdesk'@'%'; FLUSH PRIVILEGES;"
+          docker exec serverdesk-mariadb mariadb -uroot -pserverdesk-root-password \
+            -e "DROP DATABASE IF EXISTS serverdesk_restore; CREATE DATABASE serverdesk_restore; GRANT ALL PRIVILEGES ON serverdesk_restore.* TO 'serverdesk'@'%'; FLUSH PRIVILEGES;"
+
+          cat <<'EOF' | sudo tee /usr/local/bin/pg_restore >/dev/null
+          #!/usr/bin/env bash
+          exec docker run --rm -i --network host -e PGPASSWORD \
+            -v /tmp/serverdesk-db-backups:/tmp/serverdesk-db-backups \
+            postgres:18.6 pg_restore "$@"
+          EOF
+          cat <<'EOF' | sudo tee /usr/local/bin/psql >/dev/null
+          #!/usr/bin/env bash
+          exec docker run --rm -i --network host -e PGPASSWORD postgres:18.6 psql "$@"
+          EOF
+          cat <<'EOF' | sudo tee /usr/local/bin/mysql >/dev/null
+          #!/usr/bin/env bash
+          exec docker run --rm -i --network host -e MYSQL_PWD mysql:8.4.11 mysql "$@"
+          EOF
+          cat <<'EOF' | sudo tee /usr/local/bin/mariadb >/dev/null
+          #!/usr/bin/env bash
+          exec docker run --rm -i --network host -e MYSQL_PWD mariadb:11.8.9 mariadb "$@"
+          EOF
+          sudo chmod 0755 /usr/local/bin/pg_restore /usr/local/bin/psql /usr/local/bin/mysql /usr/local/bin/mariadb
+          sudo -u serverdesk_ci docker version >/dev/null
+
       - name: Restore integration tests
         run: dotnet restore tests/ServerDesk.Ssh.IntegrationTests/ServerDesk.Ssh.IntegrationTests.csproj
 
