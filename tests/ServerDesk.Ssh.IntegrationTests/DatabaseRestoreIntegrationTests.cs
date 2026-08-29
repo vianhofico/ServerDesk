@@ -236,8 +236,8 @@ public sealed class DatabaseRestoreIntegrationTests
 
         await using var mysql = new MySqlConnection(MySqlConnectionString(databasePort));
         await mysql.OpenAsync(cancellationToken);
-        await using var command = new MySqlCommand(sql, mysql);
-        await command.ExecuteNonQueryAsync(cancellationToken);
+        await using var mysqlCommand = new MySqlCommand(sql, mysql);
+        await mysqlCommand.ExecuteNonQueryAsync(cancellationToken);
     }
 
     private static string PostgreSqlConnectionString(int databasePort) =>
