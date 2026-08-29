@@ -253,6 +253,7 @@ public sealed class DatabaseBackupServiceTests
     [InlineData(" appdb")]
     [InlineData("appdb ")]
     [InlineData("app\nname")]
+    [InlineData("--help")]
     public async Task AmbiguousDatabaseIdentityIsRejectedBeforeRemoteCommands(string databaseName)
     {
         var fixture = CreateFixture(DatabaseEngineKind.PostgreSql);
