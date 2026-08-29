@@ -30,7 +30,7 @@
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseRuntime.SafetyFooter">M6.1 is host-side read-only discovery only: no DB login, no SQL/Redis commands, no service changes, and no public database port exposure.</sys:String>
 
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.Action">DB profiles</sys:String>
-    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.ActionTooltip">Manage secret-safe database profiles and test loopback SSH tunnel reachability.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.ActionTooltip">Manage secret-safe database profiles and test loopback SSH tunnel engine reachability.</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.WindowTitle">Database profiles</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.Title">Database profiles — {0}</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.Subtitle">Store reusable PostgreSQL, MySQL/MariaDB and Redis endpoints. Passwords stay in the secure secret store; saved metadata contains only a secret reference.</sys:String>
@@ -55,8 +55,8 @@
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.SelectFirst">Select a saved database profile first.</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.DeleteTitle">Delete database profile</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.DeleteConfirm">Delete database profile '{0}' and its secure stored password, if present?</sys:String>
-    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.TestingTunnel">Opening a temporary loopback SSH tunnel and checking TCP reachability…</sys:String>
-    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.TunnelSucceeded">Temporary SSH tunnel succeeded through {0}:{1}. The tunnel is now closed. Database credentials were not tested in M6.2.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.TestingTunnel">Opening a temporary loopback SSH tunnel and checking database engine protocol reachability…</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.TunnelSucceeded">Temporary SSH tunnel reached the selected database engine through {0}:{1}. The tunnel is now closed. Database credentials were not tested in M6.2.</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.Disconnected">The server is disconnected. Saved profiles can still be edited, but SSH tunnel testing is unavailable until the server reconnects.</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.LoadFailed">Database profiles could not be loaded: {0}</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.PasswordExistingHint">A password is already stored securely. Leave this empty to keep it; enter a value only to replace it.</sys:String>
@@ -64,5 +64,5 @@
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.PasswordDisabledHint">No database password will be stored for this profile.</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.InvalidSelection">Choose a supported database engine and authentication type.</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.InvalidPort">Remote database port must be between 1 and 65535.</sys:String>
-    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.SafetyFooter">M6.2 always creates an ephemeral local forward bound to 127.0.0.1 with an automatic local port. There is no silent direct/public database fallback. Tunnel testing checks TCP reachability only; authenticated engine diagnostics start in M6.3.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.SafetyFooter">M6.2 always creates an ephemeral local forward bound to 127.0.0.1 with an automatic local port. There is no silent direct/public database fallback. Tunnel testing uses a minimal read-only engine protocol probe; database credentials are not authenticated until M6.3.</sys:String>
 </ResourceDictionary>
