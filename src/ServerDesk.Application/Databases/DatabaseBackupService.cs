@@ -683,7 +683,7 @@ public sealed class DatabaseBackupService : IDatabaseBackupService
     private static RemotePath NormalizeAbsoluteDirectory(string value)
     {
         var raw = value?.Trim() ?? string.Empty;
-        if (!raw.StartsWith('/', StringComparison.Ordinal) || raw.Any(char.IsControl))
+        if (!raw.StartsWith("/", StringComparison.Ordinal) || raw.Any(char.IsControl))
         {
             throw new ArgumentException("Backup destination must be an absolute printable remote path.", nameof(value));
         }
