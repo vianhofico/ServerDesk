@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using ServerDesk.Domain.Errors;
@@ -10,7 +11,7 @@ public sealed class GuardedFirewallMutationService : IFirewallMutationService
 {
     private readonly FirewallMutationService _inner;
     private readonly IFirewallManager _inventory;
-    private readonly ConcurrentDictionary<Guid, string> _previewStates = new();
+    private readonly ConcurrentDictionary<Guid, PreviewState> _previewStates = new();
 
     public GuardedFirewallMutationService(
         FirewallMutationService inner,
@@ -44,8 +45,15 @@ public sealed class GuardedFirewallMutationService : IFirewallMutationService
             return result;
         }
 
-        _previewStates[result.Preview.PlanId] = FirewallMutationStateFingerprint.Compute(baseline.Snapshot);
-        return result;
+        var rawPreview = result.Preview;
+        var presented = ApplyConservativeSshImpact(rawPreview) with { Fingerprint = string.Empty };
+        var presentedFingerprint = PreviewFingerprint(presented);
+        presented = presented with { Fingerprint = presentedFingerprint };
+        _previewStates[rawPreview.PlanId] = new PreviewState(
+            FirewallMutationStateFingerprint.Compute(baseline.Snapshot),
+            rawPreview,
+            presentedFingerprint);
+        return new FirewallMutationPreviewResult(presented, null);
     }
 
     public async Task<FirewallMutationResult> ExecuteAsync(
@@ -56,11 +64,14 @@ public sealed class GuardedFirewallMutationService : IFirewallMutationService
         ArgumentNullException.ThrowIfNull(profile);
         ArgumentNullException.ThrowIfNull(preview);
 
-        if (!_previewStates.TryRemove(preview.PlanId, out var expectedState))
+        var actualPresentedFingerprint = PreviewFingerprint(preview with { Fingerprint = string.Empty });
+        if (!_previewStates.TryRemove(preview.PlanId, out var state) ||
+            !FixedTimeEquals(preview.Fingerprint, actualPresentedFingerprint) ||
+            !FixedTimeEquals(preview.Fingerprint, state.PresentedFingerprint))
         {
             return Failure(
                 RemoteErrorCode.PathConflict,
-                "Firewall Preview is missing, already consumed or no longer valid. Preview again before executing.");
+                "Firewall Preview is missing, replayed or modified. Preview the live state again before executing.");
         }
 
         var before = await _inventory.InspectAsync(profile, cancellationToken).ConfigureAwait(false);
@@ -74,7 +85,7 @@ public sealed class GuardedFirewallMutationService : IFirewallMutationService
 
         if (!string.Equals(
                 FirewallMutationStateFingerprint.Compute(before.Snapshot),
-                expectedState,
+                state.StateFingerprint,
                 StringComparison.Ordinal))
         {
             return Failure(
@@ -82,7 +93,7 @@ public sealed class GuardedFirewallMutationService : IFirewallMutationService
                 "Firewall adapter state or normalized policy changed after Preview. Preview the live state again before mutation.");
         }
 
-        var result = await _inner.ExecuteAsync(profile, preview, cancellationToken).ConfigureAwait(false);
+        var result = await _inner.ExecuteAsync(profile, state.RawPreview, cancellationToken).ConfigureAwait(false);
         if (result.IsSuccess || result.AmbiguousState)
         {
             return result;
@@ -107,7 +118,7 @@ public sealed class GuardedFirewallMutationService : IFirewallMutationService
         }
 
         var verifiedState = FirewallMutationStateFingerprint.Compute(verification.Snapshot);
-        if (!string.Equals(verifiedState, expectedState, StringComparison.Ordinal))
+        if (!string.Equals(verifiedState, state.StateFingerprint, StringComparison.Ordinal))
         {
             return new FirewallMutationResult(
                 false,
@@ -122,6 +133,118 @@ public sealed class GuardedFirewallMutationService : IFirewallMutationService
         return result with { VerifiedSnapshot = verification.Snapshot };
     }
 
+    private static FirewallMutationPreview ApplyConservativeSshImpact(FirewallMutationPreview preview)
+    {
+        if (preview.SshImpact.Kind != FirewallSshImpactKind.NoKnownRestriction ||
+            !CanRestrictSsh(preview, out var candidate))
+        {
+            return preview;
+        }
+
+        var port = candidate.PortOrService?.Trim() ?? string.Empty;
+        if (int.TryParse(port, NumberStyles.None, CultureInfo.InvariantCulture, out var numericPort) &&
+            numericPort != preview.Ssh.ServerPort)
+        {
+            return preview;
+        }
+
+        const string message =
+            "The common firewall inventory cannot prove that this rule/service is unrelated to the observed SSH endpoint. Treat the SSH impact as unknown. This analysis cannot guarantee that the current session or a future reconnect will remain available.";
+        return preview with
+        {
+            SshImpact = new FirewallSshImpact(FirewallSshImpactKind.Unknown, message),
+        };
+    }
+
+    private static bool CanRestrictSsh(
+        FirewallMutationPreview preview,
+        out FirewallRuleDraft candidate)
+    {
+        if (preview.Request.Kind == FirewallMutationKind.AddRule &&
+            preview.Request.Rule is { Action: FirewallRuleAction.Deny or FirewallRuleAction.Reject } add)
+        {
+            candidate = add;
+            return true;
+        }
+
+        if (preview.Request.Kind == FirewallMutationKind.RemoveRule &&
+            preview.BoundRule is { Action: FirewallRuleAction.Allow or FirewallRuleAction.Limit } remove)
+        {
+            candidate = new FirewallRuleDraft(
+                remove.Action,
+                remove.Direction,
+                remove.Protocol,
+                remove.PortOrService,
+                remove.Source,
+                remove.Zone);
+            return true;
+        }
+
+        candidate = null!;
+        return false;
+    }
+
+    private static string PreviewFingerprint(FirewallMutationPreview preview)
+    {
+        var builder = new StringBuilder();
+        builder.Append(preview.PlanId).Append('|')
+            .Append(preview.Request.Kind).Append('|')
+            .Append(preview.Request.Adapter).Append('|')
+            .Append(preview.Request.RuleId).Append('|')
+            .Append(DraftCanonical(preview.Request.Rule)).Append('|')
+            .Append(preview.BeforeStatus).Append('|')
+            .Append(preview.BeforeFingerprint).Append('|')
+            .Append(preview.BoundRule is null ? string.Empty : RuleCanonical(preview.BoundRule)).Append('|')
+            .Append(preview.Ssh.ClientSource).Append('|')
+            .Append(preview.Ssh.ServerPort).Append('|')
+            .Append(preview.Ssh.IsFullyObserved).Append('|')
+            .Append(preview.SshImpact.Kind).Append('|')
+            .Append(preview.SshImpact.Message).Append('|')
+            .Append(preview.Executable).Append('|')
+            .Append(string.Join("\u001f", preview.Arguments)).Append('|')
+            .Append(preview.Risk).Append('|')
+            .Append(preview.DisplayCommand);
+        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(builder.ToString())));
+    }
+
+    private static string RuleCanonical(FirewallRuleInfo rule) =>
+        string.Join(
+            "\u001f",
+            rule.Id,
+            rule.Adapter,
+            rule.Zone,
+            rule.Action,
+            rule.Direction,
+            rule.Protocol,
+            rule.PortOrService,
+            rule.Source,
+            rule.Destination,
+            rule.Raw);
+
+    private static string DraftCanonical(FirewallRuleDraft? rule) =>
+        rule is null
+            ? string.Empty
+            : string.Join(
+                "\u001f",
+                rule.Action,
+                rule.Direction,
+                rule.Protocol,
+                rule.PortOrService,
+                rule.Source,
+                rule.Zone);
+
+    private static bool FixedTimeEquals(string left, string right)
+    {
+        if (left.Length != right.Length)
+        {
+            return false;
+        }
+
+        return CryptographicOperations.FixedTimeEquals(
+            Encoding.UTF8.GetBytes(left),
+            Encoding.UTF8.GetBytes(right));
+    }
+
     private static FirewallMutationResult Failure(RemoteError error) =>
         new(false, error.Code == RemoteErrorCode.AmbiguousState, error.Message, error);
 
@@ -134,6 +257,11 @@ public sealed class GuardedFirewallMutationService : IFirewallMutationService
             true,
             message,
             new RemoteError(RemoteErrorCode.AmbiguousState, message, technicalDetails));
+
+    private sealed record PreviewState(
+        string StateFingerprint,
+        FirewallMutationPreview RawPreview,
+        string PresentedFingerprint);
 }
 
 public static class FirewallMutationStateFingerprint
