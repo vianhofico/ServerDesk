@@ -37,14 +37,23 @@ public sealed class DatabaseConnectionProfile
     }
 
     public Guid Id { get; }
+
     public Guid ServerProfileId { get; }
+
     public string Name { get; }
+
     public DatabaseEngineKind Engine { get; }
+
     public string RemoteHost { get; }
+
     public int RemotePort { get; }
+
     public string? DatabaseName { get; }
+
     public string? Username { get; }
+
     public DatabaseAuthenticationKind AuthenticationKind { get; }
+
     public SecretReference? CredentialReference { get; }
 
     public static DatabaseConnectionProfile Create(
@@ -88,19 +97,25 @@ public sealed class DatabaseConnectionProfile
 
         if (remotePort is < 1 or > 65535)
         {
-            throw new ArgumentOutOfRangeException(nameof(remotePort), "Remote database port must be between 1 and 65535.");
+            throw new ArgumentOutOfRangeException(
+                nameof(remotePort),
+                "Remote database port must be between 1 and 65535.");
         }
 
         databaseName = NormalizeOptional(databaseName, nameof(databaseName), 128);
         username = NormalizeOptional(username, nameof(username), 128);
         if (authenticationKind == DatabaseAuthenticationKind.None && credentialReference is not null)
         {
-            throw new ArgumentException("A no-password database profile cannot retain a credential reference.", nameof(credentialReference));
+            throw new ArgumentException(
+                "A no-password database profile cannot retain a credential reference.",
+                nameof(credentialReference));
         }
 
         if (authenticationKind == DatabaseAuthenticationKind.Password && credentialReference is null)
         {
-            throw new ArgumentException("A password database profile requires a credential reference.", nameof(credentialReference));
+            throw new ArgumentException(
+                "A password database profile requires a credential reference.",
+                nameof(credentialReference));
         }
 
         return new DatabaseConnectionProfile(
@@ -175,7 +190,9 @@ public sealed class DatabaseConnectionProfile
     {
         if (value.Length > maximumLength)
         {
-            throw new ArgumentOutOfRangeException(parameterName, $"Value cannot exceed {maximumLength} characters.");
+            throw new ArgumentOutOfRangeException(
+                parameterName,
+                $"Value cannot exceed {maximumLength} characters.");
         }
 
         if (value.Contains('\0'))
@@ -196,7 +213,8 @@ public sealed record DatabaseProfileSpec(
 
 public interface IDatabaseProfileRepository
 {
-    ValueTask<IReadOnlyList<DatabaseConnectionProfile>> ListAsync(CancellationToken cancellationToken = default);
+    ValueTask<IReadOnlyList<DatabaseConnectionProfile>> ListAsync(
+        CancellationToken cancellationToken = default);
 
     ValueTask<IReadOnlyList<DatabaseConnectionProfile>> ListForServerAsync(
         Guid serverProfileId,
@@ -262,17 +280,23 @@ public sealed class DatabaseProfileService : IDatabaseProfileService
         string? initialSecret,
         CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(spec);
         await EnsureServerExistsAsync(serverProfileId, cancellationToken).ConfigureAwait(false);
+        ValidateSecret(spec.AuthenticationKind, existing: null, replaceSecret: true, initialSecret);
+
         var id = Guid.NewGuid();
         var credentialReference = spec.AuthenticationKind == DatabaseAuthenticationKind.Password
             ? SecretReference.ForDatabaseProfile(id)
             : (SecretReference?)null;
-        ValidateSecret(spec.AuthenticationKind, existing: null, replaceSecret: true, initialSecret);
         var profile = CreateProfile(id, serverProfileId, spec, credentialReference);
 
         if (credentialReference is not null)
         {
-            await _secretStore.SetAsync(credentialReference.Value, initialSecret!, cancellationToken).ConfigureAwait(false);
+            await _secretStore.SetAsync(
+                    credentialReference.Value,
+                    initialSecret!,
+                    cancellationToken)
+                .ConfigureAwait(false);
         }
 
         try
@@ -298,6 +322,7 @@ public sealed class DatabaseProfileService : IDatabaseProfileService
         bool replaceSecret,
         CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(spec);
         if (id == Guid.Empty)
         {
             throw new ArgumentException("Database profile id cannot be empty.", nameof(id));
@@ -312,31 +337,39 @@ public sealed class DatabaseProfileService : IDatabaseProfileService
             ? SecretReference.ForDatabaseProfile(id)
             : (SecretReference?)null;
         var oldReference = existing.CredentialReference;
-        var oldSecret = oldReference is null
-            ? null
-            : await _secretStore.GetAsync(oldReference.Value, cancellationToken).ConfigureAwait(false);
-        var changedSecret = replaceSecret || desiredReference != oldReference;
+        var referenceChanged = desiredReference != oldReference;
+        var secretMustBeWritten = desiredReference is not null && (referenceChanged || replaceSecret);
+        var secretMustBeDeleted = oldReference is not null && desiredReference is null;
+        var changedSecret = secretMustBeWritten || secretMustBeDeleted;
 
         if (!changedSecret)
         {
-            var unchanged = CreateProfile(id, existing.ServerProfileId, spec, desiredReference);
-            await _repository.UpsertAsync(unchanged, cancellationToken).ConfigureAwait(false);
-            return unchanged;
+            var unchangedSecretProfile = CreateProfile(id, existing.ServerProfileId, spec, desiredReference);
+            await _repository.UpsertAsync(unchangedSecretProfile, cancellationToken).ConfigureAwait(false);
+            return unchangedSecretProfile;
         }
 
+        var oldSecret = oldReference is null
+            ? null
+            : await _secretStore.GetAsync(oldReference.Value, cancellationToken).ConfigureAwait(false);
         var oldReferenceDeleted = false;
         var desiredReferenceWritten = false;
+
         try
         {
-            if (oldReference is not null && desiredReference is null)
+            if (secretMustBeDeleted)
             {
-                await _secretStore.DeleteAsync(oldReference.Value, cancellationToken).ConfigureAwait(false);
+                await _secretStore.DeleteAsync(oldReference!.Value, cancellationToken).ConfigureAwait(false);
                 oldReferenceDeleted = true;
             }
 
-            if (desiredReference is not null && replaceSecret)
+            if (secretMustBeWritten)
             {
-                await _secretStore.SetAsync(desiredReference.Value, replacementSecret!, cancellationToken).ConfigureAwait(false);
+                await _secretStore.SetAsync(
+                        desiredReference!.Value,
+                        replacementSecret!,
+                        cancellationToken)
+                    .ConfigureAwait(false);
                 desiredReferenceWritten = true;
             }
 
@@ -398,7 +431,9 @@ public sealed class DatabaseProfileService : IDatabaseProfileService
         }
     }
 
-    private async ValueTask EnsureServerExistsAsync(Guid serverProfileId, CancellationToken cancellationToken)
+    private async ValueTask EnsureServerExistsAsync(
+        Guid serverProfileId,
+        CancellationToken cancellationToken)
     {
         if (serverProfileId == Guid.Empty)
         {
@@ -441,15 +476,18 @@ public sealed class DatabaseProfileService : IDatabaseProfileService
 
         if (authenticationKind == DatabaseAuthenticationKind.None)
         {
-            if (replaceSecret && !string.IsNullOrEmpty(secret))
+            if (!string.IsNullOrEmpty(secret))
             {
-                throw new ArgumentException("A no-password database profile cannot store a password.", nameof(secret));
+                throw new ArgumentException(
+                    "A no-password database profile cannot store a password.",
+                    nameof(secret));
             }
 
             return;
         }
 
-        var switchingToPassword = existing is not null && existing.AuthenticationKind != DatabaseAuthenticationKind.Password;
+        var switchingToPassword = existing is not null &&
+            existing.AuthenticationKind != DatabaseAuthenticationKind.Password;
         if (existing is null || switchingToPassword || replaceSecret)
         {
             if (string.IsNullOrEmpty(secret))
@@ -467,6 +505,7 @@ public sealed class DatabaseProfileService : IDatabaseProfileService
         }
         catch
         {
+            // Preserve the original persistence/secret-store failure.
         }
     }
 
@@ -478,6 +517,7 @@ public sealed class DatabaseProfileService : IDatabaseProfileService
         }
         catch
         {
+            // Preserve the original persistence/secret-store failure.
         }
     }
 }
