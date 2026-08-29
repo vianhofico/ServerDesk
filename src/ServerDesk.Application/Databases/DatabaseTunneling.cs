@@ -1,5 +1,4 @@
 using System.Net;
-using System.Net.Sockets;
 using ServerDesk.Application.PortForwarding;
 using ServerDesk.Application.Profiles;
 using ServerDesk.Domain.Errors;
@@ -82,7 +81,15 @@ public sealed class DatabaseTunnelService : IDatabaseTunnelService
         }
         catch
         {
-            await session.DisposeAsync().ConfigureAwait(false);
+            try
+            {
+                await session.DisposeAsync().ConfigureAwait(false);
+            }
+            catch
+            {
+                // Preserve the original tunnel-start failure.
+            }
+
             throw;
         }
     }
@@ -107,7 +114,7 @@ public sealed class DatabaseTunnelService : IDatabaseTunnelService
                 return;
             }
 
-            Exception? stopError = null;
+            Exception? cleanupError = null;
             try
             {
                 if (session.State is PortForwardSessionState.Active or
@@ -119,16 +126,21 @@ public sealed class DatabaseTunnelService : IDatabaseTunnelService
             }
             catch (Exception exception)
             {
-                stopError = exception;
+                cleanupError = exception;
             }
-            finally
+
+            try
             {
                 await session.DisposeAsync().ConfigureAwait(false);
             }
-
-            if (stopError is not null)
+            catch (Exception exception) when (cleanupError is null)
             {
-                throw stopError;
+                cleanupError = exception;
+            }
+
+            if (cleanupError is not null)
+            {
+                throw cleanupError;
             }
         }
     }
@@ -175,13 +187,23 @@ public sealed class DatabaseTunnelConnectivityService : IDatabaseTunnelConnectiv
 {
     private readonly IDatabaseTunnelService _tunnelService;
     private readonly DatabaseTunnelTestOptions _options;
+    private readonly IDatabaseEngineConnectivityProbe _engineProbe;
 
     public DatabaseTunnelConnectivityService(
         IDatabaseTunnelService tunnelService,
         DatabaseTunnelTestOptions options)
+        : this(tunnelService, options, new DatabaseEngineConnectivityProbe())
+    {
+    }
+
+    public DatabaseTunnelConnectivityService(
+        IDatabaseTunnelService tunnelService,
+        DatabaseTunnelTestOptions options,
+        IDatabaseEngineConnectivityProbe engineProbe)
     {
         _tunnelService = tunnelService ?? throw new ArgumentNullException(nameof(tunnelService));
         _options = options ?? throw new ArgumentNullException(nameof(options));
+        _engineProbe = engineProbe ?? throw new ArgumentNullException(nameof(engineProbe));
         _options.Validate();
     }
 
@@ -201,35 +223,23 @@ public sealed class DatabaseTunnelConnectivityService : IDatabaseTunnelConnectiv
                     "Database tunnel did not bind to a loopback address.");
             }
 
-            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            timeout.CancelAfter(_options.ConnectTimeout);
-            using var client = new TcpClient(AddressFamily.InterNetwork);
-            try
+            var probe = await _engineProbe.ProbeAsync(
+                    profile.Engine,
+                    localAddress,
+                    endpoint.LocalPort,
+                    _options.ConnectTimeout,
+                    cancellationToken)
+                .ConfigureAwait(false);
+            if (!probe.IsSuccess)
             {
-                await client.ConnectAsync(localAddress, endpoint.LocalPort, timeout.Token).ConfigureAwait(false);
-            }
-            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
-            {
-                return Failure(
-                    RemoteErrorCode.CommandTimeout,
-                    "The loopback database tunnel opened, but TCP reachability timed out.");
-            }
-            catch (SocketException)
-            {
-                return Failure(
-                    RemoteErrorCode.ConnectionFailed,
-                    "The loopback database tunnel opened, but the remote database TCP endpoint was not reachable.");
+                return new DatabaseTunnelTestResult(false, null, probe.Message, probe.Error);
             }
 
-            return client.Connected
-                ? new DatabaseTunnelTestResult(
-                    true,
-                    endpoint,
-                    "SSH tunnel TCP reachability succeeded. Database credentials are not tested in M6.2.",
-                    null)
-                : Failure(
-                    RemoteErrorCode.ConnectionFailed,
-                    "The loopback database tunnel did not establish TCP reachability.");
+            return new DatabaseTunnelTestResult(
+                true,
+                endpoint,
+                $"{probe.Message} Database credentials are not tested in M6.2.",
+                null);
         }
         catch (OperationCanceledException)
         {
