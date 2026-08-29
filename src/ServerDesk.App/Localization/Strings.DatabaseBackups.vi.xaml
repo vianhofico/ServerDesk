@@ -25,6 +25,7 @@
     <sys:String x:Key="Loc.DatabaseBackups.Loading">Đang tải lịch sử backup đã xác minh…</sys:String>
     <sys:String x:Key="Loc.DatabaseBackups.Creating">Đang tạo đúng database backup và thu thập bằng chứng xác minh…</sys:String>
     <sys:String x:Key="Loc.DatabaseBackups.Success">Backup đã xác minh thành công: {0}</sys:String>
+    <sys:String x:Key="Loc.DatabaseBackups.SuccessHistoryFailed">Backup đã xác minh thành công tại {0}, nhưng không ghi được lịch sử xác minh cục bộ. Không chạy lại backup chỉ để sửa lịch sử.</sys:String>
     <sys:String x:Key="Loc.DatabaseBackups.Unsupported">Chế độ backup này chưa được chứng nhận. Không thử fallback không an toàn.</sys:String>
     <sys:String x:Key="Loc.DatabaseBackups.Ambiguous">Trạng thái hoàn tất backup không xác định. ServerDesk sẽ không tự động thử lại. Hãy kiểm tra đúng thư mục đích trước khi quyết định retry.</sys:String>
     <sys:String x:Key="Loc.DatabaseBackups.Disconnected">Hãy kết nối server trước khi tạo database backup.</sys:String>
