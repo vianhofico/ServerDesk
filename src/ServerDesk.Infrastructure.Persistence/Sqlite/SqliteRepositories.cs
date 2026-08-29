@@ -240,8 +240,27 @@ public sealed class SqliteOperationAudit : IOperationAudit, IOperationAuditReade
 
         if (query.ServerProfileId is { } serverProfileId)
         {
-            clauses.Add("substr(target, 1, length(@server_prefix)) = @server_prefix");
+            clauses.Add(
+                """
+                (
+                    substr(target, 1, length(@server_prefix)) = @server_prefix
+                    OR EXISTS (
+                        SELECT 1
+                        FROM server_profiles AS profile
+                        WHERE profile.id = @server_id
+                          AND (
+                              target = profile.username || '@' || profile.host || ':' || CAST(profile.port AS TEXT)
+                              OR substr(
+                                  target,
+                                  1,
+                                  length(profile.username || '@' || profile.host || ':' || CAST(profile.port AS TEXT) || ' ')) =
+                                  profile.username || '@' || profile.host || ':' || CAST(profile.port AS TEXT) || ' '
+                          )
+                    )
+                )
+                """);
             command.Parameters.AddWithValue("@server_prefix", $"server:{serverProfileId:D} ");
+            command.Parameters.AddWithValue("@server_id", serverProfileId.ToString("D"));
         }
 
         if (!string.IsNullOrWhiteSpace(query.Category))
