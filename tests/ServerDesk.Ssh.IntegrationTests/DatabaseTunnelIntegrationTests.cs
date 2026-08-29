@@ -106,13 +106,13 @@ public sealed class DatabaseTunnelIntegrationTests
         switch (engine)
         {
             case DatabaseEngineKind.PostgreSql:
-            {
-                var request = new byte[8];
-                await ReadExactlyAsync(stream, request, cancellationToken);
-                Assert.Equal(new byte[] { 0, 0, 0, 8, 4, 210, 22, 47 }, request);
-                await stream.WriteAsync(new byte[] { (byte)'N' }, cancellationToken);
-                break;
-            }
+                {
+                    var request = new byte[8];
+                    await ReadExactlyAsync(stream, request, cancellationToken);
+                    Assert.Equal(new byte[] { 0, 0, 0, 8, 4, 210, 22, 47 }, request);
+                    await stream.WriteAsync(new byte[] { (byte)'N' }, cancellationToken);
+                    break;
+                }
 
             case DatabaseEngineKind.MySql:
             case DatabaseEngineKind.MariaDb:
@@ -120,15 +120,15 @@ public sealed class DatabaseTunnelIntegrationTests
                 break;
 
             case DatabaseEngineKind.Redis:
-            {
-                var request = new byte[14];
-                await ReadExactlyAsync(stream, request, cancellationToken);
-                Assert.Equal("*1\r\n$4\r\nPING\r\n", Encoding.ASCII.GetString(request));
-                await stream.WriteAsync(
-                    Encoding.ASCII.GetBytes("-NOAUTH Authentication required.\r\n"),
-                    cancellationToken);
-                break;
-            }
+                {
+                    var request = new byte[14];
+                    await ReadExactlyAsync(stream, request, cancellationToken);
+                    Assert.Equal("*1\r\n$4\r\nPING\r\n", Encoding.ASCII.GetString(request));
+                    await stream.WriteAsync(
+                        Encoding.ASCII.GetBytes("-NOAUTH Authentication required.\r\n"),
+                        cancellationToken);
+                    break;
+                }
 
             default:
                 throw new ArgumentOutOfRangeException(nameof(engine));
