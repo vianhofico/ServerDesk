@@ -25,6 +25,7 @@
     <sys:String x:Key="Loc.DatabaseBackups.Loading">Loading verified backup history…</sys:String>
     <sys:String x:Key="Loc.DatabaseBackups.Creating">Creating the exact database backup and collecting verification evidence…</sys:String>
     <sys:String x:Key="Loc.DatabaseBackups.Success">Backup verified successfully: {0}</sys:String>
+    <sys:String x:Key="Loc.DatabaseBackups.SuccessHistoryFailed">Backup verified successfully at {0}, but local verified-history persistence failed. Do not repeat the backup solely to repair history.</sys:String>
     <sys:String x:Key="Loc.DatabaseBackups.Unsupported">This backup mode is not certified. No unsafe fallback was attempted.</sys:String>
     <sys:String x:Key="Loc.DatabaseBackups.Ambiguous">Backup completion is ambiguous. ServerDesk will not retry automatically. Inspect the exact destination before deciding whether to retry.</sys:String>
     <sys:String x:Key="Loc.DatabaseBackups.Disconnected">Connect to this server before creating a database backup.</sys:String>
