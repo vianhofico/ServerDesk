@@ -1,0 +1,6 @@
+{
+  "adapter": "firewalld",
+  "version": "2.3.0",
+  "state": "running",
+  "zones": "public (active)\n  target: default\n  interfaces: eth0\n  sources: 10.40.0.0/16\n  services: ssh https\n  ports: 8080/tcp 5353/udp\n  protocols:\n  forward: yes\n\ntrusted\n  target: ACCEPT\n  interfaces:\n  sources: 192.0.2.0/24\n  services:\n  ports: 9000/tcp"
+}
