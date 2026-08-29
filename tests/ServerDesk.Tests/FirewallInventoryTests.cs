@@ -128,6 +128,7 @@ public sealed class FirewallInventoryTests
         {
             UfwStatus = "Status: active\n[ 1] 22/tcp                     ALLOW IN    Anywhere",
             FirewalldState = "running",
+            FirewalldStateExitCode = 0,
             FirewalldZones = "public (active)\n  services: ssh\n  ports:\n  sources:",
         };
         var service = CreateService(state);
