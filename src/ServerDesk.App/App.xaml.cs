@@ -6,6 +6,7 @@ using ServerDesk.Application.Abstractions;
 using ServerDesk.Application.Audit;
 using ServerDesk.Application.Capabilities;
 using ServerDesk.Application.Dashboard;
+using ServerDesk.Application.Databases;
 using ServerDesk.Application.Docker;
 using ServerDesk.Application.EnvironmentFiles;
 using ServerDesk.Application.Firewall;
@@ -162,6 +163,8 @@ public partial class App : System.Windows.Application
         services.AddSingleton<IServerCapabilityService, ServerCapabilityService>();
         services.AddSingleton(ServerDashboardOptions.Default);
         services.AddSingleton<IServerDashboardService, ServerDashboardService>();
+        services.AddSingleton(DatabaseRuntimeOptions.Default);
+        services.AddSingleton<IDatabaseRuntimeService, DatabaseRuntimeService>();
         services.AddSingleton<ServerProcessService>();
         services.AddSingleton<IServerProcessService>(provider =>
             new AuditedServerProcessService(
