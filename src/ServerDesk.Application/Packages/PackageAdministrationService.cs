@@ -21,11 +21,9 @@ public sealed partial class PackageAdministrationService : IPackageManager
             ["LANG"] = "C",
         };
 
-    private static readonly Regex SafePackageName = SafePackageNameRegex();
     private readonly IRemoteCommandExecutorFactory _commandFactory;
     private readonly PackageAdministrationOptions _options;
-    private readonly IReadOnlyDictionary<PackageManagerKind, IPackageAdapter> _adapters;
-    private readonly ConcurrentDictionary<Guid, string> _capabilities = new();
+    private readonly ConcurrentDictionary<Guid, string> _previewCapabilities = new();
 
     public PackageAdministrationService(
         IRemoteCommandExecutorFactory commandFactory,
@@ -34,11 +32,6 @@ public sealed partial class PackageAdministrationService : IPackageManager
         _commandFactory = commandFactory ?? throw new ArgumentNullException(nameof(commandFactory));
         _options = options ?? throw new ArgumentNullException(nameof(options));
         _options.Validate();
-        _adapters = new Dictionary<PackageManagerKind, IPackageAdapter>
-        {
-            [PackageManagerKind.Apt] = new AptPackageAdapter(_options),
-            [PackageManagerKind.Dnf] = new DnfPackageAdapter(_options),
-        };
     }
 
     public async Task<PackageInventoryResult> InspectAsync(
@@ -47,28 +40,41 @@ public sealed partial class PackageAdministrationService : IPackageManager
     {
         ArgumentNullException.ThrowIfNull(profile);
         await using var executor = _commandFactory.Create(profile);
-        var observations = new List<PackageManagerObservation>();
-        foreach (var adapter in _adapters.Values)
-        {
-            observations.Add(await adapter.ProbeAsync(executor, cancellationToken).ConfigureAwait(false));
-        }
 
+        var apt = await ProbeAsync(
+            executor,
+            PackageManagerKind.Apt,
+            "apt-get",
+            ["--version"],
+            "dpkg-query",
+            ["--version"],
+            cancellationToken).ConfigureAwait(false);
+        var dnf = await ProbeAsync(
+            executor,
+            PackageManagerKind.Dnf,
+            "dnf",
+            ["--version"],
+            "rpm",
+            ["--version"],
+            cancellationToken).ConfigureAwait(false);
+        var observations = new[] { apt, dnf };
         var available = observations.Where(IsAvailable).ToArray();
+
         if (available.Length > 1)
         {
-            return SnapshotResult(
+            return Snapshot(
                 PackageManagerRuntimeStatus.AdapterConflict,
                 null,
                 [],
                 observations,
-                "APT and DNF capability pairs are both available. ServerDesk will not guess package-manager ownership.");
+                "Both complete APT and DNF capability pairs are available. ServerDesk will not guess which package manager owns this host.");
         }
 
         if (available.Length == 0)
         {
             if (observations.Any(item => item.PermissionDenied))
             {
-                return SnapshotResult(
+                return Snapshot(
                     PackageManagerRuntimeStatus.PermissionDenied,
                     null,
                     [],
@@ -76,7 +82,7 @@ public sealed partial class PackageAdministrationService : IPackageManager
                     "Package-manager capability probing was denied by the remote account or execution policy.");
             }
 
-            return SnapshotResult(
+            return Snapshot(
                 PackageManagerRuntimeStatus.Unavailable,
                 null,
                 [],
@@ -84,20 +90,19 @@ public sealed partial class PackageAdministrationService : IPackageManager
                 "No complete APT (apt-get + dpkg-query) or DNF (dnf + rpm) capability pair is available.");
         }
 
-        var selected = available[0].Manager;
-        var inventory = await _adapters[selected]
-            .InspectAsync(executor, cancellationToken)
-            .ConfigureAwait(false);
+        var manager = available[0].Manager;
+        var inventory = manager == PackageManagerKind.Apt
+            ? await InspectAptAsync(executor, cancellationToken).ConfigureAwait(false)
+            : await InspectDnfAsync(executor, cancellationToken).ConfigureAwait(false);
         if (inventory.Error is not null)
         {
-            var status = inventory.Error.Code == RemoteErrorCode.PermissionDenied ||
-                inventory.Error.Code == RemoteErrorCode.SudoRequired
+            var status = inventory.Error.Code is RemoteErrorCode.PermissionDenied or RemoteErrorCode.SudoRequired
                 ? PackageManagerRuntimeStatus.PermissionDenied
                 : PackageManagerRuntimeStatus.Error;
             return new PackageInventoryResult(
                 new PackageInventorySnapshot(
                     status,
-                    selected,
+                    manager,
                     [],
                     observations,
                     inventory.Error.Message,
@@ -105,9 +110,9 @@ public sealed partial class PackageAdministrationService : IPackageManager
                 inventory.Error);
         }
 
-        return SnapshotResult(
+        return Snapshot(
             PackageManagerRuntimeStatus.Available,
-            selected,
+            manager,
             inventory.Packages,
             observations,
             inventory.Detail);
@@ -119,10 +124,11 @@ public sealed partial class PackageAdministrationService : IPackageManager
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(profile);
+
         PackageMutationRequest normalized;
         try
         {
-            normalized = NormalizeRequest(request);
+            normalized = NormalizeRequestCore(request, _options.MaximumPackagesPerMutation);
         }
         catch (ArgumentException exception)
         {
@@ -148,29 +154,33 @@ public sealed partial class PackageAdministrationService : IPackageManager
         }
 
         await using var executor = _commandFactory.Create(profile);
-        var adapter = _adapters[normalized.Manager];
-        var bound = normalized.Kind == PackageMutationKind.RefreshMetadata
-            ? new AdapterPackageResolution([], null)
-            : await adapter.ResolveAsync(executor, normalized.PackageNames, cancellationToken).ConfigureAwait(false);
-        if (bound.Error is not null)
+        IReadOnlyList<PackageInfo> bound = [];
+        if (normalized.Kind != PackageMutationKind.RefreshMetadata)
         {
-            return new PackageMutationPreviewResult(null, bound.Error);
+            var resolved = normalized.Manager == PackageManagerKind.Apt
+                ? await ResolveAptAsync(executor, normalized.PackageNames, cancellationToken).ConfigureAwait(false)
+                : await ResolveDnfAsync(executor, before, normalized.PackageNames, cancellationToken).ConfigureAwait(false);
+            if (resolved.Error is not null)
+            {
+                return new PackageMutationPreviewResult(null, resolved.Error);
+            }
+
+            bound = resolved.Packages;
+            var precondition = ValidatePreconditions(normalized, bound);
+            if (precondition is not null)
+            {
+                return new PackageMutationPreviewResult(null, precondition);
+            }
         }
 
-        var precondition = ValidateMutationPreconditions(normalized, bound.Packages);
-        if (precondition is not null)
-        {
-            return new PackageMutationPreviewResult(null, precondition);
-        }
-
-        var command = adapter.BuildCommand(normalized);
+        var command = BuildCommand(normalized, _options.PrivilegeExecutable);
         var planId = Guid.NewGuid();
         var provisional = new PackageMutationPreview(
             planId,
             string.Empty,
             normalized,
             StateFingerprint(before),
-            bound.Packages,
+            bound,
             command.Executable,
             command.Arguments,
             command.Risk,
@@ -178,7 +188,7 @@ public sealed partial class PackageAdministrationService : IPackageManager
             Display(command.Executable, command.Arguments));
         var fingerprint = PreviewFingerprint(provisional);
         var preview = provisional with { Fingerprint = fingerprint };
-        _capabilities[planId] = fingerprint;
+        _previewCapabilities[planId] = fingerprint;
         return new PackageMutationPreviewResult(preview, null);
     }
 
@@ -189,10 +199,11 @@ public sealed partial class PackageAdministrationService : IPackageManager
     {
         ArgumentNullException.ThrowIfNull(profile);
         ArgumentNullException.ThrowIfNull(preview);
+
         var actualFingerprint = PreviewFingerprint(preview with { Fingerprint = string.Empty });
-        if (!_capabilities.TryRemove(preview.PlanId, out var expectedFingerprint) ||
-            !FixedTimeEquals(expectedFingerprint, preview.Fingerprint) ||
-            !FixedTimeEquals(actualFingerprint, preview.Fingerprint))
+        if (!_previewCapabilities.TryRemove(preview.PlanId, out var expectedFingerprint) ||
+            !FixedTimeEquals(preview.Fingerprint, expectedFingerprint) ||
+            !FixedTimeEquals(preview.Fingerprint, actualFingerprint))
         {
             return Failure(
                 RemoteErrorCode.PathConflict,
@@ -217,21 +228,18 @@ public sealed partial class PackageAdministrationService : IPackageManager
         }
 
         await using var executor = _commandFactory.Create(profile);
-        var adapter = _adapters[preview.Request.Manager];
         if (preview.Request.Kind != PackageMutationKind.RefreshMetadata)
         {
-            var rebound = await adapter.ResolveAsync(
-                    executor,
-                    preview.Request.PackageNames,
-                    cancellationToken)
-                .ConfigureAwait(false);
-            if (rebound.Error is not null)
+            var resolved = preview.Request.Manager == PackageManagerKind.Apt
+                ? await ResolveAptAsync(executor, preview.Request.PackageNames, cancellationToken).ConfigureAwait(false)
+                : await ResolveDnfAsync(executor, before, preview.Request.PackageNames, cancellationToken).ConfigureAwait(false);
+            if (resolved.Error is not null)
             {
-                return Failure(rebound.Error);
+                return Failure(resolved.Error);
             }
 
             if (!string.Equals(
-                    PackageSetFingerprint(rebound.Packages),
+                    PackageSetFingerprint(resolved.Packages),
                     PackageSetFingerprint(preview.BoundPackages),
                     StringComparison.Ordinal))
             {
@@ -241,14 +249,12 @@ public sealed partial class PackageAdministrationService : IPackageManager
             }
         }
 
-        var command = adapter.BuildCommand(preview.Request);
+        var command = BuildCommand(preview.Request, _options.PrivilegeExecutable);
         if (!string.Equals(command.Executable, preview.Executable, StringComparison.Ordinal) ||
             !command.Arguments.SequenceEqual(preview.Arguments, StringComparer.Ordinal) ||
             command.Risk != preview.Risk)
         {
-            return Failure(
-                RemoteErrorCode.PathConflict,
-                "The package command no longer matches the exact typed Preview.");
+            return Failure(RemoteErrorCode.PathConflict, "The package command no longer matches the exact typed Preview.");
         }
 
         RemoteExecutionResult execution;
@@ -266,33 +272,26 @@ public sealed partial class PackageAdministrationService : IPackageManager
         }
         catch (OperationCanceledException)
         {
-            return await AmbiguousAfterDispatchAsync(
-                profile,
-                preview,
-                "Package execution was cancelled after dispatch began. Completion is unknown; do not retry until package state is refreshed.")
-                .ConfigureAwait(false);
+            return Ambiguous(
+                "Package execution was cancelled after dispatch began. Completion is unknown; refresh package state before any retry.");
         }
 
         if (execution.Error is not null)
         {
-            return IsAmbiguous(execution.Error.Code)
-                ? await AmbiguousAfterDispatchAsync(
-                        profile,
-                        preview,
-                        "ServerDesk lost a reliable completion signal after package mutation dispatch. Refresh package state before any retry.",
-                        execution.Error.TechnicalDetails)
-                    .ConfigureAwait(false)
-                : await HandleDeterministicFailureAsync(profile, preview, before, execution.Error)
-                    .ConfigureAwait(false);
+            if (IsAmbiguous(execution.Error.Code))
+            {
+                return Ambiguous(
+                    "ServerDesk lost a reliable completion signal after package mutation dispatch. Refresh package state before any retry.",
+                    execution.Error.TechnicalDetails);
+            }
+
+            return await VerifyDeterministicFailureAsync(profile, before, execution.Error).ConfigureAwait(false);
         }
 
         if (OutputTooLarge(execution.Command!))
         {
-            return await AmbiguousAfterDispatchAsync(
-                    profile,
-                    preview,
-                    "Package command output exceeded the configured safety bound after dispatch. Completion is treated as ambiguous.")
-                .ConfigureAwait(false);
+            return Ambiguous(
+                "Package command output exceeded the configured safety bound after dispatch. Completion is treated as ambiguous.");
         }
 
         if (execution.Command!.ExitCode != 0)
@@ -301,69 +300,25 @@ public sealed partial class PackageAdministrationService : IPackageManager
                 execution.Command.StandardError,
                 execution.Command.StandardOutput,
                 "Package mutation command failed.");
-            return await HandleDeterministicFailureAsync(
+            return await VerifyDeterministicFailureAsync(
                     profile,
-                    preview,
                     before,
                     new RemoteError(ClassifyFailure(detail), detail))
                 .ConfigureAwait(false);
         }
 
-        return await VerifySuccessAsync(profile, preview, before, cancellationToken).ConfigureAwait(false);
+        return await VerifySuccessAsync(profile, preview, cancellationToken).ConfigureAwait(false);
     }
 
-    internal static PackageMutationRequest NormalizeRequest(PackageMutationRequest request)
-    {
-        ArgumentNullException.ThrowIfNull(request);
-        var names = (request.PackageNames ?? [])
-            .Select(item => item?.Trim() ?? string.Empty)
-            .ToArray();
-        if (request.Kind == PackageMutationKind.RefreshMetadata)
-        {
-            if (names.Length != 0)
-            {
-                throw new ArgumentException("Metadata refresh is manager-scoped and must not carry package identities.", nameof(request));
-            }
-
-            return request with { PackageNames = [] };
-        }
-
-        if (names.Length == 0)
-        {
-            throw new ArgumentException("Install, upgrade and remove require explicit selected package identities.", nameof(request));
-        }
-
-        if (names.Length > 256)
-        {
-            throw new ArgumentException("Too many package identities were requested in one guarded mutation.", nameof(request));
-        }
-
-        foreach (var name in names)
-        {
-            if (!SafePackageName.IsMatch(name) || name.StartsWith('-'))
-            {
-                throw new ArgumentException($"Unsafe or unsupported package identity '{name}'.", nameof(request));
-            }
-        }
-
-        var normalized = names
-            .Distinct(StringComparer.Ordinal)
-            .OrderBy(item => item, StringComparer.Ordinal)
-            .ToArray();
-        return request with { PackageNames = normalized };
-    }
+    internal static PackageMutationRequest NormalizeRequest(PackageMutationRequest request) =>
+        NormalizeRequestCore(request, 256);
 
     internal static IReadOnlyList<PackageInfo> ParseDpkgInstalled(string output)
     {
         var packages = new List<PackageInfo>();
-        foreach (var raw in NormalizeLines(output))
+        foreach (var line in NormalizeLines(output).Where(item => item.Length > 0))
         {
-            if (string.IsNullOrWhiteSpace(raw))
-            {
-                continue;
-            }
-
-            var parts = raw.Split('\t');
+            var parts = line.Split('\t');
             if (parts.Length != 3 || string.IsNullOrWhiteSpace(parts[0]) || string.IsNullOrWhiteSpace(parts[1]))
             {
                 throw new FormatException("dpkg-query returned an unrecognized installed-package row.");
@@ -392,29 +347,33 @@ public sealed partial class PackageAdministrationService : IPackageManager
                 continue;
             }
 
-            var nameEnd = line.IndexOf(' ', 5);
-            var open = line.IndexOf('(', StringComparison.Ordinal);
+            var tokens = line.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            if (tokens.Length < 3)
+            {
+                continue;
+            }
+
+            var name = tokens[1];
+            var open = line.IndexOf('(');
             var close = line.LastIndexOf(')');
-            if (nameEnd <= 5 || open <= nameEnd || close <= open)
+            if (open < 0 || close <= open)
             {
                 continue;
             }
 
-            var name = line[5..nameEnd].Trim();
             var inside = line[(open + 1)..close].Trim();
-            var insideParts = inside.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-            if (insideParts.Length == 0)
+            var fields = inside.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            if (fields.Length == 0)
             {
                 continue;
             }
 
-            var candidate = insideParts[0];
-            var repository = insideParts.Length > 1
-                ? string.Join(' ', insideParts.Skip(1).TakeWhile(item => !item.StartsWith('[', StringComparison.Ordinal)))
-                : string.Empty;
+            var repository = fields.Length > 1
+                ? string.Join(' ', fields.Skip(1).TakeWhile(item => !item.StartsWith('[', StringComparison.Ordinal)))
+                : null;
             updates.Add(new PackageUpdateRow(
                 name,
-                candidate,
+                fields[0],
                 NullIfBlank(repository),
                 IsSecurityRepository(repository)
                     ? PackageUpdateClassification.Security
@@ -427,14 +386,9 @@ public sealed partial class PackageAdministrationService : IPackageManager
     internal static IReadOnlyList<PackageInfo> ParseRpmInstalled(string output)
     {
         var packages = new List<PackageInfo>();
-        foreach (var raw in NormalizeLines(output))
+        foreach (var line in NormalizeLines(output).Where(item => item.Length > 0))
         {
-            if (string.IsNullOrWhiteSpace(raw))
-            {
-                continue;
-            }
-
-            var parts = raw.Split('\t');
+            var parts = line.Split('\t');
             if (parts.Length != 3 || string.IsNullOrWhiteSpace(parts[0]) || string.IsNullOrWhiteSpace(parts[1]))
             {
                 throw new FormatException("rpm returned an unrecognized installed-package row.");
@@ -466,23 +420,22 @@ public sealed partial class PackageAdministrationService : IPackageManager
                 continue;
             }
 
-            var parts = line.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-            if (parts.Length < 3 || !parts[0].Contains('.', StringComparison.Ordinal))
+            var fields = line.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            if (fields.Length < 3)
             {
                 continue;
             }
 
-            var dot = parts[0].LastIndexOf('.');
-            if (dot <= 0 || dot == parts[0].Length - 1)
+            var dot = fields[0].LastIndexOf('.');
+            if (dot <= 0 || dot == fields[0].Length - 1)
             {
                 continue;
             }
 
-            var name = parts[0][..dot];
-            var repository = parts[2];
+            var repository = fields[2];
             updates.Add(new PackageUpdateRow(
-                name,
-                parts[1],
+                fields[0][..dot],
+                fields[1],
                 repository,
                 IsSecurityRepository(repository)
                     ? PackageUpdateClassification.Security
@@ -492,48 +445,327 @@ public sealed partial class PackageAdministrationService : IPackageManager
         return updates;
     }
 
+    internal static PackageCommandPlan BuildCommandForTest(
+        PackageMutationRequest request,
+        string privilegeExecutable = "sudo") =>
+        BuildCommand(NormalizeRequest(request), privilegeExecutable);
+
+    private async Task<InventoryRead> InspectAptAsync(
+        IRemoteCommandExecutor executor,
+        CancellationToken cancellationToken)
+    {
+        var installed = await ReadAsync(
+            executor,
+            "dpkg-query",
+            ["-W", "-f=${binary:Package}\\t${Version}\\t${Architecture}\\n"],
+            cancellationToken).ConfigureAwait(false);
+        if (installed.Error is not null)
+        {
+            return new InventoryRead([], installed.Error.Message, installed.Error);
+        }
+
+        IReadOnlyList<PackageInfo> packages;
+        try
+        {
+            packages = ParseDpkgInstalled(installed.Output!);
+        }
+        catch (FormatException exception)
+        {
+            var error = new RemoteError(RemoteErrorCode.ParseFailed, exception.Message);
+            return new InventoryRead([], error.Message, error);
+        }
+
+        var updates = await ReadAsync(
+            executor,
+            "apt-get",
+            ["-s", "-o", "Debug::NoLocking=1", "upgrade"],
+            cancellationToken,
+            acceptedExitCodes: [0]).ConfigureAwait(false);
+        if (updates.Error is null)
+        {
+            packages = MergeInstalledAndUpdates(packages, ParseAptUpgradeSimulation(updates.Output!));
+            return new InventoryRead(packages, "APT installed and cached update inventory loaded.", null);
+        }
+
+        return new InventoryRead(
+            packages,
+            "APT installed inventory loaded; cached update metadata is unavailable or stale. Explicit Refresh metadata is required before relying on update candidates.",
+            null);
+    }
+
+    private async Task<InventoryRead> InspectDnfAsync(
+        IRemoteCommandExecutor executor,
+        CancellationToken cancellationToken)
+    {
+        var installed = await ReadAsync(
+            executor,
+            "rpm",
+            ["-qa", "--qf", "%{NAME}\\t%{VERSION}-%{RELEASE}\\t%{ARCH}\\n"],
+            cancellationToken).ConfigureAwait(false);
+        if (installed.Error is not null)
+        {
+            return new InventoryRead([], installed.Error.Message, installed.Error);
+        }
+
+        IReadOnlyList<PackageInfo> packages;
+        try
+        {
+            packages = ParseRpmInstalled(installed.Output!);
+        }
+        catch (FormatException exception)
+        {
+            var error = new RemoteError(RemoteErrorCode.ParseFailed, exception.Message);
+            return new InventoryRead([], error.Message, error);
+        }
+
+        var updates = await ReadAsync(
+            executor,
+            "dnf",
+            ["-q", "--cacheonly", "check-update"],
+            cancellationToken,
+            acceptedExitCodes: [0, 100]).ConfigureAwait(false);
+        if (updates.Error is null)
+        {
+            packages = MergeInstalledAndUpdates(packages, ParseDnfCheckUpdate(updates.Output!));
+            return new InventoryRead(packages, "DNF installed and cached update inventory loaded.", null);
+        }
+
+        return new InventoryRead(
+            packages,
+            "DNF installed inventory loaded; cached update metadata is unavailable. Explicit Refresh metadata is required before relying on update candidates.",
+            null);
+    }
+
+    private async Task<PackageResolution> ResolveAptAsync(
+        IRemoteCommandExecutor executor,
+        IReadOnlyList<string> names,
+        CancellationToken cancellationToken)
+    {
+        var result = await ReadAsync(
+            executor,
+            "apt-cache",
+            ["policy", .. names],
+            cancellationToken).ConfigureAwait(false);
+        if (result.Error is not null)
+        {
+            return new PackageResolution([], result.Error);
+        }
+
+        var expected = names.ToHashSet(StringComparer.Ordinal);
+        var packages = new List<PackageInfo>();
+        string? current = null;
+        string? installed = null;
+        string? candidate = null;
+
+        void Commit()
+        {
+            if (current is null || !expected.Contains(current))
+            {
+                return;
+            }
+
+            packages.Add(new PackageInfo(
+                current,
+                installed is "(none)" ? null : NullIfBlank(installed),
+                candidate is "(none)" ? null : NullIfBlank(candidate),
+                null,
+                null,
+                PackageUpdateClassification.Unknown));
+        }
+
+        foreach (var raw in NormalizeLines(result.Output!))
+        {
+            if (raw.Length > 0 && !char.IsWhiteSpace(raw[0]) && raw.EndsWith(':'))
+            {
+                Commit();
+                current = raw[..^1].Trim();
+                installed = null;
+                candidate = null;
+                continue;
+            }
+
+            var line = raw.Trim();
+            if (line.StartsWith("Installed:", StringComparison.Ordinal))
+            {
+                installed = line["Installed:".Length..].Trim();
+            }
+            else if (line.StartsWith("Candidate:", StringComparison.Ordinal))
+            {
+                candidate = line["Candidate:".Length..].Trim();
+            }
+        }
+
+        Commit();
+        return packages.Count == names.Count
+            ? new PackageResolution(packages, null)
+            : new PackageResolution(
+                packages,
+                new RemoteError(RemoteErrorCode.PathNotFound, "One or more selected APT package identities could not be resolved exactly."));
+    }
+
+    private async Task<PackageResolution> ResolveDnfAsync(
+        IRemoteCommandExecutor executor,
+        PackageInventorySnapshot inventory,
+        IReadOnlyList<string> names,
+        CancellationToken cancellationToken)
+    {
+        var resolved = inventory.Packages
+            .Where(item => names.Contains(item.Name, StringComparer.Ordinal))
+            .ToDictionary(item => item.Name, StringComparer.Ordinal);
+        var missing = names.Where(name => !resolved.ContainsKey(name)).ToArray();
+        if (missing.Length > 0)
+        {
+            var available = await ReadAsync(
+                executor,
+                "dnf",
+                ["-q", "--cacheonly", "list", "--available", .. missing],
+                cancellationToken).ConfigureAwait(false);
+            if (available.Error is null)
+            {
+                foreach (var package in ParseDnfAvailable(available.Output!, missing))
+                {
+                    resolved[package.Name] = package;
+                }
+            }
+        }
+
+        var packages = names.Where(resolved.ContainsKey).Select(name => resolved[name]).ToArray();
+        return packages.Length == names.Count
+            ? new PackageResolution(packages, null)
+            : new PackageResolution(
+                packages,
+                new RemoteError(RemoteErrorCode.PathNotFound, "One or more selected DNF package identities are unavailable in installed or cached repository metadata."));
+    }
+
+    private async Task<PackageManagerObservation> ProbeAsync(
+        IRemoteCommandExecutor executor,
+        PackageManagerKind manager,
+        string managerExecutable,
+        IReadOnlyList<string> managerArguments,
+        string databaseExecutable,
+        IReadOnlyList<string> databaseArguments,
+        CancellationToken cancellationToken)
+    {
+        var first = await ProbeExecutableAsync(executor, managerExecutable, managerArguments, cancellationToken).ConfigureAwait(false);
+        var second = await ProbeExecutableAsync(executor, databaseExecutable, databaseArguments, cancellationToken).ConfigureAwait(false);
+        return new PackageManagerObservation(
+            manager,
+            first.Available,
+            second.Available,
+            first.PermissionDenied || second.PermissionDenied,
+            first.Version,
+            $"manager={first.Detail}; database={second.Detail}");
+    }
+
+    private async Task<ProbeState> ProbeExecutableAsync(
+        IRemoteCommandExecutor executor,
+        string executable,
+        IReadOnlyList<string> arguments,
+        CancellationToken cancellationToken)
+    {
+        var result = await executor.ExecuteAsync(
+            new RemoteCommandSpec(executable, arguments, _options.CommandTimeout, OperationRisk.ReadOnly, StableEnvironment),
+            cancellationToken).ConfigureAwait(false);
+        if (result.Error is not null)
+        {
+            var denied = result.Error.Code is RemoteErrorCode.PermissionDenied or RemoteErrorCode.SudoRequired;
+            return new ProbeState(false, denied, null, result.Error.Message);
+        }
+
+        if (OutputTooLarge(result.Command!))
+        {
+            return new ProbeState(false, false, null, "probe output exceeded safety bound");
+        }
+
+        if (result.Command!.ExitCode == 0)
+        {
+            var version = FirstUseful(result.Command.StandardOutput, result.Command.StandardError, string.Empty)
+                .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .FirstOrDefault();
+            return new ProbeState(true, false, NullIfBlank(version), "available");
+        }
+
+        var detail = FirstUseful(result.Command.StandardError, result.Command.StandardOutput, "probe failed");
+        var code = ClassifyFailure(detail);
+        return new ProbeState(
+            false,
+            code is RemoteErrorCode.PermissionDenied or RemoteErrorCode.SudoRequired,
+            null,
+            detail);
+    }
+
+    private async Task<ReadResult> ReadAsync(
+        IRemoteCommandExecutor executor,
+        string executable,
+        IReadOnlyList<string> arguments,
+        CancellationToken cancellationToken,
+        IReadOnlySet<int>? acceptedExitCodes = null)
+    {
+        var result = await executor.ExecuteAsync(
+            new RemoteCommandSpec(executable, arguments, _options.CommandTimeout, OperationRisk.ReadOnly, StableEnvironment),
+            cancellationToken).ConfigureAwait(false);
+        if (result.Error is not null)
+        {
+            return new ReadResult(null, result.Error);
+        }
+
+        if (OutputTooLarge(result.Command!))
+        {
+            return new ReadResult(null, new RemoteError(
+                RemoteErrorCode.CapabilityUnavailable,
+                "Package-manager output exceeded the configured safety bound."));
+        }
+
+        var accepted = acceptedExitCodes ?? new HashSet<int> { 0 };
+        if (!accepted.Contains(result.Command!.ExitCode))
+        {
+            var detail = FirstUseful(result.Command.StandardError, result.Command.StandardOutput, "Package-manager read command failed.");
+            return new ReadResult(null, new RemoteError(ClassifyFailure(detail), detail));
+        }
+
+        return new ReadResult(result.Command.StandardOutput, null);
+    }
+
     private async Task<PackageMutationResult> VerifySuccessAsync(
         ServerProfile profile,
         PackageMutationPreview preview,
-        PackageInventorySnapshot before,
         CancellationToken cancellationToken)
     {
-        PackageInventoryResult verified;
+        PackageInventoryResult verification;
         try
         {
-            verified = await InspectAsync(profile, cancellationToken).ConfigureAwait(false);
+            verification = await InspectAsync(profile, cancellationToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {
-            return Ambiguous("Package command returned success, but post-verification was cancelled. Refresh package state before retrying.");
+            return Ambiguous("Package command returned success, but post-verification was cancelled. Refresh before retrying.");
         }
 
-        if (verified.Snapshot is not { Status: PackageManagerRuntimeStatus.Available } after ||
+        if (verification.Snapshot is not { Status: PackageManagerRuntimeStatus.Available } after ||
             after.ActiveManager != preview.Request.Manager)
         {
             return Ambiguous(
-                "Package command returned success, but ServerDesk could not re-read a stable package-manager state.",
-                verified.Error?.TechnicalDetails);
+                "Package command returned success, but package-manager state could not be re-read reliably.",
+                verification.Error?.TechnicalDetails);
         }
 
-        var success = preview.Request.Kind switch
+        var matches = preview.Request.Kind switch
         {
             PackageMutationKind.RefreshMetadata => true,
             PackageMutationKind.Install => preview.Request.PackageNames.All(name => IsInstalled(after, name)),
             PackageMutationKind.Upgrade => preview.BoundPackages.All(bound =>
                 after.Packages.Any(item =>
                     string.Equals(item.Name, bound.Name, StringComparison.Ordinal) &&
-                    item.IsInstalled &&
                     string.Equals(item.InstalledVersion, bound.CandidateVersion, StringComparison.Ordinal))),
             PackageMutationKind.Remove => preview.Request.PackageNames.All(name => !IsInstalled(after, name)),
             _ => false,
         };
-        if (!success)
+        if (!matches)
         {
             return new PackageMutationResult(
                 false,
                 true,
-                "Package command returned success, but normalized post-state did not match the exact previewed package mutation.",
+                "Package command returned success, but normalized post-state did not match the exact previewed mutation.",
                 new RemoteError(RemoteErrorCode.AmbiguousState, "Package post-verification did not match."),
                 after);
         }
@@ -541,21 +773,20 @@ public sealed partial class PackageAdministrationService : IPackageManager
         return new PackageMutationResult(
             true,
             false,
-            "Package operation completed and normalized package state was re-read successfully.",
+            "Package operation completed and normalized package state was verified.",
             null,
             after);
     }
 
-    private async Task<PackageMutationResult> HandleDeterministicFailureAsync(
+    private async Task<PackageMutationResult> VerifyDeterministicFailureAsync(
         ServerProfile profile,
-        PackageMutationPreview preview,
         PackageInventorySnapshot before,
         RemoteError error)
     {
-        PackageInventoryResult verified;
+        PackageInventoryResult verification;
         try
         {
-            verified = await InspectAsync(profile, CancellationToken.None).ConfigureAwait(false);
+            verification = await InspectAsync(profile, CancellationToken.None).ConfigureAwait(false);
         }
         catch
         {
@@ -564,20 +795,20 @@ public sealed partial class PackageAdministrationService : IPackageManager
                 error.TechnicalDetails);
         }
 
-        if (verified.Snapshot is not { Status: PackageManagerRuntimeStatus.Available } after ||
-            after.ActiveManager != preview.Request.Manager)
+        if (verification.Snapshot is not { Status: PackageManagerRuntimeStatus.Available } after ||
+            after.ActiveManager != before.ActiveManager)
         {
             return Ambiguous(
                 "The package command reported failure, but package-manager state could not be verified.",
-                verified.Error?.TechnicalDetails ?? error.TechnicalDetails);
+                verification.Error?.TechnicalDetails ?? error.TechnicalDetails);
         }
 
-        if (!string.Equals(StateFingerprint(after), StateFingerprint(before), StringComparison.Ordinal))
+        if (!string.Equals(StateFingerprint(before), StateFingerprint(after), StringComparison.Ordinal))
         {
             return new PackageMutationResult(
                 false,
                 true,
-                "The package command reported failure, but live package/update state changed. Completion is ambiguous; refresh before retrying.",
+                "The package command reported failure, but normalized package/update state changed. Completion is ambiguous; refresh before retrying.",
                 new RemoteError(RemoteErrorCode.AmbiguousState, "Deterministic package failure was followed by state drift."),
                 after);
         }
@@ -585,56 +816,57 @@ public sealed partial class PackageAdministrationService : IPackageManager
         return new PackageMutationResult(false, false, error.Message, error, after);
     }
 
-    private async Task<PackageMutationResult> AmbiguousAfterDispatchAsync(
-        ServerProfile profile,
-        PackageMutationPreview preview,
-        string message,
-        string? details = null)
+    private static PackageMutationRequest NormalizeRequestCore(PackageMutationRequest request, int maximumPackages)
     {
-        PackageInventorySnapshot? snapshot = null;
-        try
+        ArgumentNullException.ThrowIfNull(request);
+        var names = (request.PackageNames ?? [])
+            .Select(item => item?.Trim() ?? string.Empty)
+            .ToArray();
+
+        if (request.Kind == PackageMutationKind.RefreshMetadata)
         {
-            snapshot = (await InspectAsync(profile, CancellationToken.None).ConfigureAwait(false)).Snapshot;
-        }
-        catch
-        {
+            if (names.Length != 0)
+            {
+                throw new ArgumentException("Metadata refresh must not carry package identities.", nameof(request));
+            }
+
+            return request with { PackageNames = [] };
         }
 
-        return new PackageMutationResult(
-            false,
-            true,
-            message,
-            new RemoteError(RemoteErrorCode.AmbiguousState, message, details),
-            snapshot);
+        if (names.Length == 0)
+        {
+            throw new ArgumentException("Install, upgrade and remove require explicit selected package identities.", nameof(request));
+        }
+
+        if (names.Length > maximumPackages)
+        {
+            throw new ArgumentException($"At most {maximumPackages} packages may be changed in one guarded operation.", nameof(request));
+        }
+
+        foreach (var name in names)
+        {
+            if (!SafePackageNameRegex().IsMatch(name) || name.StartsWith('-', StringComparison.Ordinal))
+            {
+                throw new ArgumentException($"Unsafe or unsupported package identity '{name}'.", nameof(request));
+            }
+        }
+
+        return request with
+        {
+            PackageNames = names
+                .Distinct(StringComparer.Ordinal)
+                .OrderBy(item => item, StringComparer.Ordinal)
+                .ToArray(),
+        };
     }
 
-    private PackageMutationRequest NormalizeRequest(PackageMutationRequest request)
-    {
-        var normalized = NormalizeRequest(request);
-        if (normalized.PackageNames.Count > _options.MaximumPackagesPerMutation)
-        {
-            throw new ArgumentException(
-                $"At most {_options.MaximumPackagesPerMutation} packages may be changed in one guarded operation.",
-                nameof(request));
-        }
-
-        return normalized;
-    }
-
-    private static RemoteError? ValidateMutationPreconditions(
+    private static RemoteError? ValidatePreconditions(
         PackageMutationRequest request,
         IReadOnlyList<PackageInfo> packages)
     {
-        if (request.Kind == PackageMutationKind.RefreshMetadata)
-        {
-            return null;
-        }
-
         if (packages.Count != request.PackageNames.Count)
         {
-            return new RemoteError(
-                RemoteErrorCode.PathNotFound,
-                "One or more selected package identities could not be resolved exactly by the active package manager.");
+            return new RemoteError(RemoteErrorCode.PathNotFound, "One or more selected package identities could not be resolved exactly.");
         }
 
         foreach (var name in request.PackageNames)
@@ -643,7 +875,7 @@ public sealed partial class PackageAdministrationService : IPackageManager
             switch (request.Kind)
             {
                 case PackageMutationKind.Install when package.IsInstalled:
-                    return new RemoteError(RemoteErrorCode.PathConflict, $"Package '{name}' is already installed; use selected-package Upgrade if an update is available.");
+                    return new RemoteError(RemoteErrorCode.PathConflict, $"Package '{name}' is already installed.");
                 case PackageMutationKind.Install when string.IsNullOrWhiteSpace(package.CandidateVersion):
                     return new RemoteError(RemoteErrorCode.PathNotFound, $"No install candidate is available for package '{name}'.");
                 case PackageMutationKind.Upgrade when !package.IsInstalled:
@@ -658,24 +890,141 @@ public sealed partial class PackageAdministrationService : IPackageManager
         return null;
     }
 
+    private static PackageCommandPlan BuildCommand(PackageMutationRequest request, string privilegeExecutable)
+    {
+        var arguments = new List<string> { "-n" };
+        if (request.Manager == PackageManagerKind.Apt)
+        {
+            arguments.Add("apt-get");
+            switch (request.Kind)
+            {
+                case PackageMutationKind.RefreshMetadata:
+                    arguments.Add("update");
+                    return new PackageCommandPlan(privilegeExecutable, arguments, OperationRisk.Mutating);
+                case PackageMutationKind.Install:
+                    arguments.AddRange(["-y", "--no-install-recommends", "install"]);
+                    arguments.AddRange(request.PackageNames);
+                    return new PackageCommandPlan(privilegeExecutable, arguments, OperationRisk.Mutating);
+                case PackageMutationKind.Upgrade:
+                    arguments.AddRange(["-y", "--only-upgrade", "install"]);
+                    arguments.AddRange(request.PackageNames);
+                    return new PackageCommandPlan(privilegeExecutable, arguments, OperationRisk.Mutating);
+                case PackageMutationKind.Remove:
+                    arguments.AddRange(["-y", "remove"]);
+                    arguments.AddRange(request.PackageNames);
+                    return new PackageCommandPlan(privilegeExecutable, arguments, OperationRisk.Destructive);
+            }
+        }
+        else
+        {
+            arguments.AddRange(["dnf", "-q"]);
+            switch (request.Kind)
+            {
+                case PackageMutationKind.RefreshMetadata:
+                    arguments.Add("makecache");
+                    return new PackageCommandPlan(privilegeExecutable, arguments, OperationRisk.Mutating);
+                case PackageMutationKind.Install:
+                    arguments.AddRange(["-y", "install"]);
+                    arguments.AddRange(request.PackageNames);
+                    return new PackageCommandPlan(privilegeExecutable, arguments, OperationRisk.Mutating);
+                case PackageMutationKind.Upgrade:
+                    arguments.AddRange(["-y", "upgrade"]);
+                    arguments.AddRange(request.PackageNames);
+                    return new PackageCommandPlan(privilegeExecutable, arguments, OperationRisk.Mutating);
+                case PackageMutationKind.Remove:
+                    arguments.AddRange(["-y", "remove"]);
+                    arguments.AddRange(request.PackageNames);
+                    return new PackageCommandPlan(privilegeExecutable, arguments, OperationRisk.Destructive);
+            }
+        }
+
+        throw new ArgumentOutOfRangeException(nameof(request));
+    }
+
+    private static IReadOnlyList<PackageInfo> ParseDnfAvailable(string output, IReadOnlyList<string> expectedNames)
+    {
+        var expected = expectedNames.ToHashSet(StringComparer.Ordinal);
+        var packages = new List<PackageInfo>();
+        foreach (var raw in NormalizeLines(output))
+        {
+            var line = raw.Trim();
+            if (line.Length == 0 ||
+                line.StartsWith("Available Packages", StringComparison.OrdinalIgnoreCase) ||
+                line.StartsWith("Last metadata", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var fields = line.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            if (fields.Length < 3)
+            {
+                continue;
+            }
+
+            var dot = fields[0].LastIndexOf('.');
+            if (dot <= 0 || dot == fields[0].Length - 1)
+            {
+                continue;
+            }
+
+            var name = fields[0][..dot];
+            if (!expected.Contains(name))
+            {
+                continue;
+            }
+
+            packages.Add(new PackageInfo(
+                name,
+                null,
+                fields[1],
+                fields[0][(dot + 1)..],
+                fields[2],
+                IsSecurityRepository(fields[2])
+                    ? PackageUpdateClassification.Security
+                    : PackageUpdateClassification.Unknown));
+        }
+
+        return packages
+            .GroupBy(item => item.Name, StringComparer.Ordinal)
+            .Select(group => group.First())
+            .ToArray();
+    }
+
+    private static IReadOnlyList<PackageInfo> MergeInstalledAndUpdates(
+        IReadOnlyList<PackageInfo> installed,
+        IReadOnlyList<PackageUpdateRow> updates)
+    {
+        var byName = updates
+            .GroupBy(item => item.Name, StringComparer.Ordinal)
+            .ToDictionary(group => group.Key, group => group.First(), StringComparer.Ordinal);
+        return installed
+            .Select(package => byName.TryGetValue(package.Name, out var update)
+                ? package with
+                {
+                    CandidateVersion = update.CandidateVersion,
+                    Repository = update.Repository,
+                    UpdateClassification = update.Classification,
+                }
+                : package)
+            .OrderBy(item => item.Name, StringComparer.Ordinal)
+            .ToArray();
+    }
+
     private static PackageImpactHint AnalyzeImpact(PackageMutationRequest request)
     {
         if (request.Kind == PackageMutationKind.RefreshMetadata)
         {
-            return new PackageImpactHint(
-                false,
-                false,
-                "Metadata refresh updates package indexes only; it does not apply package upgrades.");
+            return new PackageImpactHint(false, false, "Metadata refresh updates package indexes only; it never applies package upgrades.");
         }
 
         var reboot = request.PackageNames.Any(IsKernelPackage);
         var restart = request.PackageNames.Any(IsServiceSensitivePackage);
         var selected = string.Join(", ", request.PackageNames);
         var message = reboot
-            ? $"Selected package set ({selected}) contains a kernel package; a reboot may be required to activate the new kernel."
+            ? $"Selected packages ({selected}) include a kernel package; a reboot may be required after the operation."
             : restart
-                ? $"Selected package set ({selected}) contains service/runtime packages; service restarts may be required."
-                : $"No deterministic reboot/service-restart hint is available from the selected package identities ({selected}).";
+                ? $"Selected packages ({selected}) include service/runtime packages; service restarts may be required."
+                : $"No deterministic reboot/service-restart hint is available for the selected packages ({selected}).";
         return new PackageImpactHint(reboot, restart, message);
     }
 
@@ -689,9 +1038,6 @@ public sealed partial class PackageAdministrationService : IPackageManager
         name is "systemd" or "glibc" or "libc6" or "openssh-server" or "openssh" or
             "nginx" or "apache2" or "httpd" or "docker" or "docker-ce" or "containerd";
 
-    private static bool IsInstalled(PackageInventorySnapshot snapshot, string name) =>
-        snapshot.Packages.Any(item => string.Equals(item.Name, name, StringComparison.Ordinal) && item.IsInstalled);
-
     private bool OutputTooLarge(RemoteCommandResult command) =>
         command.StandardOutput.Length > _options.MaximumOutputCharacters ||
         command.StandardError.Length > _options.MaximumOutputCharacters;
@@ -701,20 +1047,17 @@ public sealed partial class PackageAdministrationService : IPackageManager
         observation.DatabaseExecutableAvailable &&
         !observation.PermissionDenied;
 
-    private static PackageInventoryResult SnapshotResult(
+    private static bool IsInstalled(PackageInventorySnapshot snapshot, string name) =>
+        snapshot.Packages.Any(item => string.Equals(item.Name, name, StringComparison.Ordinal) && item.IsInstalled);
+
+    private static PackageInventoryResult Snapshot(
         PackageManagerRuntimeStatus status,
-        PackageManagerKind? active,
+        PackageManagerKind? manager,
         IReadOnlyList<PackageInfo> packages,
         IReadOnlyList<PackageManagerObservation> observations,
         string detail) =>
         new(
-            new PackageInventorySnapshot(
-                status,
-                active,
-                packages,
-                observations,
-                detail,
-                DateTimeOffset.UtcNow),
+            new PackageInventorySnapshot(status, manager, packages, observations, detail, DateTimeOffset.UtcNow),
             null);
 
     private static string StateFingerprint(PackageInventorySnapshot snapshot)
@@ -723,8 +1066,7 @@ public sealed partial class PackageAdministrationService : IPackageManager
         builder.Append(snapshot.Status).Append('|').Append(snapshot.ActiveManager).Append('\n');
         foreach (var observation in snapshot.Observations.OrderBy(item => item.Manager))
         {
-            builder.Append("manager|")
-                .Append(observation.Manager).Append('|')
+            builder.Append(observation.Manager).Append('|')
                 .Append(observation.ManagerExecutableAvailable).Append('|')
                 .Append(observation.DatabaseExecutableAvailable).Append('|')
                 .Append(observation.PermissionDenied).Append('|')
@@ -758,9 +1100,8 @@ public sealed partial class PackageAdministrationService : IPackageManager
             .Append(package.Repository).Append('|')
             .Append(package.UpdateClassification).Append('\n');
 
-    private static string PreviewFingerprint(PackageMutationPreview preview)
-    {
-        var canonical = string.Join(
+    private static string PreviewFingerprint(PackageMutationPreview preview) =>
+        Sha256(string.Join(
             "\u001f",
             preview.PlanId,
             preview.Request.Kind,
@@ -774,17 +1115,41 @@ public sealed partial class PackageAdministrationService : IPackageManager
             preview.ImpactHint.RebootMayBeRequired,
             preview.ImpactHint.ServiceRestartMayBeRequired,
             preview.ImpactHint.Message,
-            preview.DisplayCommand);
-        return Sha256(canonical);
-    }
+            preview.DisplayCommand));
 
     private static string Display(string executable, IReadOnlyList<string> arguments) =>
         executable + " " + string.Join(' ', arguments.Select(TokenDisplay));
 
     private static string TokenDisplay(string value) =>
-        value.All(character => char.IsLetterOrDigit(character) || "-._/:@+=%".Contains(character, StringComparison.Ordinal))
+        value.All(character => char.IsLetterOrDigit(character) || "-._/:=@+".Contains(character))
             ? value
             : "[token]";
+
+    private static RemoteErrorCode ClassifyFailure(string detail)
+    {
+        if (detail.Contains("password is required", StringComparison.OrdinalIgnoreCase) ||
+            detail.Contains("not in the sudoers", StringComparison.OrdinalIgnoreCase) ||
+            detail.Contains("a terminal is required", StringComparison.OrdinalIgnoreCase))
+        {
+            return RemoteErrorCode.SudoRequired;
+        }
+
+        if (detail.Contains("permission denied", StringComparison.OrdinalIgnoreCase) ||
+            detail.Contains("operation not permitted", StringComparison.OrdinalIgnoreCase) ||
+            detail.Contains("could not open lock file", StringComparison.OrdinalIgnoreCase))
+        {
+            return RemoteErrorCode.PermissionDenied;
+        }
+
+        if (detail.Contains("unable to locate package", StringComparison.OrdinalIgnoreCase) ||
+            detail.Contains("no match for argument", StringComparison.OrdinalIgnoreCase) ||
+            detail.Contains("not found", StringComparison.OrdinalIgnoreCase))
+        {
+            return RemoteErrorCode.PathNotFound;
+        }
+
+        return RemoteErrorCode.CommandFailed;
+    }
 
     private static bool IsAmbiguous(RemoteErrorCode code) =>
         code is RemoteErrorCode.NetworkInterrupted or
@@ -792,30 +1157,19 @@ public sealed partial class PackageAdministrationService : IPackageManager
             RemoteErrorCode.OperationCancelled or
             RemoteErrorCode.ConnectionFailed;
 
-    private static RemoteErrorCode ClassifyFailure(string detail)
-    {
-        if (detail.Contains("permission denied", StringComparison.OrdinalIgnoreCase) ||
-            detail.Contains("operation not permitted", StringComparison.OrdinalIgnoreCase))
-        {
-            return RemoteErrorCode.PermissionDenied;
-        }
+    private static bool IsSecurityRepository(string? value) =>
+        !string.IsNullOrWhiteSpace(value) &&
+        (value.Contains("security", StringComparison.OrdinalIgnoreCase) ||
+         value.Contains("-sec", StringComparison.OrdinalIgnoreCase));
 
-        if (detail.Contains("password is required", StringComparison.OrdinalIgnoreCase) ||
-            detail.Contains("not in the sudoers", StringComparison.OrdinalIgnoreCase) ||
-            detail.Contains("not allowed", StringComparison.OrdinalIgnoreCase))
-        {
-            return RemoteErrorCode.SudoRequired;
-        }
+    private static string[] NormalizeLines(string value) =>
+        (value ?? string.Empty)
+            .Replace("\r\n", "\n", StringComparison.Ordinal)
+            .Replace('\r', '\n')
+            .Split('\n', StringSplitOptions.TrimEntries);
 
-        if (detail.Contains("not found", StringComparison.OrdinalIgnoreCase) ||
-            detail.Contains("no match", StringComparison.OrdinalIgnoreCase) ||
-            detail.Contains("unable to locate package", StringComparison.OrdinalIgnoreCase))
-        {
-            return RemoteErrorCode.PathNotFound;
-        }
-
-        return RemoteErrorCode.CommandFailed;
-    }
+    private static string? NullIfBlank(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
     private static string FirstUseful(string first, string second, string fallback)
     {
@@ -831,20 +1185,9 @@ public sealed partial class PackageAdministrationService : IPackageManager
         Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value)));
 
     private static bool FixedTimeEquals(string left, string right) =>
-        left.Length == right.Length &&
-        CryptographicOperations.FixedTimeEquals(Encoding.UTF8.GetBytes(left), Encoding.UTF8.GetBytes(right));
-
-    private static string? NullIfBlank(string? value) =>
-        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
-
-    private static bool IsSecurityRepository(string? repository) =>
-        repository?.Contains("security", StringComparison.OrdinalIgnoreCase) == true;
-
-    private static IReadOnlyList<string> NormalizeLines(string output) =>
-        (output ?? string.Empty)
-            .Replace("\r\n", "\n", StringComparison.Ordinal)
-            .Replace('\r', '\n')
-            .Split('\n');
+        left.Length == right.Length && CryptographicOperations.FixedTimeEquals(
+            Encoding.UTF8.GetBytes(left),
+            Encoding.UTF8.GetBytes(right));
 
     private static PackageMutationPreviewResult PreviewFailure(RemoteErrorCode code, string message) =>
         new(null, new RemoteError(code, message));
@@ -867,503 +1210,27 @@ public sealed partial class PackageAdministrationService : IPackageManager
         string? Repository,
         PackageUpdateClassification Classification);
 
-    private sealed record AdapterCommandPlan(
+    internal sealed record PackageCommandPlan(
         string Executable,
         IReadOnlyList<string> Arguments,
         OperationRisk Risk);
 
-    private sealed record AdapterInventoryResult(
+    private sealed record ProbeState(
+        bool Available,
+        bool PermissionDenied,
+        string? Version,
+        string Detail);
+
+    private sealed record ReadResult(string? Output, RemoteError? Error);
+
+    private sealed record InventoryRead(
         IReadOnlyList<PackageInfo> Packages,
         string Detail,
         RemoteError? Error);
 
-    private sealed record AdapterPackageResolution(
+    private sealed record PackageResolution(
         IReadOnlyList<PackageInfo> Packages,
         RemoteError? Error);
-
-    private interface IPackageAdapter
-    {
-        PackageManagerKind Kind { get; }
-
-        Task<PackageManagerObservation> ProbeAsync(
-            IRemoteCommandExecutor executor,
-            CancellationToken cancellationToken);
-
-        Task<AdapterInventoryResult> InspectAsync(
-            IRemoteCommandExecutor executor,
-            CancellationToken cancellationToken);
-
-        Task<AdapterPackageResolution> ResolveAsync(
-            IRemoteCommandExecutor executor,
-            IReadOnlyList<string> packageNames,
-            CancellationToken cancellationToken);
-
-        AdapterCommandPlan BuildCommand(PackageMutationRequest request);
-    }
-
-    private abstract class PackageAdapterBase
-    {
-        protected readonly PackageAdministrationOptions Options;
-
-        protected PackageAdapterBase(PackageAdministrationOptions options) => Options = options;
-
-        protected async Task<RemoteExecutionResult> RunAsync(
-            IRemoteCommandExecutor executor,
-            string executable,
-            IReadOnlyList<string> arguments,
-            CancellationToken cancellationToken)
-        {
-            var result = await executor.ExecuteAsync(
-                    new RemoteCommandSpec(
-                        executable,
-                        arguments,
-                        Options.CommandTimeout,
-                        OperationRisk.ReadOnly,
-                        StableEnvironment),
-                    cancellationToken)
-                .ConfigureAwait(false);
-            if (result.Command is { } command &&
-                (command.StandardOutput.Length > Options.MaximumOutputCharacters ||
-                 command.StandardError.Length > Options.MaximumOutputCharacters))
-            {
-                return RemoteExecutionResult.Failure(new RemoteError(
-                    RemoteErrorCode.CapabilityUnavailable,
-                    "Package-manager output exceeded the configured safety bound."));
-            }
-
-            return result;
-        }
-
-        protected static PackageManagerObservation Observation(
-            PackageManagerKind manager,
-            ProbeState managerProbe,
-            ProbeState databaseProbe) =>
-            new(
-                manager,
-                managerProbe.Available,
-                databaseProbe.Available,
-                managerProbe.PermissionDenied || databaseProbe.PermissionDenied,
-                managerProbe.Version,
-                $"manager={managerProbe.Detail}; database={databaseProbe.Detail}");
-
-        protected async Task<ProbeState> ProbeExecutableAsync(
-            IRemoteCommandExecutor executor,
-            string executable,
-            IReadOnlyList<string> arguments,
-            CancellationToken cancellationToken)
-        {
-            var result = await RunAsync(executor, executable, arguments, cancellationToken).ConfigureAwait(false);
-            if (result.Error is not null)
-            {
-                var permission = result.Error.Code is RemoteErrorCode.PermissionDenied or RemoteErrorCode.SudoRequired;
-                return new ProbeState(false, permission, null, result.Error.Message);
-            }
-
-            if (result.Command!.ExitCode == 0)
-            {
-                var version = FirstUseful(result.Command.StandardOutput, result.Command.StandardError, string.Empty)
-                    .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                    .FirstOrDefault();
-                return new ProbeState(true, false, NullIfBlank(version), "available");
-            }
-
-            var detail = FirstUseful(result.Command.StandardError, result.Command.StandardOutput, "probe failed");
-            var permissionDenied = ClassifyFailure(detail) is RemoteErrorCode.PermissionDenied or RemoteErrorCode.SudoRequired;
-            return new ProbeState(false, permissionDenied, null, detail);
-        }
-
-        protected sealed record ProbeState(
-            bool Available,
-            bool PermissionDenied,
-            string? Version,
-            string Detail);
-    }
-
-    private sealed class AptPackageAdapter : PackageAdapterBase, IPackageAdapter
-    {
-        public AptPackageAdapter(PackageAdministrationOptions options)
-            : base(options)
-        {
-        }
-
-        public PackageManagerKind Kind => PackageManagerKind.Apt;
-
-        public async Task<PackageManagerObservation> ProbeAsync(
-            IRemoteCommandExecutor executor,
-            CancellationToken cancellationToken)
-        {
-            var manager = await ProbeExecutableAsync(executor, "apt-get", ["--version"], cancellationToken)
-                .ConfigureAwait(false);
-            var database = await ProbeExecutableAsync(executor, "dpkg-query", ["--version"], cancellationToken)
-                .ConfigureAwait(false);
-            return Observation(Kind, manager, database);
-        }
-
-        public async Task<AdapterInventoryResult> InspectAsync(
-            IRemoteCommandExecutor executor,
-            CancellationToken cancellationToken)
-        {
-            var installedResult = await RunAsync(
-                    executor,
-                    "dpkg-query",
-                    ["-W", "-f=${Package}\\t${Version}\\t${Architecture}\\n"],
-                    cancellationToken)
-                .ConfigureAwait(false);
-            var installedError = ReadFailure(installedResult, "dpkg-query inventory failed.");
-            if (installedError is not null)
-            {
-                return new AdapterInventoryResult([], installedError.Message, installedError);
-            }
-
-            IReadOnlyList<PackageInfo> installed;
-            try
-            {
-                installed = ParseDpkgInstalled(installedResult.Command!.StandardOutput);
-            }
-            catch (FormatException exception)
-            {
-                var error = new RemoteError(RemoteErrorCode.ParseFailed, exception.Message);
-                return new AdapterInventoryResult([], error.Message, error);
-            }
-
-            var updatesResult = await RunAsync(
-                    executor,
-                    "apt-get",
-                    ["-s", "-o", "Debug::NoLocking=1", "upgrade"],
-                    cancellationToken)
-                .ConfigureAwait(false);
-            var updates = updatesResult.Error is null && updatesResult.Command?.ExitCode == 0
-                ? ParseAptUpgradeSimulation(updatesResult.Command.StandardOutput)
-                : [];
-            var merged = MergeInstalledAndUpdates(installed, updates);
-            var detail = updatesResult.Error is null && updatesResult.Command?.ExitCode == 0
-                ? "APT installed and cached upgrade inventory loaded."
-                : "APT installed inventory loaded; cached upgrade metadata was unavailable or stale. Use explicit Refresh metadata before relying on update candidates.";
-            return new AdapterInventoryResult(merged, detail, null);
-        }
-
-        public async Task<AdapterPackageResolution> ResolveAsync(
-            IRemoteCommandExecutor executor,
-            IReadOnlyList<string> packageNames,
-            CancellationToken cancellationToken)
-        {
-            var result = await RunAsync(
-                    executor,
-                    "apt-cache",
-                    ["policy", .. packageNames],
-                    cancellationToken)
-                .ConfigureAwait(false);
-            var failure = ReadFailure(result, "apt-cache policy failed.");
-            if (failure is not null)
-            {
-                return new AdapterPackageResolution([], failure);
-            }
-
-            var packages = ParseAptPolicy(result.Command!.StandardOutput, packageNames);
-            return packages.Count == packageNames.Count
-                ? new AdapterPackageResolution(packages, null)
-                : new AdapterPackageResolution(
-                    packages,
-                    new RemoteError(RemoteErrorCode.PathNotFound, "One or more selected APT packages have no resolvable policy entry."));
-        }
-
-        public AdapterCommandPlan BuildCommand(PackageMutationRequest request)
-        {
-            var args = new List<string> { "-n", "apt-get" };
-            switch (request.Kind)
-            {
-                case PackageMutationKind.RefreshMetadata:
-                    args.Add("update");
-                    return new AdapterCommandPlan(Options.PrivilegeExecutable, args, OperationRisk.Mutating);
-                case PackageMutationKind.Install:
-                    args.AddRange(["-y", "--no-install-recommends", "install"]);
-                    args.AddRange(request.PackageNames);
-                    return new AdapterCommandPlan(Options.PrivilegeExecutable, args, OperationRisk.Mutating);
-                case PackageMutationKind.Upgrade:
-                    args.AddRange(["-y", "--only-upgrade", "install"]);
-                    args.AddRange(request.PackageNames);
-                    return new AdapterCommandPlan(Options.PrivilegeExecutable, args, OperationRisk.Mutating);
-                case PackageMutationKind.Remove:
-                    args.AddRange(["-y", "remove"]);
-                    args.AddRange(request.PackageNames);
-                    return new AdapterCommandPlan(Options.PrivilegeExecutable, args, OperationRisk.Destructive);
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(request));
-            }
-        }
-
-        private static IReadOnlyList<PackageInfo> ParseAptPolicy(
-            string output,
-            IReadOnlyList<string> expectedNames)
-        {
-            var expected = expectedNames.ToHashSet(StringComparer.Ordinal);
-            var packages = new List<PackageInfo>();
-            string? current = null;
-            string? installed = null;
-            string? candidate = null;
-
-            void Commit()
-            {
-                if (current is null || !expected.Contains(current))
-                {
-                    return;
-                }
-
-                packages.Add(new PackageInfo(
-                    current,
-                    installed is "(none)" ? null : NullIfBlank(installed),
-                    candidate is "(none)" ? null : NullIfBlank(candidate),
-                    null,
-                    null,
-                    PackageUpdateClassification.Unknown));
-            }
-
-            foreach (var raw in NormalizeLines(output))
-            {
-                if (raw.Length > 0 && !char.IsWhiteSpace(raw[0]) && raw.EndsWith(':'))
-                {
-                    Commit();
-                    current = raw[..^1].Trim();
-                    installed = null;
-                    candidate = null;
-                    continue;
-                }
-
-                var line = raw.Trim();
-                if (line.StartsWith("Installed:", StringComparison.Ordinal))
-                {
-                    installed = line["Installed:".Length..].Trim();
-                }
-                else if (line.StartsWith("Candidate:", StringComparison.Ordinal))
-                {
-                    candidate = line["Candidate:".Length..].Trim();
-                }
-            }
-
-            Commit();
-            return packages;
-        }
-    }
-
-    private sealed class DnfPackageAdapter : PackageAdapterBase, IPackageAdapter
-    {
-        public DnfPackageAdapter(PackageAdministrationOptions options)
-            : base(options)
-        {
-        }
-
-        public PackageManagerKind Kind => PackageManagerKind.Dnf;
-
-        public async Task<PackageManagerObservation> ProbeAsync(
-            IRemoteCommandExecutor executor,
-            CancellationToken cancellationToken)
-        {
-            var manager = await ProbeExecutableAsync(executor, "dnf", ["--version"], cancellationToken)
-                .ConfigureAwait(false);
-            var database = await ProbeExecutableAsync(executor, "rpm", ["--version"], cancellationToken)
-                .ConfigureAwait(false);
-            return Observation(Kind, manager, database);
-        }
-
-        public async Task<AdapterInventoryResult> InspectAsync(
-            IRemoteCommandExecutor executor,
-            CancellationToken cancellationToken)
-        {
-            var installedResult = await RunAsync(
-                    executor,
-                    "rpm",
-                    ["-qa", "--qf", "%{NAME}\\t%{VERSION}-%{RELEASE}\\t%{ARCH}\\n"],
-                    cancellationToken)
-                .ConfigureAwait(false);
-            var installedError = ReadFailure(installedResult, "rpm inventory failed.");
-            if (installedError is not null)
-            {
-                return new AdapterInventoryResult([], installedError.Message, installedError);
-            }
-
-            IReadOnlyList<PackageInfo> installed;
-            try
-            {
-                installed = ParseRpmInstalled(installedResult.Command!.StandardOutput);
-            }
-            catch (FormatException exception)
-            {
-                var error = new RemoteError(RemoteErrorCode.ParseFailed, exception.Message);
-                return new AdapterInventoryResult([], error.Message, error);
-            }
-
-            var updateResult = await RunAsync(
-                    executor,
-                    "dnf",
-                    ["-q", "--cacheonly", "check-update"],
-                    cancellationToken)
-                .ConfigureAwait(false);
-            var updateCommandAccepted = updateResult.Error is null && updateResult.Command?.ExitCode is 0 or 100;
-            var updates = updateCommandAccepted
-                ? ParseDnfCheckUpdate(updateResult.Command!.StandardOutput)
-                : [];
-            var merged = MergeInstalledAndUpdates(installed, updates);
-            var detail = updateCommandAccepted
-                ? "DNF installed and cached update inventory loaded."
-                : "DNF installed inventory loaded; cached update metadata is unavailable. Use explicit Refresh metadata before relying on update candidates.";
-            return new AdapterInventoryResult(merged, detail, null);
-        }
-
-        public async Task<AdapterPackageResolution> ResolveAsync(
-            IRemoteCommandExecutor executor,
-            IReadOnlyList<string> packageNames,
-            CancellationToken cancellationToken)
-        {
-            var inventory = await InspectAsync(executor, cancellationToken).ConfigureAwait(false);
-            if (inventory.Error is not null)
-            {
-                return new AdapterPackageResolution([], inventory.Error);
-            }
-
-            var resolved = inventory.Packages
-                .Where(item => packageNames.Contains(item.Name, StringComparer.Ordinal))
-                .ToDictionary(item => item.Name, StringComparer.Ordinal);
-            var missing = packageNames.Where(name => !resolved.ContainsKey(name)).ToArray();
-            if (missing.Length > 0)
-            {
-                var availableResult = await RunAsync(
-                        executor,
-                        "dnf",
-                        ["-q", "--cacheonly", "list", "--available", .. missing],
-                        cancellationToken)
-                    .ConfigureAwait(false);
-                if (availableResult.Error is null && availableResult.Command?.ExitCode == 0)
-                {
-                    foreach (var package in ParseDnfAvailable(availableResult.Command.StandardOutput, missing))
-                    {
-                        resolved[package.Name] = package;
-                    }
-                }
-            }
-
-            var packages = packageNames
-                .Where(resolved.ContainsKey)
-                .Select(name => resolved[name])
-                .ToArray();
-            return packages.Length == packageNames.Count
-                ? new AdapterPackageResolution(packages, null)
-                : new AdapterPackageResolution(
-                    packages,
-                    new RemoteError(RemoteErrorCode.PathNotFound, "One or more selected DNF packages are unavailable in installed or cached repository metadata."));
-        }
-
-        public AdapterCommandPlan BuildCommand(PackageMutationRequest request)
-        {
-            var args = new List<string> { "-n", "dnf", "-q" };
-            switch (request.Kind)
-            {
-                case PackageMutationKind.RefreshMetadata:
-                    args.Add("makecache");
-                    return new AdapterCommandPlan(Options.PrivilegeExecutable, args, OperationRisk.Mutating);
-                case PackageMutationKind.Install:
-                    args.AddRange(["-y", "install"]);
-                    args.AddRange(request.PackageNames);
-                    return new AdapterCommandPlan(Options.PrivilegeExecutable, args, OperationRisk.Mutating);
-                case PackageMutationKind.Upgrade:
-                    args.AddRange(["-y", "upgrade"]);
-                    args.AddRange(request.PackageNames);
-                    return new AdapterCommandPlan(Options.PrivilegeExecutable, args, OperationRisk.Mutating);
-                case PackageMutationKind.Remove:
-                    args.AddRange(["-y", "remove"]);
-                    args.AddRange(request.PackageNames);
-                    return new AdapterCommandPlan(Options.PrivilegeExecutable, args, OperationRisk.Destructive);
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(request));
-            }
-        }
-
-        private static IReadOnlyList<PackageInfo> ParseDnfAvailable(
-            string output,
-            IReadOnlyList<string> expectedNames)
-        {
-            var expected = expectedNames.ToHashSet(StringComparer.Ordinal);
-            var packages = new List<PackageInfo>();
-            foreach (var raw in NormalizeLines(output))
-            {
-                var line = raw.Trim();
-                if (line.Length == 0 ||
-                    line.StartsWith("Available Packages", StringComparison.OrdinalIgnoreCase) ||
-                    line.StartsWith("Last metadata", StringComparison.OrdinalIgnoreCase))
-                {
-                    continue;
-                }
-
-                var parts = line.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-                if (parts.Length < 3)
-                {
-                    continue;
-                }
-
-                var dot = parts[0].LastIndexOf('.');
-                if (dot <= 0)
-                {
-                    continue;
-                }
-
-                var name = parts[0][..dot];
-                if (!expected.Contains(name))
-                {
-                    continue;
-                }
-
-                packages.Add(new PackageInfo(
-                    name,
-                    null,
-                    parts[1],
-                    parts[0][(dot + 1)..],
-                    parts[2],
-                    IsSecurityRepository(parts[2])
-                        ? PackageUpdateClassification.Security
-                        : PackageUpdateClassification.Unknown));
-            }
-
-            return packages
-                .GroupBy(item => item.Name, StringComparer.Ordinal)
-                .Select(group => group.First())
-                .ToArray();
-        }
-    }
-
-    private static RemoteError? ReadFailure(RemoteExecutionResult result, string fallback)
-    {
-        if (result.Error is not null)
-        {
-            return result.Error;
-        }
-
-        if (result.Command!.ExitCode == 0)
-        {
-            return null;
-        }
-
-        var detail = FirstUseful(result.Command.StandardError, result.Command.StandardOutput, fallback);
-        return new RemoteError(ClassifyFailure(detail), detail);
-    }
-
-    private static IReadOnlyList<PackageInfo> MergeInstalledAndUpdates(
-        IReadOnlyList<PackageInfo> installed,
-        IReadOnlyList<PackageUpdateRow> updates)
-    {
-        var updateMap = updates
-            .GroupBy(item => item.Name, StringComparer.Ordinal)
-            .ToDictionary(group => group.Key, group => group.First(), StringComparer.Ordinal);
-        return installed
-            .Select(package => updateMap.TryGetValue(package.Name, out var update)
-                ? package with
-                {
-                    CandidateVersion = update.CandidateVersion,
-                    Repository = update.Repository,
-                    UpdateClassification = update.Classification,
-                }
-                : package)
-            .OrderBy(item => item.Name, StringComparer.Ordinal)
-            .ToArray();
-    }
 }
 
 public sealed class AuditedPackageManager : IPackageManager
@@ -1404,10 +1271,7 @@ public sealed class AuditedPackageManager : IPackageManager
             var persisted = await TryAuditAsync(profile, preview, outcome, cancellationToken).ConfigureAwait(false);
             return persisted
                 ? result
-                : result with
-                {
-                    Message = result.Message + " Audit persistence failed; do not repeat a package mutation solely for audit.",
-                };
+                : result with { Message = result.Message + " Audit persistence failed; do not repeat the package operation solely for audit." };
         }
         catch (OperationCanceledException)
         {
@@ -1424,15 +1288,15 @@ public sealed class AuditedPackageManager : IPackageManager
     {
         try
         {
-            var identities = preview.Request.PackageNames.Count == 0
-                ? "metadata"
+            var identity = preview.Request.Kind == PackageMutationKind.RefreshMetadata
+                ? preview.Request.Manager.ToString()
                 : string.Join(',', preview.Request.PackageNames);
             var entry = OperationAuditEntry.Create(
                 "package-administration",
-                $"Package {preview.Request.Kind} via {preview.Request.Manager}: {identities}",
+                $"Package {preview.Request.Kind} requested via {preview.Request.Manager}: {identity}",
                 preview.Risk,
                 outcome,
-                $"{profile.Username}@{profile.Host}:{profile.Port} packages:{preview.Request.Manager}:{identities}");
+                $"{profile.Username}@{profile.Host}:{profile.Port} package-manager:{preview.Request.Manager} packages:{identity}");
             await _audit.AppendAsync(entry, cancellationToken).ConfigureAwait(false);
             return true;
         }
