@@ -23,6 +23,7 @@ public partial class MainWindow
         EnsurePackageAdministrationActionButton();
         EnsureBackupRestoreActionButton();
         EnsureOperationHistoryActionButton();
+        EnsureDatabaseRuntimeActionButton();
     }
 
     private void EnsureGitActionButton()
