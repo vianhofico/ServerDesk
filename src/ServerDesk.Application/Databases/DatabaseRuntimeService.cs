@@ -193,7 +193,22 @@ public sealed class DatabaseRuntimeService : IDatabaseRuntimeService
         {
             "active" => DatabaseEngineRuntimeStatus.Active,
             "inactive" or "failed" or "deactivating" => DatabaseEngineRuntimeStatus.Inactive,
+            "permission-denied" => DatabaseEngineRuntimeStatus.PermissionDenied,
+            "probe-failed" => DatabaseEngineRuntimeStatus.ProbeFailed,
             _ => DatabaseEngineRuntimeStatus.Installed,
+        };
+        var journalUnit = status is DatabaseEngineRuntimeStatus.Active or
+            DatabaseEngineRuntimeStatus.Inactive or
+            DatabaseEngineRuntimeStatus.Installed
+                ? service.Unit
+                : null;
+        var detail = status switch
+        {
+            DatabaseEngineRuntimeStatus.PermissionDenied =>
+                $"{service.Unit} exists, but its runtime state could not be read with the current account.",
+            DatabaseEngineRuntimeStatus.ProbeFailed =>
+                $"{service.Unit} runtime state could not be normalized safely ({service.SubState}).",
+            _ => $"systemd reports {service.Unit} as {service.ActiveState}/{service.SubState}.",
         };
         return ProbeResult.Success(new DatabaseEngineObservation(
             engine,
@@ -203,8 +218,8 @@ public sealed class DatabaseRuntimeService : IDatabaseRuntimeService
             service.Unit,
             service.ActiveState,
             service.SubState,
-            service.Unit,
-            $"systemd reports {service.Unit} as {service.ActiveState}/{service.SubState}."));
+            journalUnit,
+            detail));
     }
 
     private async Task<ServiceProbeResult> ProbeServiceAsync(
