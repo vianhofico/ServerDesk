@@ -1,5 +1,4 @@
 using System.Net;
-using System.Net.Sockets;
 using ServerDesk.Application.Databases;
 using ServerDesk.Application.PortForwarding;
 using ServerDesk.Application.Profiles;
@@ -75,28 +74,28 @@ public sealed class DatabaseTunnelTests
     }
 
     [Fact]
-    public async Task ConnectivityRejectsNonLoopbackEndpointWithoutOpeningTcpConnection()
+    public async Task ConnectivityRejectsNonLoopbackEndpointBeforeEngineProbe()
     {
         var profile = Profile(Guid.NewGuid());
         var tunnel = new FixedTunnelService(
             new DatabaseTunnelEndpoint(profile.Id, "0.0.0.0", 6543, profile.RemoteHost, profile.RemotePort));
-        var service = new DatabaseTunnelConnectivityService(tunnel, DatabaseTunnelTestOptions.Default);
+        var probe = new CapturingEngineProbe();
+        var service = new DatabaseTunnelConnectivityService(
+            tunnel,
+            DatabaseTunnelTestOptions.Default,
+            probe);
 
         var result = await service.TestAsync(profile, TestContext.Current.CancellationToken);
 
         Assert.False(result.IsSuccess);
         Assert.Equal(RemoteErrorCode.InvalidEndpoint, result.Error!.Code);
         Assert.Contains("loopback", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(0, probe.Calls);
     }
 
     [Fact]
-    public async Task ConnectivityUsesLoopbackTunnelAndDoesNotClaimAuthentication()
+    public async Task ConnectivityUsesSelectedEngineProbeAndDoesNotClaimAuthentication()
     {
-        var cancellationToken = TestContext.Current.CancellationToken;
-        using var listener = new TcpListener(IPAddress.Loopback, 0);
-        listener.Start();
-        var port = ((IPEndPoint)listener.LocalEndpoint).Port;
-        var acceptTask = listener.AcceptTcpClientAsync(cancellationToken).AsTask();
         var profile = DatabaseConnectionProfile.Create(
             Guid.NewGuid(),
             Guid.NewGuid(),
@@ -109,18 +108,44 @@ public sealed class DatabaseTunnelTests
             DatabaseAuthenticationKind.None,
             null);
         var tunnel = new FixedTunnelService(
-            new DatabaseTunnelEndpoint(profile.Id, "127.0.0.1", port, profile.RemoteHost, profile.RemotePort));
+            new DatabaseTunnelEndpoint(profile.Id, "127.0.0.1", 6543, profile.RemoteHost, profile.RemotePort));
+        var probe = new CapturingEngineProbe();
         var service = new DatabaseTunnelConnectivityService(
             tunnel,
-            new DatabaseTunnelTestOptions(TimeSpan.FromSeconds(2)));
+            new DatabaseTunnelTestOptions(TimeSpan.FromSeconds(2)),
+            probe);
 
-        var result = await service.TestAsync(profile, cancellationToken);
-        using var accepted = await acceptTask;
+        var result = await service.TestAsync(profile, TestContext.Current.CancellationToken);
 
         Assert.True(result.IsSuccess, result.Error?.Message);
         Assert.NotNull(result.Endpoint);
-        Assert.Equal(port, result.Endpoint.LocalPort);
+        Assert.Equal(6543, result.Endpoint.LocalPort);
+        Assert.Equal(1, probe.Calls);
+        Assert.Equal(DatabaseEngineKind.PostgreSql, probe.LastEngine);
+        Assert.Equal(IPAddress.Loopback, probe.LastAddress);
+        Assert.Equal(6543, probe.LastPort);
         Assert.Contains("credentials are not tested", result.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task ConnectivityPropagatesEngineProbeFailureWithoutDirectFallback()
+    {
+        var profile = Profile(Guid.NewGuid());
+        var tunnel = new FixedTunnelService(
+            new DatabaseTunnelEndpoint(profile.Id, "127.0.0.1", 6544, profile.RemoteHost, profile.RemotePort));
+        var expected = new RemoteError(RemoteErrorCode.ConnectionFailed, "fixture engine unreachable");
+        var probe = new CapturingEngineProbe(new DatabaseEngineProbeResult(false, expected.Message, expected));
+        var service = new DatabaseTunnelConnectivityService(
+            tunnel,
+            DatabaseTunnelTestOptions.Default,
+            probe);
+
+        var result = await service.TestAsync(profile, TestContext.Current.CancellationToken);
+
+        Assert.False(result.IsSuccess);
+        Assert.Null(result.Endpoint);
+        Assert.Equal(expected, result.Error);
+        Assert.Equal(1, probe.Calls);
     }
 
     private static DatabaseConnectionProfile Profile(Guid serverId) =>
@@ -262,5 +287,35 @@ public sealed class DatabaseTunnelTests
         public DatabaseTunnelEndpoint Endpoint { get; }
 
         public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+    }
+
+    private sealed class CapturingEngineProbe : IDatabaseEngineConnectivityProbe
+    {
+        private readonly DatabaseEngineProbeResult _result;
+
+        public CapturingEngineProbe(DatabaseEngineProbeResult? result = null)
+        {
+            _result = result ?? new DatabaseEngineProbeResult(true, "fixture protocol success", null);
+        }
+
+        public int Calls { get; private set; }
+        public DatabaseEngineKind? LastEngine { get; private set; }
+        public IPAddress? LastAddress { get; private set; }
+        public int LastPort { get; private set; }
+
+        public Task<DatabaseEngineProbeResult> ProbeAsync(
+            DatabaseEngineKind engine,
+            IPAddress localAddress,
+            int localPort,
+            TimeSpan timeout,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            Calls++;
+            LastEngine = engine;
+            LastAddress = localAddress;
+            LastPort = localPort;
+            return Task.FromResult(_result);
+        }
     }
 }
