@@ -57,6 +57,8 @@
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.DeleteConfirm">Delete database profile '{0}' and its secure stored password, if present?</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.TestingTunnel">Opening a temporary loopback SSH tunnel and checking TCP reachability…</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.TunnelSucceeded">Temporary SSH tunnel succeeded through {0}:{1}. The tunnel is now closed. Database credentials were not tested in M6.2.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.Disconnected">The server is disconnected. Saved profiles can still be edited, but SSH tunnel testing is unavailable until the server reconnects.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.LoadFailed">Database profiles could not be loaded: {0}</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.PasswordExistingHint">A password is already stored securely. Leave this empty to keep it; enter a value only to replace it.</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.PasswordNewHint">Enter a password. It will be stored in the secure secret store and will not be written to SQLite.</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.PasswordDisabledHint">No database password will be stored for this profile.</sys:String>
