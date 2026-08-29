@@ -50,6 +50,9 @@
     <None Include="Fixtures\Deployment\**\*"
           CopyToOutputDirectory="PreserveNewest"
           CopyToPublishDirectory="Never" />
+    <None Include="Fixtures\Firewall\**\*"
+          CopyToOutputDirectory="PreserveNewest"
+          CopyToPublishDirectory="Never" />
     <None Include="..\..\src\ServerDesk.App\Localization\Strings.*.xaml"
           Link="Fixtures\Localization\%(Filename)%(Extension)"
           CopyToOutputDirectory="PreserveNewest"
