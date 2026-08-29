@@ -30,7 +30,7 @@
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseRuntime.SafetyFooter">M6.1 chỉ khám phá phía máy chủ ở chế độ chỉ đọc: không đăng nhập DB, không chạy SQL/lệnh Redis, không thay đổi dịch vụ và không mở cổng cơ sở dữ liệu ra Internet.</sys:String>
 
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.Action">Hồ sơ DB</sys:String>
-    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.ActionTooltip">Quản lý hồ sơ cơ sở dữ liệu an toàn cho secret và kiểm tra khả năng truy cập engine qua SSH tunnel loopback.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.ActionTooltip">Quản lý hồ sơ DB an toàn cho secret và chẩn đoán chỉ đọc qua tunnel.</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.WindowTitle">Hồ sơ cơ sở dữ liệu</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.Title">Hồ sơ cơ sở dữ liệu — {0}</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.Subtitle">Lưu endpoint PostgreSQL, MySQL/MariaDB và Redis để tái sử dụng. Mật khẩu chỉ nằm trong kho secret an toàn; metadata lưu chỉ chứa tham chiếu secret.</sys:String>
@@ -38,6 +38,7 @@
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.New">Tạo mới</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.Delete">Xóa</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.TestTunnel">Kiểm tra tunnel</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.Inspect">Kiểm tra chỉ đọc</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.EditorTitle">Chi tiết hồ sơ</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.Name">Tên</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.Engine">Engine</sys:String>
@@ -57,12 +58,34 @@
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.DeleteConfirm">Xóa hồ sơ cơ sở dữ liệu '{0}' và mật khẩu đã lưu an toàn của hồ sơ này nếu có?</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.TestingTunnel">Đang mở SSH tunnel loopback tạm thời và kiểm tra khả năng phản hồi giao thức của engine cơ sở dữ liệu…</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.TunnelSucceeded">SSH tunnel tạm thời đã truy cập được engine cơ sở dữ liệu đã chọn qua {0}:{1}. Tunnel hiện đã được đóng. M6.2 chưa kiểm tra thông tin đăng nhập cơ sở dữ liệu.</sys:String>
-    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.Disconnected">Máy chủ đang mất kết nối. Vẫn có thể sửa hồ sơ đã lưu, nhưng không thể kiểm tra SSH tunnel cho đến khi máy chủ kết nối lại.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.Disconnected">Máy chủ đang mất kết nối. Vẫn có thể sửa hồ sơ đã lưu, nhưng không thể kiểm tra tunnel hoặc chẩn đoán có xác thực cho đến khi máy chủ kết nối lại.</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.LoadFailed">Không thể tải hồ sơ cơ sở dữ liệu: {0}</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.PasswordExistingHint">Đã có mật khẩu được lưu an toàn. Để trống để giữ nguyên; chỉ nhập giá trị khi muốn thay mật khẩu.</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.PasswordNewHint">Nhập mật khẩu. Mật khẩu sẽ được lưu trong kho secret an toàn và không được ghi vào SQLite.</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.PasswordDisabledHint">Hồ sơ này sẽ không lưu mật khẩu cơ sở dữ liệu.</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.InvalidSelection">Chọn engine cơ sở dữ liệu và kiểu xác thực được hỗ trợ.</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.InvalidPort">Cổng cơ sở dữ liệu từ xa phải nằm trong khoảng 1 đến 65535.</sys:String>
-    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.SafetyFooter">M6.2 luôn tạo local forward tạm thời bind vào 127.0.0.1 với cổng local tự động. Không có cơ chế âm thầm kết nối DB trực tiếp/public. Kiểm tra tunnel dùng probe giao thức engine tối thiểu và chỉ đọc; thông tin đăng nhập cơ sở dữ liệu chỉ được xác thực từ M6.3.</sys:String>
+
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.DiagnosticsTitle">Chẩn đoán chỉ đọc có xác thực</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.DiagnosticsSearch">Tìm trong dữ liệu chẩn đoán đã chuẩn hóa</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.DiagnosticsKind">Loại</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.DiagnosticsName">Tên</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.DiagnosticsValue">Giá trị</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.DiagnosticsDetail">Chi tiết</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.DiagnosticsLoading">Đang mở SSH tunnel loopback và tải dữ liệu chẩn đoán engine chỉ đọc có giới hạn…</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.DiagnosticsLoaded">Đã hoàn tất chẩn đoán chỉ đọc có xác thực.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.DiagnosticsCancelled">Đã hủy chẩn đoán cơ sở dữ liệu.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.DiagnosticsEmpty">Chọn hồ sơ đã lưu rồi nhấn Kiểm tra chỉ đọc.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.DiagnosticsSummaryFormat">{0} {1} · danh tính {2} · ghi nhận {3}</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.DiagnosticsTruncated">Engine trả về nhiều catalog hơn giới hạn cấu hình. Chỉ tập dữ liệu đầu tiên trong giới hạn được hiển thị.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.DiagnosticsFailureSecret">Không thể lấy thông tin xác thực DB đã lưu từ kho secret an toàn.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.DiagnosticsFailureAuthentication">Cơ sở dữ liệu từ chối thông tin xác thực đã lưu.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.DiagnosticsFailureAuthorization">Xác thực thành công nhưng tài khoản không có quyền đọc một nguồn chẩn đoán bắt buộc.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.DiagnosticsFailureNetwork">Không thể truy cập cơ sở dữ liệu qua SSH tunnel loopback.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.DiagnosticsFailureCapability">Engine hoặc database đã chọn không cung cấp khả năng chẩn đoán an toàn bắt buộc.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.DiagnosticsFailureParse">Không thể chuẩn hóa phản hồi của engine một cách an toàn.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.DiagnosticsFailureTimeout">Tác vụ chẩn đoán có giới hạn đã hết thời gian.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.DiagnosticsFailureUnsupported">Engine này chưa được hỗ trợ chẩn đoán có xác thực.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.DiagnosticsFailureUnexpected">Chẩn đoán cơ sở dữ liệu thất bại ngoài dự kiến. Không hiển thị chi tiết thông tin xác thực.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.SafetyFooter">M6.2/M6.3 luôn dùng local forward tạm thời bind vào 127.0.0.1; không có cơ chế âm thầm kết nối DB trực tiếp/public. Kiểm tra tunnel dùng probe giao thức tối thiểu và chỉ đọc. Chẩn đoán có xác thực chỉ là inventory chỉ đọc có giới hạn: không có console truy vấn tùy ý, không mutation và không bao giờ hiển thị thông tin xác thực.</sys:String>
 </ResourceDictionary>

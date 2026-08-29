@@ -30,7 +30,7 @@ public sealed class DatabaseRuntimeLocalizationTests
     }
 
     [Fact]
-    public void BothLanguagesStateSecretAndTunnelBoundaries()
+    public void BothLanguagesStateSecretTunnelAndReadOnlyDiagnosticBoundaries()
     {
         var english = ReadResources("Strings.DatabaseRuntime.en.xaml");
         var vietnamese = ReadResources("Strings.DatabaseRuntime.vi.xaml");
@@ -43,6 +43,12 @@ public sealed class DatabaseRuntimeLocalizationTests
         Assert.Contains("không có cơ chế âm thầm", vietnamese["Loc.DatabaseProfiles.SafetyFooter"], StringComparison.OrdinalIgnoreCase);
         Assert.Contains("protocol probe", english["Loc.DatabaseProfiles.SafetyFooter"], StringComparison.OrdinalIgnoreCase);
         Assert.Contains("probe giao thức", vietnamese["Loc.DatabaseProfiles.SafetyFooter"], StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("no arbitrary query console", english["Loc.DatabaseProfiles.SafetyFooter"], StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("không có console truy vấn tùy ý", vietnamese["Loc.DatabaseProfiles.SafetyFooter"], StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("no mutation", english["Loc.DatabaseProfiles.SafetyFooter"], StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("không mutation", vietnamese["Loc.DatabaseProfiles.SafetyFooter"], StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("never displayed", english["Loc.DatabaseProfiles.SafetyFooter"], StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("không bao giờ hiển thị", vietnamese["Loc.DatabaseProfiles.SafetyFooter"], StringComparison.OrdinalIgnoreCase);
         Assert.Contains("credentials were not tested", english["Loc.DatabaseProfiles.TunnelSucceeded"], StringComparison.OrdinalIgnoreCase);
         Assert.Contains("chưa kiểm tra thông tin đăng nhập", vietnamese["Loc.DatabaseProfiles.TunnelSucceeded"], StringComparison.OrdinalIgnoreCase);
     }

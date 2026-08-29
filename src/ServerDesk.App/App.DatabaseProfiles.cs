@@ -6,6 +6,7 @@ using ServerDesk.Application.PortForwarding;
 using ServerDesk.Application.Profiles;
 using ServerDesk.Application.Secrets;
 using ServerDesk.Domain.Servers;
+using ServerDesk.Infrastructure.Databases;
 using ServerDesk.Infrastructure.Persistence.Sqlite;
 
 namespace ServerDesk.App;
@@ -19,19 +20,31 @@ public partial class App
         var provider = _serviceProvider ?? throw new InvalidOperationException("ServerDesk services are not initialized.");
         var repository = new SqliteDatabaseProfileRepository(
             provider.GetRequiredService<SqliteConnectionFactory>());
+        var secretStore = provider.GetRequiredService<ISecretStore>();
         var profileService = new DatabaseProfileService(
             repository,
             provider.GetRequiredService<IProfileRepository>(),
-            provider.GetRequiredService<ISecretStore>());
+            secretStore);
         var tunnelService = new DatabaseTunnelService(
             provider.GetRequiredService<IProfileRepository>(),
             provider.GetRequiredService<IPortForwardSessionFactory>());
         var connectivityService = new DatabaseTunnelConnectivityService(
             tunnelService,
             DatabaseTunnelTestOptions.Default);
+        var diagnosticService = new DatabaseDiagnosticService(
+            tunnelService,
+            secretStore,
+            [
+                new PostgreSqlDiagnosticAdapter(),
+                new MySqlDiagnosticAdapter(),
+                new MariaDbDiagnosticAdapter(),
+                new RedisDiagnosticAdapter(),
+            ],
+            DatabaseDiagnosticOptions.Default);
         var window = new DatabaseProfilesWindow(
             profileService,
             connectivityService,
+            diagnosticService,
             provider.GetRequiredService<ILocalizationService>(),
             profile,
             connected)
