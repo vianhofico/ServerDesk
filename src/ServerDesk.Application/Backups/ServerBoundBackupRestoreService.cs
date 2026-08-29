@@ -47,7 +47,7 @@ public sealed class ServerBoundBackupRestoreService : IBackupRestoreService
         return _inner.PreviewRestoreAsync(profile, manifest, cancellationToken);
     }
 
-    public Task<RestoreResult> ExecuteRestoreAsync(
+    public async Task<RestoreResult> ExecuteRestoreAsync(
         ServerProfile profile,
         RestorePreview preview,
         CancellationToken cancellationToken = default)
@@ -56,13 +56,25 @@ public sealed class ServerBoundBackupRestoreService : IBackupRestoreService
         ArgumentNullException.ThrowIfNull(preview);
         if (!_serverBindings.TryGetValue(preview.Manifest.BackupId, out var serverProfileId) || serverProfileId != profile.Id)
         {
-            return Task.FromResult(new RestoreResult(
+            return new RestoreResult(
                 false,
                 false,
                 "Verified backup manifest is not bound to this server profile/session.",
-                new RemoteError(RemoteErrorCode.PathConflict, "Cross-server restore binding mismatch.")));
+                new RemoteError(RemoteErrorCode.PathConflict, "Cross-server restore binding mismatch."));
         }
 
-        return _inner.ExecuteRestoreAsync(profile, preview, cancellationToken);
+        try
+        {
+            return await _inner.ExecuteRestoreAsync(profile, preview, cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            const string message = "Restore cancellation occurred while guarded execution was in progress. Completion is treated as ambiguous; re-read the exact target before any retry.";
+            return new RestoreResult(
+                false,
+                true,
+                message,
+                new RemoteError(RemoteErrorCode.AmbiguousState, message));
+        }
     }
 }
