@@ -92,6 +92,9 @@ public partial class MainWindow
             return;
         }
 
-        app.OpenDatabaseProfiles(selected.Profile, this);
+        app.OpenDatabaseProfiles(
+            selected.Profile,
+            selected.ConnectionState == RemoteSessionState.Connected,
+            this);
     }
 }
