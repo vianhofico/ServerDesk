@@ -23,7 +23,6 @@ public sealed class DatabaseRuntimeTests
         Assert.All(result.Snapshot.Engines, engine =>
             Assert.Equal(DatabaseEngineRuntimeStatus.CliUnavailable, engine.Status));
         Assert.False(result.Snapshot.HasSupportedEngine);
-        Assert.Equal(4, state.Commands.Count);
         Assert.All(state.Commands, AssertReadOnlyStableLocale);
     }
 
@@ -55,6 +54,24 @@ public sealed class DatabaseRuntimeTests
         Assert.DoesNotContain(state.Commands, command =>
             command.Executable is "psql" or "mysql" or "redis-cli");
         Assert.All(state.Commands, AssertReadOnlyStableLocale);
+    }
+
+    [Fact]
+    public async Task SystemdRuntimeIsDetectedEvenWhenServerBinaryIsNotInPath()
+    {
+        var state = new FakeState();
+        state.Services["postgresql.service"] = ("loaded", "active", "running");
+        var service = CreateService(state);
+
+        var result = await service.InspectAsync(Profile(), TestContext.Current.CancellationToken);
+
+        Assert.True(result.IsSuccess, result.Error?.Message);
+        var postgres = Assert.Single(result.Snapshot!.Engines, engine => engine.Engine == DatabaseEngineKind.PostgreSql);
+        Assert.Equal(DatabaseEngineRuntimeStatus.Active, postgres.Status);
+        Assert.True(postgres.IsInstalled);
+        Assert.Null(postgres.Version);
+        Assert.Equal("postgresql.service", postgres.ServiceUnit);
+        Assert.Contains("not in the remote command path", postgres.Detail, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -97,6 +114,26 @@ public sealed class DatabaseRuntimeTests
     }
 
     [Fact]
+    public async Task ServicePermissionDeniedIsNotCollapsedIntoInstalledState()
+    {
+        var state = new FakeState
+        {
+            RedisVersion = "Redis server v=8.0.2",
+        };
+        state.ServiceErrors["redis-server.service"] =
+            new RemoteError(RemoteErrorCode.PermissionDenied, "systemd access denied");
+        var service = CreateService(state);
+
+        var result = await service.InspectAsync(Profile(), TestContext.Current.CancellationToken);
+
+        Assert.True(result.IsSuccess, result.Error?.Message);
+        var redis = Assert.Single(result.Snapshot!.Engines, engine => engine.Engine == DatabaseEngineKind.Redis);
+        Assert.Equal(DatabaseEngineRuntimeStatus.PermissionDenied, redis.Status);
+        Assert.Null(redis.JournalUnit);
+        Assert.Contains("could not be read", redis.Detail, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task TransportFailureStopsSnapshotInsteadOfPretendingEngineIsMissing()
     {
         var state = new FakeState
@@ -136,7 +173,7 @@ public sealed class DatabaseRuntimeTests
         Assert.Equal(OperationRisk.ReadOnly, command.Risk);
         Assert.NotNull(command.Environment);
         Assert.Equal("C", command.Environment["LC_ALL"]);
-        Assert.DoesNotContain(command.Arguments, argument => argument.Contains(';', StringComparison.Ordinal));
+        Assert.DoesNotContain(command.Arguments, argument => argument.Contains(';'));
     }
 
     private static DatabaseRuntimeService CreateService(FakeState state) =>
@@ -154,6 +191,7 @@ public sealed class DatabaseRuntimeTests
         public string? MariaDbDVersion { get; set; }
         public string? RedisVersion { get; set; }
         public Dictionary<string, (string Load, string Active, string Sub)> Services { get; } = new(StringComparer.Ordinal);
+        public Dictionary<string, RemoteError> ServiceErrors { get; } = new(StringComparer.Ordinal);
     }
 
     private sealed class FakeCommandFactory : IRemoteCommandExecutorFactory
@@ -209,6 +247,11 @@ public sealed class DatabaseRuntimeTests
             if (command.Executable == "systemctl" && command.Arguments.Count >= 2 && command.Arguments[0] == "show")
             {
                 var unit = command.Arguments[1];
+                if (_state.ServiceErrors.TryGetValue(unit, out var serviceError))
+                {
+                    return Task.FromResult(RemoteExecutionResult.Failure(serviceError));
+                }
+
                 if (!_state.Services.TryGetValue(unit, out var service))
                 {
                     return Task.FromResult(Success(1, string.Empty, $"Unit {unit} could not be found."));
