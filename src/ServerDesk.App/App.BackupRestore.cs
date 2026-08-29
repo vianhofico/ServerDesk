@@ -16,9 +16,10 @@ public partial class App
         ArgumentNullException.ThrowIfNull(owner);
         var provider = _serviceProvider ?? throw new InvalidOperationException("ServerDesk services are not initialized.");
         var service = new AuditedBackupRestoreService(
-            new BackupRestoreService(
-                provider.GetRequiredService<IRemoteCommandExecutorFactory>(),
-                BackupRestoreOptions.Default),
+            new ServerBoundBackupRestoreService(
+                new BackupRestoreService(
+                    provider.GetRequiredService<IRemoteCommandExecutorFactory>(),
+                    BackupRestoreOptions.Default)),
             provider.GetRequiredService<IOperationAudit>());
         var window = new BackupRestoreWindow(
             service,
