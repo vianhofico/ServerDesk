@@ -235,6 +235,11 @@ public static class DeploymentTargetPolicy
         }
 
         var normalizedChecks = healthChecks.Select(NormalizeHealthCheck).ToArray();
+        if (normalizedChecks.Select(check => check.Name).Distinct(StringComparer.Ordinal).Count() != normalizedChecks.Length)
+        {
+            throw new ArgumentException("Deployment health-check names must be unique within a target.", nameof(target));
+        }
+
         var repositoryPath = string.IsNullOrWhiteSpace(target.RepositoryPath)
             ? null
             : GitRepositoryPath.Normalize(target.RepositoryPath);
