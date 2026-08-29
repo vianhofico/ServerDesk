@@ -19,6 +19,8 @@ public sealed class DeploymentOrchestrationService : IDeploymentOrchestrationSer
     private readonly IDeploymentHealthCheckRunner _health;
     private readonly IOperationAudit _audit;
     private readonly DeploymentOptions _options;
+    private readonly object _previewGate = new();
+    private readonly Dictionary<Guid, string> _previewFingerprints = [];
 
     public DeploymentOrchestrationService(
         IGitOperationsService git,
@@ -59,22 +61,18 @@ public sealed class DeploymentOrchestrationService : IDeploymentOrchestrationSer
             return new DeploymentPlanResult(null, observed.Error);
         }
 
-        var rollbackPossible = normalized.Kind == DeploymentTargetKind.Compose &&
-                               normalized.ComposeMode == DeploymentComposeMode.Up &&
-                               !normalized.ComposePull &&
-                               !normalized.ComposeBuild &&
-                               !observed.State!.ComposeProjectPresent;
-        return new DeploymentPlanResult(
-            new DeploymentPlan(
-                Guid.NewGuid(),
-                normalized,
-                BuildSteps(normalized),
-                observed.State!,
-                rollbackPossible,
-                rollbackPossible
-                    ? "compose-down-to-predeployment-absence"
-                    : "rollback-unavailable-for-nondeterministic-state"),
-            null);
+        var rollbackPossible = CanRollbackToPreDeploymentAbsence(normalized, observed.State!);
+        var plan = new DeploymentPlan(
+            Guid.NewGuid(),
+            normalized,
+            BuildSteps(normalized),
+            observed.State!,
+            rollbackPossible,
+            rollbackPossible
+                ? "compose-down-to-predeployment-absence"
+                : "rollback-unavailable-for-nondeterministic-state");
+        RememberPreview(plan);
+        return new DeploymentPlanResult(plan, null);
     }
 
     public async Task<DeploymentRunResult> ExecuteAsync(
@@ -85,8 +83,13 @@ public sealed class DeploymentOrchestrationService : IDeploymentOrchestrationSer
         ArgumentNullException.ThrowIfNull(profile);
         ArgumentNullException.ThrowIfNull(plan);
         var executionId = Guid.NewGuid();
-        var results = new List<DeploymentStepResult>(plan.Steps.Count);
+        if (plan.PlanId == Guid.Empty || plan.Steps is null || plan.ObservedState is null)
+        {
+            var invalid = new RemoteError(RemoteErrorCode.PathConflict, "The deployment plan is invalid. Create a new preview before executing.");
+            return new DeploymentRunResult(executionId, DeploymentRunStatus.Failed, [], invalid.Message, invalid);
+        }
 
+        var results = new List<DeploymentStepResult>(plan.Steps.Count);
         DeploymentTarget normalized;
         try
         {
@@ -98,9 +101,16 @@ public sealed class DeploymentOrchestrationService : IDeploymentOrchestrationSer
             return new DeploymentRunResult(executionId, DeploymentRunStatus.Failed, results, error.Message, error);
         }
 
-        if (!TargetMatches(normalized, plan.Target))
+        if (!TargetMatches(normalized, plan.Target) || !TryConsumePreview(plan))
         {
-            var error = new RemoteError(RemoteErrorCode.PathConflict, "The deployment target changed after preview. Create a new plan before executing.");
+            var error = new RemoteError(RemoteErrorCode.PathConflict, "The deployment plan changed after preview, was already consumed, or is no longer the latest preview. Create a new plan before executing.");
+            return new DeploymentRunResult(executionId, DeploymentRunStatus.Failed, results, error.Message, error);
+        }
+
+        var expectedSteps = BuildSteps(normalized);
+        if (!expectedSteps.SequenceEqual(plan.Steps))
+        {
+            var error = new RemoteError(RemoteErrorCode.PathConflict, "The deployment operation sequence no longer matches the supported preview. Create a new plan before executing.");
             return new DeploymentRunResult(executionId, DeploymentRunStatus.Failed, results, error.Message, error);
         }
 
@@ -120,9 +130,10 @@ public sealed class DeploymentOrchestrationService : IDeploymentOrchestrationSer
             return new DeploymentRunResult(executionId, DeploymentRunStatus.Failed, results, current.Error.Message, current.Error);
         }
 
-        if (!ObservedStateMatches(plan.ObservedState, current.State!))
+        if (!ObservedStateMatches(plan.ObservedState, current.State!) ||
+            plan.DeterministicRollbackPossible != CanRollbackToPreDeploymentAbsence(normalized, current.State!))
         {
-            var error = new RemoteError(RemoteErrorCode.PathConflict, "Deployment state changed after preview. Refresh and preview again before any mutation.");
+            var error = new RemoteError(RemoteErrorCode.PathConflict, "Deployment state or rollback capability changed after preview. Refresh and preview again before any mutation.");
             return new DeploymentRunResult(executionId, DeploymentRunStatus.Failed, results, error.Message, error);
         }
 
@@ -139,51 +150,51 @@ public sealed class DeploymentOrchestrationService : IDeploymentOrchestrationSer
                 switch (step.Kind)
                 {
                     case DeploymentStepKind.GitFetch:
-                    {
-                        mutationStarted = true;
-                        var fetch = await _git.FetchAsync(profile, normalized.RepositoryPath!, cancellationToken).ConfigureAwait(false);
-                        result = new DeploymentStepResult(step, ToOutcome(fetch.IsSuccess, fetch.Error), fetch.Message, fetch.Error);
-                        if (fetch.IsSuccess)
                         {
-                            fetchedGitState = fetch.VerifiedSnapshot;
-                        }
+                            mutationStarted = true;
+                            var fetch = await _git.FetchAsync(profile, normalized.RepositoryPath!, cancellationToken).ConfigureAwait(false);
+                            result = new DeploymentStepResult(step, ToOutcome(fetch.IsSuccess, fetch.Error), fetch.Message, fetch.Error);
+                            if (fetch.IsSuccess)
+                            {
+                                fetchedGitState = fetch.VerifiedSnapshot;
+                            }
 
-                        break;
-                    }
+                            break;
+                        }
                     case DeploymentStepKind.GitFastForward:
-                    {
-                        if (fetchedGitState is null)
                         {
-                            result = StepFailure(step, RemoteErrorCode.PathConflict, "Verified post-fetch Git state is unavailable.");
+                            if (fetchedGitState is null)
+                            {
+                                result = StepFailure(step, RemoteErrorCode.PathConflict, "Verified post-fetch Git state is unavailable.");
+                                break;
+                            }
+
+                            if (fetchedGitState.Behind == 0 && fetchedGitState.Ahead == 0)
+                            {
+                                result = new DeploymentStepResult(step, DeploymentStepOutcome.Skipped, "git-fast-forward-not-needed");
+                                break;
+                            }
+
+                            var pullPreview = await _git.PreviewPullAsync(profile, normalized.RepositoryPath!, cancellationToken).ConfigureAwait(false);
+                            if (!pullPreview.IsSuccess || pullPreview.Preview is null)
+                            {
+                                var error = pullPreview.Error ?? new RemoteError(RemoteErrorCode.CommandFailed, "Git safe-pull preview failed after fetch.");
+                                result = new DeploymentStepResult(step, DeploymentStepOutcome.Failed, error.Message, error);
+                                break;
+                            }
+
+                            if (!pullPreview.Preview.CanApply ||
+                                !string.Equals(pullPreview.Preview.CurrentRevision, fetchedGitState.Revision, StringComparison.Ordinal))
+                            {
+                                result = StepFailure(step, RemoteErrorCode.PathConflict, "Git state changed or became unsafe after fetch; deployment stopped before fast-forward.");
+                                break;
+                            }
+
+                            mutationStarted = true;
+                            var pull = await _git.PullAsync(profile, normalized.RepositoryPath!, fetchedGitState.Revision, cancellationToken).ConfigureAwait(false);
+                            result = new DeploymentStepResult(step, ToOutcome(pull.IsSuccess, pull.Error), pull.Message, pull.Error);
                             break;
                         }
-
-                        if (fetchedGitState.Behind == 0 && fetchedGitState.Ahead == 0)
-                        {
-                            result = new DeploymentStepResult(step, DeploymentStepOutcome.Skipped, "git-fast-forward-not-needed");
-                            break;
-                        }
-
-                        var pullPreview = await _git.PreviewPullAsync(profile, normalized.RepositoryPath!, cancellationToken).ConfigureAwait(false);
-                        if (!pullPreview.IsSuccess || pullPreview.Preview is null)
-                        {
-                            var error = pullPreview.Error ?? new RemoteError(RemoteErrorCode.CommandFailed, "Git safe-pull preview failed after fetch.");
-                            result = new DeploymentStepResult(step, DeploymentStepOutcome.Failed, error.Message, error);
-                            break;
-                        }
-
-                        if (!pullPreview.Preview.CanApply ||
-                            !string.Equals(pullPreview.Preview.CurrentRevision, fetchedGitState.Revision, StringComparison.Ordinal))
-                        {
-                            result = StepFailure(step, RemoteErrorCode.PathConflict, "Git state changed or became unsafe after fetch; deployment stopped before fast-forward.");
-                            break;
-                        }
-
-                        mutationStarted = true;
-                        var pull = await _git.PullAsync(profile, normalized.RepositoryPath!, fetchedGitState.Revision, cancellationToken).ConfigureAwait(false);
-                        result = new DeploymentStepResult(step, ToOutcome(pull.IsSuccess, pull.Error), pull.Message, pull.Error);
-                        break;
-                    }
                     case DeploymentStepKind.ComposePull:
                         mutationStarted = true;
                         result = await ExecuteComposeAsync(profile, normalized, step, DockerComposeAction.Pull, cancellationToken).ConfigureAwait(false);
@@ -193,52 +204,52 @@ public sealed class DeploymentOrchestrationService : IDeploymentOrchestrationSer
                         result = await ExecuteComposeAsync(profile, normalized, step, DockerComposeAction.Build, cancellationToken).ConfigureAwait(false);
                         break;
                     case DeploymentStepKind.ComposeUp:
-                    {
-                        mutationStarted = true;
-                        var action = await _compose.ExecuteAsync(profile, normalized.ComposeProject!, DockerComposeAction.Up, cancellationToken).ConfigureAwait(false);
-                        result = new DeploymentStepResult(step, ToOutcome(action.IsSuccess, action.Error), action.Message, action.Error);
-                        if (action.IsSuccess && plan.DeterministicRollbackPossible && action.VerifiedDetails is { } verified)
                         {
-                            rollback = new DeploymentRollbackPlan(
-                                executionId,
-                                DeploymentRollbackKind.ComposeDown,
-                                normalized.Id,
-                                normalized.Environment,
-                                normalized.ComposeProject!,
-                                ComposeFingerprint(verified),
-                                "compose-down-to-predeployment-absence");
-                        }
+                            mutationStarted = true;
+                            var action = await _compose.ExecuteAsync(profile, normalized.ComposeProject!, DockerComposeAction.Up, cancellationToken).ConfigureAwait(false);
+                            result = new DeploymentStepResult(step, ToOutcome(action.IsSuccess, action.Error), action.Message, action.Error);
+                            if (action.IsSuccess && plan.DeterministicRollbackPossible && action.VerifiedDetails is { } verified)
+                            {
+                                rollback = new DeploymentRollbackPlan(
+                                    executionId,
+                                    DeploymentRollbackKind.ComposeDown,
+                                    normalized.Id,
+                                    normalized.Environment,
+                                    normalized.ComposeProject!,
+                                    ComposeFingerprint(verified),
+                                    "compose-down-to-predeployment-absence");
+                            }
 
-                        break;
-                    }
+                            break;
+                        }
                     case DeploymentStepKind.ComposeRestart:
                         mutationStarted = true;
                         result = await ExecuteComposeAsync(profile, normalized, step, DockerComposeAction.Restart, cancellationToken).ConfigureAwait(false);
                         break;
                     case DeploymentStepKind.SystemdRestart:
-                    {
-                        mutationStarted = true;
-                        var action = await _services.ExecuteAsync(profile, normalized.SystemdUnit!, ServerServiceAction.Restart, cancellationToken).ConfigureAwait(false);
-                        result = new DeploymentStepResult(step, ToOutcome(action.IsSuccess, action.Error), action.Message, action.Error);
-                        break;
-                    }
-                    case DeploymentStepKind.HealthCheck:
-                    {
-                        var check = normalized.HealthChecks.FirstOrDefault(candidate => string.Equals(candidate.Name, step.HealthCheckName, StringComparison.Ordinal));
-                        if (check is null)
                         {
-                            result = StepFailure(step, RemoteErrorCode.PathConflict, "The health-check definition changed after preview.");
+                            mutationStarted = true;
+                            var action = await _services.ExecuteAsync(profile, normalized.SystemdUnit!, ServerServiceAction.Restart, cancellationToken).ConfigureAwait(false);
+                            result = new DeploymentStepResult(step, ToOutcome(action.IsSuccess, action.Error), action.Message, action.Error);
                             break;
                         }
+                    case DeploymentStepKind.HealthCheck:
+                        {
+                            var check = normalized.HealthChecks.FirstOrDefault(candidate => string.Equals(candidate.Name, step.HealthCheckName, StringComparison.Ordinal));
+                            if (check is null)
+                            {
+                                result = StepFailure(step, RemoteErrorCode.PathConflict, "The health-check definition changed after preview.");
+                                break;
+                            }
 
-                        var health = await _health.RunAsync(profile, check, cancellationToken).ConfigureAwait(false);
-                        result = new DeploymentStepResult(
-                            step,
-                            health.IsSuccess ? DeploymentStepOutcome.Succeeded : DeploymentStepOutcome.Failed,
-                            health.Message,
-                            health.Error);
-                        break;
-                    }
+                            var health = await _health.RunAsync(profile, check, cancellationToken).ConfigureAwait(false);
+                            result = new DeploymentStepResult(
+                                step,
+                                health.IsSuccess ? DeploymentStepOutcome.Succeeded : DeploymentStepOutcome.Failed,
+                                health.Message,
+                                health.Error);
+                            break;
+                        }
                     default:
                         throw new ArgumentOutOfRangeException(nameof(step));
                 }
@@ -513,6 +524,101 @@ public sealed class DeploymentOrchestrationService : IDeploymentOrchestrationSer
         }
 
         return steps;
+    }
+
+    private static bool CanRollbackToPreDeploymentAbsence(DeploymentTarget target, DeploymentObservedState state) =>
+        target.Kind == DeploymentTargetKind.Compose &&
+        target.ComposeMode == DeploymentComposeMode.Up &&
+        !target.ComposePull &&
+        !target.ComposeBuild &&
+        !state.ComposeProjectPresent;
+
+    private void RememberPreview(DeploymentPlan plan)
+    {
+        var fingerprint = PlanFingerprint(plan);
+        lock (_previewGate)
+        {
+            _previewFingerprints.Clear();
+            _previewFingerprints[plan.PlanId] = fingerprint;
+        }
+    }
+
+    private bool TryConsumePreview(DeploymentPlan plan)
+    {
+        string? expected;
+        lock (_previewGate)
+        {
+            if (!_previewFingerprints.Remove(plan.PlanId, out expected))
+            {
+                return false;
+            }
+        }
+
+        return string.Equals(expected, PlanFingerprint(plan), StringComparison.Ordinal);
+    }
+
+    private static string PlanFingerprint(DeploymentPlan plan)
+    {
+        var builder = new StringBuilder();
+        Append(builder, plan.Target.Id);
+        Append(builder, plan.Target.Name);
+        Append(builder, plan.Target.Environment);
+        Append(builder, ((int)plan.Target.Kind).ToString(System.Globalization.CultureInfo.InvariantCulture));
+        Append(builder, plan.Target.RepositoryPath);
+        Append(builder, plan.Target.ComposeProject?.Name);
+        if (plan.Target.ComposeProject is { } compose)
+        {
+            foreach (var config in compose.ConfigFiles)
+            {
+                Append(builder, config);
+            }
+        }
+
+        Append(builder, plan.Target.ComposeMode is null ? null : ((int)plan.Target.ComposeMode.Value).ToString(System.Globalization.CultureInfo.InvariantCulture));
+        Append(builder, plan.Target.ComposePull ? "1" : "0");
+        Append(builder, plan.Target.ComposeBuild ? "1" : "0");
+        Append(builder, plan.Target.SystemdUnit);
+        foreach (var check in plan.Target.HealthChecks)
+        {
+            Append(builder, check.Name);
+            Append(builder, ((int)check.Kind).ToString(System.Globalization.CultureInfo.InvariantCulture));
+            Append(builder, check.Target);
+            Append(builder, check.Port?.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        }
+
+        foreach (var step in plan.Steps)
+        {
+            Append(builder, step.Sequence.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            Append(builder, ((int)step.Kind).ToString(System.Globalization.CultureInfo.InvariantCulture));
+            Append(builder, ((int)step.Risk).ToString(System.Globalization.CultureInfo.InvariantCulture));
+            Append(builder, step.Description);
+            Append(builder, step.Conditional ? "1" : "0");
+            Append(builder, step.HealthCheckName);
+        }
+
+        Append(builder, plan.ObservedState.GitRevision);
+        Append(builder, plan.ObservedState.GitBranch);
+        Append(builder, plan.ObservedState.GitUpstream);
+        Append(builder, plan.ObservedState.ComposeProjectPresent ? "1" : "0");
+        Append(builder, plan.ObservedState.ComposeFingerprint);
+        Append(builder, plan.ObservedState.SystemdActiveState);
+        Append(builder, plan.ObservedState.SystemdSubState);
+        Append(builder, plan.DeterministicRollbackPossible ? "1" : "0");
+        Append(builder, plan.RollbackSummary);
+        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(builder.ToString())));
+    }
+
+    private static void Append(StringBuilder builder, string? value)
+    {
+        if (value is null)
+        {
+            builder.Append("-1:");
+            return;
+        }
+
+        builder.Append(value.Length)
+            .Append(':')
+            .Append(value);
     }
 
     private static DockerComposeProject? FindProject(DockerComposeSnapshot snapshot, DockerComposeProject expected)
