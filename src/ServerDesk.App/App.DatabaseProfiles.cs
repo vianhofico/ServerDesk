@@ -1,9 +1,11 @@
 using System.Windows;
 using Microsoft.Extensions.DependencyInjection;
 using ServerDesk.App.Localization;
+using ServerDesk.Application.Audit;
 using ServerDesk.Application.Databases;
 using ServerDesk.Application.PortForwarding;
 using ServerDesk.Application.Profiles;
+using ServerDesk.Application.Remote;
 using ServerDesk.Application.Secrets;
 using ServerDesk.Domain.Servers;
 using ServerDesk.Infrastructure.Databases;
@@ -18,8 +20,8 @@ public partial class App
         ArgumentNullException.ThrowIfNull(profile);
         ArgumentNullException.ThrowIfNull(owner);
         var provider = _serviceProvider ?? throw new InvalidOperationException("ServerDesk services are not initialized.");
-        var repository = new SqliteDatabaseProfileRepository(
-            provider.GetRequiredService<SqliteConnectionFactory>());
+        var connectionFactory = provider.GetRequiredService<SqliteConnectionFactory>();
+        var repository = new SqliteDatabaseProfileRepository(connectionFactory);
         var secretStore = provider.GetRequiredService<ISecretStore>();
         var profileService = new DatabaseProfileService(
             repository,
@@ -41,6 +43,14 @@ public partial class App
                 new RedisDiagnosticAdapter(),
             ],
             DatabaseDiagnosticOptions.Default);
+        var backupService = new AuditedDatabaseBackupService(
+            new DatabaseBackupService(
+                repository,
+                secretStore,
+                provider.GetRequiredService<IRemoteCommandExecutorFactory>(),
+                new SqliteDatabaseBackupManifestRepository(connectionFactory),
+                DatabaseBackupOptions.Default),
+            provider.GetRequiredService<IOperationAudit>());
         var window = new DatabaseProfilesWindow(
             profileService,
             connectivityService,
@@ -51,6 +61,7 @@ public partial class App
         {
             Owner = owner,
         };
+        window.InitializeBackupWorkflow(backupService);
         window.Show();
     }
 }

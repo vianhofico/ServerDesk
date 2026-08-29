@@ -48,7 +48,7 @@ jobs:
   ssh-integration:
     name: OpenSSH integration
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 30
 
     env:
       SERVERDESK_SSH_HOST: 127.0.0.1
@@ -69,6 +69,7 @@ jobs:
       SERVERDESK_MYSQL_PORT: 13306
       SERVERDESK_MARIADB_PORT: 13307
       SERVERDESK_REDIS_PORT: 16379
+      SERVERDESK_DB_BACKUP_DIR: /tmp/serverdesk-db-backups
 
     steps:
       - name: Checkout
@@ -189,6 +190,40 @@ jobs:
           docker ps -a
           exit 1
 
+      - name: Configure certified database backup tool wrappers
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo usermod -aG docker serverdesk_ci
+          sudo install -d -m 0777 "$SERVERDESK_DB_BACKUP_DIR"
+
+          cat <<'EOF' | sudo tee /usr/local/bin/pg_dump >/dev/null
+          #!/usr/bin/env bash
+          exec docker run --rm -i --network host -e PGPASSWORD \
+            -v /tmp/serverdesk-db-backups:/tmp/serverdesk-db-backups \
+            postgres:18.6 pg_dump "$@"
+          EOF
+          cat <<'EOF' | sudo tee /usr/local/bin/pg_restore >/dev/null
+          #!/usr/bin/env bash
+          exec docker run --rm -i --network host \
+            -v /tmp/serverdesk-db-backups:/tmp/serverdesk-db-backups \
+            postgres:18.6 pg_restore "$@"
+          EOF
+          cat <<'EOF' | sudo tee /usr/local/bin/mysqldump >/dev/null
+          #!/usr/bin/env bash
+          exec docker run --rm -i --network host -e MYSQL_PWD \
+            -v /tmp/serverdesk-db-backups:/tmp/serverdesk-db-backups \
+            mysql:8.4.11 mysqldump "$@"
+          EOF
+          cat <<'EOF' | sudo tee /usr/local/bin/mariadb-dump >/dev/null
+          #!/usr/bin/env bash
+          exec docker run --rm -i --network host -e MYSQL_PWD \
+            -v /tmp/serverdesk-db-backups:/tmp/serverdesk-db-backups \
+            mariadb:11.8.9 mariadb-dump "$@"
+          EOF
+          sudo chmod 0755 /usr/local/bin/pg_dump /usr/local/bin/pg_restore /usr/local/bin/mysqldump /usr/local/bin/mariadb-dump
+          sudo -u serverdesk_ci docker version >/dev/null
+
       - name: Restore integration tests
         run: dotnet restore tests/ServerDesk.Ssh.IntegrationTests/ServerDesk.Ssh.IntegrationTests.csproj
 
@@ -208,3 +243,4 @@ jobs:
           docker logs serverdesk-mysql || true
           docker logs serverdesk-mariadb || true
           docker logs serverdesk-redis || true
+          ls -la /tmp/serverdesk-db-backups || true

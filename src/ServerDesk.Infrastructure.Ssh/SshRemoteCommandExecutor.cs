@@ -86,7 +86,14 @@ internal sealed class SshRemoteCommandExecutor : IRemoteCommandExecutor
 
             try
             {
-                await sshCommand.ExecuteAsync(cancellationToken).ConfigureAwait(false);
+                var executionTask = sshCommand.ExecuteAsync(cancellationToken);
+                if (command.StandardInput is not null)
+                {
+                    using var inputStream = sshCommand.CreateInputStream();
+                    await command.StandardInput.WriteToAsync(inputStream, cancellationToken).ConfigureAwait(false);
+                }
+
+                await executionTask.ConfigureAwait(false);
                 stopwatch.Stop();
                 return RemoteExecutionResult.Success(new RemoteCommandResult(
                     sshCommand.ExitStatus ?? -1,
