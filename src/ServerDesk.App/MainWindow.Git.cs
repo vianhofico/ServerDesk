@@ -18,6 +18,7 @@ public partial class MainWindow
         EnsureTlsActionButton();
         EnsureEnvironmentFilesActionButton();
         EnsureDeploymentActionButton();
+        EnsureFirewallActionButton();
     }
 
     private void EnsureGitActionButton()
