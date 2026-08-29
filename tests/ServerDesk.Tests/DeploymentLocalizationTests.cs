@@ -32,7 +32,7 @@ public sealed class DeploymentLocalizationTests
         var english = ReadResources("Strings.Deployment.en.xaml");
         var vietnamese = ReadResources("Strings.Deployment.vi.xaml");
         var arguments = key == "Loc.Deploy.ExecuteConfirmMessage"
-            ? new object?[] { targetId, environment, mutationCount }
+            ? new object?[] { 6, targetId, environment, mutationCount }
             : new object?[] { targetId, environment };
 
         var englishText = string.Format(CultureInfo.GetCultureInfo("en-US"), english[key], arguments);
@@ -42,6 +42,13 @@ public sealed class DeploymentLocalizationTests
         Assert.Contains(environment, englishText, StringComparison.Ordinal);
         Assert.Contains(targetId, vietnameseText, StringComparison.Ordinal);
         Assert.Contains(environment, vietnameseText, StringComparison.Ordinal);
+        if (key == "Loc.Deploy.ExecuteConfirmMessage")
+        {
+            Assert.Contains("6", englishText, StringComparison.Ordinal);
+            Assert.Contains(mutationCount.ToString(CultureInfo.InvariantCulture), englishText, StringComparison.Ordinal);
+            Assert.Contains("6", vietnameseText, StringComparison.Ordinal);
+            Assert.Contains(mutationCount.ToString(CultureInfo.InvariantCulture), vietnameseText, StringComparison.Ordinal);
+        }
     }
 
     private static IReadOnlyDictionary<string, string> ReadResources(string fileName)
