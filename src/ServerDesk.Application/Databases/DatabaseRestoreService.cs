@@ -436,15 +436,20 @@ public sealed class DatabaseRestoreService : IDatabaseRestoreService
             return BindingRead.Fail(RemoteErrorCode.PathConflict, "Server, database profile and backup manifest identities do not match.");
         }
 
-        if (profile.Engine != manifest.Engine || !CompatibleFormat(profile.Engine, manifest.Format))
+        if (profile.Engine != manifest.Engine)
         {
-            return BindingRead.Fail(RemoteErrorCode.PathConflict, "Backup engine/format is not compatible with the selected database profile.");
+            return BindingRead.Fail(RemoteErrorCode.PathConflict, "Backup engine does not match the selected database profile.");
         }
 
         if (profile.Engine == DatabaseEngineKind.Redis)
         {
             return BindingRead.UnsupportedMode(
                 "Redis restore is not certified because ServerDesk cannot yet prove deterministic safe recovery semantics. No restore command will be generated.");
+        }
+
+        if (!CompatibleFormat(profile.Engine, manifest.Format))
+        {
+            return BindingRead.Fail(RemoteErrorCode.PathConflict, "Backup format is not compatible with the selected database profile.");
         }
 
         if (profile.Engine is not DatabaseEngineKind.PostgreSql and
@@ -773,8 +778,7 @@ public sealed class DatabaseRestoreService : IDatabaseRestoreService
                 "--single-transaction",
                 "--dbname", targetDatabase,
             };
-            if (!string.IsNullOrWhiteSpace(profile.Username))
-            {
+            if (!string.IsNullOrWhiteSpace(profile.Username))n            {
                 args.Add("--username");
                 args.Add(profile.Username);
             }
@@ -956,9 +960,9 @@ public sealed class DatabaseRestoreService : IDatabaseRestoreService
     private static string DataLossWarning(DatabaseEngineKind engine, string targetDatabase) => engine switch
     {
         DatabaseEngineKind.PostgreSql =>
-            $"Destructive logical restore targets exactly '{targetDatabase}'. Objects represented in the archive may be dropped/recreated. Objects absent from the archive may remain. No automatic rollback is claimed, and ambiguous transport completion must be inspected before any next action.",
+            $"Destructive data-loss-sensitive logical restore targets exactly '{targetDatabase}'. Objects represented in the archive may be dropped/recreated. Objects absent from the archive may remain. No automatic rollback is claimed, and ambiguous transport completion must be inspected before any next action.",
         DatabaseEngineKind.MySql or DatabaseEngineKind.MariaDb =>
-            $"Destructive logical restore is restricted to exactly '{targetDatabase}' with --one-database. DDL/DML in the verified dump may overwrite or drop represented objects; objects absent from the dump may remain. No automatic rollback is available.",
+            $"Destructive data-loss-sensitive logical restore is restricted to exactly '{targetDatabase}' with --one-database. DDL/DML in the verified dump may overwrite or drop represented objects; objects absent from the dump may remain. No automatic rollback is available.",
         _ => "Restore is unsupported.",
     };
 
