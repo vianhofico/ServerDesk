@@ -109,6 +109,8 @@ public sealed class DatabaseRuntimeService : IDatabaseRuntimeService
         IReadOnlyList<string> serviceUnits,
         CancellationToken cancellationToken)
     {
+        var executableAvailable = true;
+        string? version = null;
         var versionResult = await executor.ExecuteAsync(
             ReadOnly(executable, versionArguments),
             cancellationToken).ConfigureAwait(false);
@@ -116,19 +118,9 @@ public sealed class DatabaseRuntimeService : IDatabaseRuntimeService
         {
             if (versionResult.Error.Code == RemoteErrorCode.CommandNotFound)
             {
-                return ProbeResult.Success(new DatabaseEngineObservation(
-                    engine,
-                    DatabaseEngineRuntimeStatus.CliUnavailable,
-                    executable,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    $"{executable} is not available in the remote command path."));
+                executableAvailable = false;
             }
-
-            if (versionResult.Error.Code == RemoteErrorCode.PermissionDenied)
+            else if (versionResult.Error.Code == RemoteErrorCode.PermissionDenied)
             {
                 return ProbeResult.Success(new DatabaseEngineObservation(
                     engine,
@@ -141,33 +133,38 @@ public sealed class DatabaseRuntimeService : IDatabaseRuntimeService
                     null,
                     versionResult.Error.Message));
             }
-
-            return ProbeResult.Failure(versionResult.Error);
+            else
+            {
+                return ProbeResult.Failure(versionResult.Error);
+            }
         }
-
-        var versionCommand = versionResult.Command!;
-        if (OutputTooLarge(versionCommand))
+        else
         {
-            return ProbeResult.Success(ProbeFailed(
-                engine,
-                executable,
-                null,
-                "Version probe output exceeded the configured safety limit."));
+            var versionCommand = versionResult.Command!;
+            if (OutputTooLarge(versionCommand))
+            {
+                return ProbeResult.Success(ProbeFailed(
+                    engine,
+                    executable,
+                    null,
+                    "Version probe output exceeded the configured safety limit."));
+            }
+
+            if (versionCommand.ExitCode != 0)
+            {
+                return ProbeResult.Success(ProbeFailed(
+                    engine,
+                    executable,
+                    null,
+                    FirstUseful(versionCommand.StandardError, versionCommand.StandardOutput, "Version probe failed.")));
+            }
+
+            version = NormalizeSingleLine(FirstUseful(
+                versionCommand.StandardOutput,
+                versionCommand.StandardError,
+                "version-unavailable"));
         }
 
-        if (versionCommand.ExitCode != 0)
-        {
-            return ProbeResult.Success(ProbeFailed(
-                engine,
-                executable,
-                null,
-                FirstUseful(versionCommand.StandardError, versionCommand.StandardOutput, "Version probe failed.")));
-        }
-
-        var version = NormalizeSingleLine(FirstUseful(
-            versionCommand.StandardOutput,
-            versionCommand.StandardError,
-            "version-unavailable"));
         var serviceProbe = await ProbeServiceAsync(executor, serviceUnits, cancellationToken).ConfigureAwait(false);
         if (serviceProbe.Error is not null)
         {
@@ -179,16 +176,35 @@ public sealed class DatabaseRuntimeService : IDatabaseRuntimeService
         {
             return ProbeResult.Success(new DatabaseEngineObservation(
                 engine,
-                DatabaseEngineRuntimeStatus.Installed,
+                executableAvailable
+                    ? DatabaseEngineRuntimeStatus.Installed
+                    : DatabaseEngineRuntimeStatus.CliUnavailable,
                 executable,
                 version,
                 null,
                 null,
                 null,
                 null,
-                "The server binary is available, but no supported systemd service unit was found. Runtime state remains unverified."));
+                executableAvailable
+                    ? "The server binary is available, but no supported systemd service unit was found. Runtime state remains unverified."
+                    : $"Neither {executable} nor a supported systemd service unit was detected."));
         }
 
+        return ProbeResult.Success(BuildServiceObservation(
+            engine,
+            executable,
+            version,
+            executableAvailable,
+            service));
+    }
+
+    private static DatabaseEngineObservation BuildServiceObservation(
+        DatabaseEngineKind engine,
+        string executable,
+        string? version,
+        bool executableAvailable,
+        ServiceObservation service)
+    {
         var status = service.ActiveState switch
         {
             "active" => DatabaseEngineRuntimeStatus.Active,
@@ -202,15 +218,18 @@ public sealed class DatabaseRuntimeService : IDatabaseRuntimeService
             DatabaseEngineRuntimeStatus.Installed
                 ? service.Unit
                 : null;
+        var executableNote = executableAvailable
+            ? string.Empty
+            : $" {executable} is not in the remote command path, so the server version is not verified.";
         var detail = status switch
         {
             DatabaseEngineRuntimeStatus.PermissionDenied =>
                 $"{service.Unit} exists, but its runtime state could not be read with the current account.",
             DatabaseEngineRuntimeStatus.ProbeFailed =>
                 $"{service.Unit} runtime state could not be normalized safely ({service.SubState}).",
-            _ => $"systemd reports {service.Unit} as {service.ActiveState}/{service.SubState}.",
+            _ => $"systemd reports {service.Unit} as {service.ActiveState}/{service.SubState}.{executableNote}",
         };
-        return ProbeResult.Success(new DatabaseEngineObservation(
+        return new DatabaseEngineObservation(
             engine,
             status,
             executable,
@@ -219,7 +238,7 @@ public sealed class DatabaseRuntimeService : IDatabaseRuntimeService
             service.ActiveState,
             service.SubState,
             journalUnit,
-            detail));
+            detail);
     }
 
     private async Task<ServiceProbeResult> ProbeServiceAsync(
@@ -268,7 +287,7 @@ public sealed class DatabaseRuntimeService : IDatabaseRuntimeService
                     "output-too-large"));
             }
 
-            var text = string.Join('\n', command.StandardOutput, command.StandardError);
+            var text = command.StandardOutput + "\n" + command.StandardError;
             if (command.ExitCode != 0 && LooksLikeUnitMissing(text))
             {
                 continue;
@@ -346,8 +365,8 @@ public sealed class DatabaseRuntimeService : IDatabaseRuntimeService
             StableEnvironment);
 
     private bool OutputTooLarge(RemoteCommandResult command) =>
-        Encoding.UTF8.GetByteCount(command.StandardOutput ?? string.Empty) > _options.MaximumOutputBytes ||
-        Encoding.UTF8.GetByteCount(command.StandardError ?? string.Empty) > _options.MaximumOutputBytes;
+        Encoding.UTF8.GetByteCount(command.StandardOutput) > _options.MaximumOutputBytes ||
+        Encoding.UTF8.GetByteCount(command.StandardError) > _options.MaximumOutputBytes;
 
     private static DatabaseEngineObservation ProbeFailed(
         DatabaseEngineKind engine,
