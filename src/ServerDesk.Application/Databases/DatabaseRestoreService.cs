@@ -778,7 +778,8 @@ public sealed class DatabaseRestoreService : IDatabaseRestoreService
                 "--single-transaction",
                 "--dbname", targetDatabase,
             };
-            if (!string.IsNullOrWhiteSpace(profile.Username))n            {
+            if (!string.IsNullOrWhiteSpace(profile.Username))
+            {
                 args.Add("--username");
                 args.Add(profile.Username);
             }
