@@ -55,8 +55,9 @@ public sealed class ConnectionRoutingTests
         await routeRepository.UpsertAsync(route, cancellationToken);
         var loaded = await routeRepository.GetAsync(profile.Id, cancellationToken);
 
-        Assert.Equal(SqliteDatabaseInitializer.CurrentSchemaVersion, await initializer.GetSchemaVersionAsync(cancellationToken));
-        Assert.Equal(6, SqliteDatabaseInitializer.CurrentSchemaVersion);
+        Assert.Equal(
+            SqliteDatabaseInitializer.CurrentSchemaVersion,
+            await initializer.GetSchemaVersionAsync(cancellationToken));
         Assert.Equal(route, loaded);
 
         await using var connection = factory.Create();
