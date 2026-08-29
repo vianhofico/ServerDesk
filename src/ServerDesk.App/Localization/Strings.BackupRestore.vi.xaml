@@ -1,0 +1,38 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.BackupRestore.Action">Sao lưu</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.BackupRestore.ActionTooltip">Tạo backup đã xác minh và chỉ khôi phục về đúng target gốc.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.BackupRestore.WindowTitle">Sao lưu và khôi phục</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.BackupRestore.Title">Sao lưu / Khôi phục — {0}</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.BackupRestore.Subtitle">M5.5 certify target file thường. Backup chỉ được phép dùng để restore sau khi size, SHA-256, UID/GID và mode khớp hoàn toàn.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.BackupRestore.TargetPath">File target chính xác</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.BackupRestore.DestinationDirectory">Thư mục đích backup đã tồn tại</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.BackupRestore.CreateVerify">Tạo &amp; xác minh backup</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.BackupRestore.Created">Thời điểm tạo</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.BackupRestore.Target">Target</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.BackupRestore.Backup">Đường dẫn backup</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.BackupRestore.Size">Bytes</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.BackupRestore.Verified">Đã xác minh</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.BackupRestore.Restore">Khôi phục có bảo vệ</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.BackupRestore.ExactTargetNotice">Không thể sửa destination khi restore: manifest đã xác minh chỉ được ghi đè đúng file target chuẩn hóa ban đầu.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.BackupRestore.SelectedManifest">Manifest đã xác minh đang chọn</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.BackupRestore.PreviewRestore">Preview restore</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.BackupRestore.ExecuteRestore">Thực thi restore</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.BackupRestore.Preview">Preview khôi phục</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.BackupRestore.Rollback">Khả năng rollback</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.BackupRestore.VerificationPolicy">Restore tạo stage và xác minh trước khi atomic replace. Kết quả không chắc chắn sẽ không bao giờ bị tự retry.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.BackupRestore.Footer">Directory và application snapshot vẫn bị khóa cho tới khi có adapter deterministic được implement và certify; ServerDesk không âm thầm mở rộng target file.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.BackupRestore.Ready">Sẵn sàng tạo backup file đã xác minh.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.BackupRestore.Disconnected">Server hiện chưa kết nối. Backup/restore có thể thất bại cho tới khi khôi phục kết nối.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.BackupRestore.NoManifestSelected">Chưa chọn backup đã xác minh.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.BackupRestore.ManifestFormat">Backup {0}&#10;Target: {1}&#10;SHA-256: {2}&#10;Mode: {3}</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.BackupRestore.ConfirmCreateTitle">Xác nhận tạo backup</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.BackupRestore.ConfirmCreate">Tạo và xác minh backup đúng file:&#10;{0}&#10;&#10;Trong thư mục đã tồn tại:&#10;{1}?</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.BackupRestore.PreviewFailed">Preview restore thất bại.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.BackupRestore.PreviewReady">Preview restore đang được ràng buộc với đúng target live và trạng thái backup đã xác minh.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.BackupRestore.RollbackAvailable">Có bản rollback đã được xác minh.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.BackupRestore.RollbackUnavailable">Rollback không khả dụng: plan này chưa capture và xác minh bản pre-restore, nên ServerDesk không tuyên bố rollback deterministic.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.BackupRestore.ConfirmRestoreTitle">Xác nhận restore phá hủy</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.BackupRestore.ConfirmRestore">Restore backup đã xác minh {0} và ghi đè đúng:&#10;{1}&#10;&#10;{2}&#10;&#10;Tiếp tục?</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.BackupRestore.AmbiguousTitle">Kết quả backup/restore không chắc chắn</sys:String>
+</ResourceDictionary>
