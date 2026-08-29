@@ -1,0 +1,43 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.PackageAdmin.Action">Gói phần mềm</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.PackageAdmin.ActionTooltip">Xem các gói đã cài và thực hiện thao tác có bảo vệ trên các gói được chọn.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.PackageAdmin.WindowTitle">Quản trị gói phần mềm</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.PackageAdmin.Title">Gói phần mềm — {0}</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.PackageAdmin.Subtitle">APT/DNF được chọn theo capability runtime thực tế. Mọi thay đổi gói đều rõ ràng, chỉ áp dụng cho gói đã chọn và phải Preview trước khi chạy.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.PackageAdmin.RefreshInventory">Làm mới inventory</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.PackageAdmin.Package">Gói</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.PackageAdmin.Installed">Đã cài</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.PackageAdmin.Candidate">Phiên bản ứng viên</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.PackageAdmin.Architecture">Kiến trúc</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.PackageAdmin.Repository">Kho nguồn</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.PackageAdmin.Classification">Loại cập nhật</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.PackageAdmin.GuardedOperation">Thao tác có bảo vệ</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.PackageAdmin.SelectedOnlyNotice">Cài, nâng cấp và gỡ chỉ áp dụng cho đúng các gói được chọn. Làm mới metadata không cài hay nâng cấp gói nào.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.PackageAdmin.Manager">Trình quản lý đang dùng</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.PackageAdmin.Operation">Thao tác</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.PackageAdmin.SelectedPackages">Các gói đã chọn</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.PackageAdmin.Preview">Preview</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.PackageAdmin.Execute">Thực thi</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.PackageAdmin.ExactCommand">Lệnh chính xác</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.PackageAdmin.Impact">Gợi ý ảnh hưởng</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.PackageAdmin.NoAutomaticUpgrade">ServerDesk không bao giờ tự động áp dụng nâng cấp toàn hệ thống production từ màn hình này.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.PackageAdmin.Footer">Sau lệnh lỗi hoặc gián đoạn, ServerDesk đọc lại trạng thái trước khi hướng dẫn retry. Khi kết quả không chắc chắn phải làm mới thủ công; ServerDesk không tự retry mutation gói.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.PackageAdmin.RefreshMetadata">Làm mới metadata</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.PackageAdmin.Install">Cài gói đã chọn</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.PackageAdmin.Upgrade">Nâng cấp gói đã chọn</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.PackageAdmin.Remove">Gỡ gói đã chọn</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.PackageAdmin.None">Không có</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.PackageAdmin.NoPackagesSelected">Chưa chọn gói nào.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.PackageAdmin.SelectPackageFirst">Hãy chọn rõ một hoặc nhiều gói trước khi Preview thao tác này.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.PackageAdmin.StatusReady">Sẵn sàng kiểm tra capability của trình quản lý gói.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.PackageAdmin.StatusDisconnected">Server hiện chưa kết nối. Thao tác gói có thể thất bại cho tới khi khôi phục kết nối.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.PackageAdmin.StatusLoading">Đang tải capability và inventory gói từ metadata hiện có…</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.PackageAdmin.StatusLoaded">Manager: {0}. Số gói: {1}. {2}</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.PackageAdmin.StatusFailed">Không thể tải inventory gói.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.PackageAdmin.PreviewFailed">Preview thao tác gói thất bại.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.PackageAdmin.PreviewReady">Preview đang được ràng buộc với trạng thái gói hiện tại. Chỉnh sửa hoặc refresh sẽ làm Preview cũ mất hiệu lực.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.PackageAdmin.ConfirmTitle">Xác nhận thao tác gói</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.PackageAdmin.ConfirmBody">Thực thi đúng lệnh gói này?&#10;&#10;{0}&#10;&#10;Ảnh hưởng: {1}&#10;&#10;ServerDesk sẽ xác minh lại trạng thái gói sau khi chạy và không tự retry khi kết quả không chắc chắn.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.PackageAdmin.AmbiguousTitle">Kết quả thao tác gói không chắc chắn</sys:String>
+</ResourceDictionary>
