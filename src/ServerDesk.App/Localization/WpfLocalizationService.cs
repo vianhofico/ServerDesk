@@ -33,6 +33,7 @@ public sealed class WpfLocalizationService : ILocalizationService
         "Firewall",
         "FirewallMutations",
         "UserAdministration",
+        "PackageAdministration",
     ];
     private readonly ISystemCultureDetector _systemCultureDetector;
 

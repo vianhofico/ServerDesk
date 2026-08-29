@@ -1,0 +1,43 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.PackageAdmin.Action">Packages</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.PackageAdmin.ActionTooltip">Inspect installed packages and run guarded selected-package operations.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.PackageAdmin.WindowTitle">Package administration</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.PackageAdmin.Title">Packages — {0}</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.PackageAdmin.Subtitle">APT/DNF is selected from live runtime capabilities. Package changes are explicit, selected-only and previewed before execution.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.PackageAdmin.RefreshInventory">Refresh inventory</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.PackageAdmin.Package">Package</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.PackageAdmin.Installed">Installed</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.PackageAdmin.Candidate">Candidate</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.PackageAdmin.Architecture">Architecture</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.PackageAdmin.Repository">Repository</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.PackageAdmin.Classification">Update type</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.PackageAdmin.GuardedOperation">Guarded operation</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.PackageAdmin.SelectedOnlyNotice">Install, upgrade and remove apply only to the explicitly selected package identities. Metadata refresh applies no packages.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.PackageAdmin.Manager">Active manager</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.PackageAdmin.Operation">Operation</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.PackageAdmin.SelectedPackages">Selected packages</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.PackageAdmin.Preview">Preview</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.PackageAdmin.Execute">Execute</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.PackageAdmin.ExactCommand">Exact command</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.PackageAdmin.Impact">Impact hint</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.PackageAdmin.NoAutomaticUpgrade">ServerDesk never automatically applies a global production upgrade from this workspace.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.PackageAdmin.Footer">A failed or interrupted package command is re-read before retry guidance. Ambiguous completion must be refreshed manually; ServerDesk does not blindly retry package mutations.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.PackageAdmin.RefreshMetadata">Refresh metadata</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.PackageAdmin.Install">Install selected</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.PackageAdmin.Upgrade">Upgrade selected</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.PackageAdmin.Remove">Remove selected</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.PackageAdmin.None">None</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.PackageAdmin.NoPackagesSelected">No packages selected.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.PackageAdmin.SelectPackageFirst">Select one or more explicit packages before previewing this operation.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.PackageAdmin.StatusReady">Ready to inspect package-manager capabilities.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.PackageAdmin.StatusDisconnected">The server is not currently connected. Package operations may fail until connectivity is restored.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.PackageAdmin.StatusLoading">Loading package-manager capabilities and cached package inventory…</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.PackageAdmin.StatusLoaded">Manager: {0}. Packages: {1}. {2}</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.PackageAdmin.StatusFailed">Package inventory could not be loaded.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.PackageAdmin.PreviewFailed">Package preview failed.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.PackageAdmin.PreviewReady">Preview is bound to the current package state. Editing or refreshing invalidates it.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.PackageAdmin.ConfirmTitle">Confirm package operation</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.PackageAdmin.ConfirmBody">Execute this exact package command?&#10;&#10;{0}&#10;&#10;Impact: {1}&#10;&#10;ServerDesk will verify normalized package state after execution and will not blindly retry ambiguous completion.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.PackageAdmin.AmbiguousTitle">Package completion is ambiguous</sys:String>
+</ResourceDictionary>
