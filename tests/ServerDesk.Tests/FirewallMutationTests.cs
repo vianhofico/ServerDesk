@@ -191,8 +191,8 @@ public sealed class FirewallMutationTests
     {
         var cancellationToken = TestContext.Current.CancellationToken;
         var profile = Profile();
-        var before = ActiveUfw(detail: "ufw-active");
-        var drifted = ActiveUfw(detail: "ufw-active-reloaded");
+        var before = ActiveUfwWithDetail("ufw-active");
+        var drifted = ActiveUfwWithDetail("ufw-active-reloaded");
         var inventory = new SequenceFirewallInventory(before, before, drifted);
         var executor = Executor(profile, Success());
         var guarded = GuardedService(inventory, executor);
@@ -459,11 +459,13 @@ public sealed class FirewallMutationTests
                 port,
                 "any"));
 
-    private static FirewallInventorySnapshot ActiveUfw(
-        FirewallRuleInfo[]? rules = null,
-        string detail = "ufw-active")
+    private static FirewallInventorySnapshot ActiveUfw(params FirewallRuleInfo[] rules) =>
+        ActiveUfwWithDetail("ufw-active", rules);
+
+    private static FirewallInventorySnapshot ActiveUfwWithDetail(
+        string detail,
+        params FirewallRuleInfo[] rules)
     {
-        rules ??= [];
         var ufw = new FirewallAdapterObservation(
             FirewallAdapterKind.Ufw,
             true,
@@ -489,9 +491,6 @@ public sealed class FirewallMutationTests
             [ufw, firewalld],
             detail);
     }
-
-    private static FirewallInventorySnapshot ActiveUfw(params FirewallRuleInfo[] rules) =>
-        ActiveUfw(rules, "ufw-active");
 
     private static FirewallInventorySnapshot DisabledUfw()
     {
