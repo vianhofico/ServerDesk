@@ -19,6 +19,7 @@ public partial class MainWindow
         EnsureEnvironmentFilesActionButton();
         EnsureDeploymentActionButton();
         EnsureFirewallActionButton();
+        EnsureUserAdministrationActionButton();
     }
 
     private void EnsureGitActionButton()
