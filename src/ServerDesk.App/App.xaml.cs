@@ -8,6 +8,7 @@ using ServerDesk.Application.Capabilities;
 using ServerDesk.Application.Dashboard;
 using ServerDesk.Application.Docker;
 using ServerDesk.Application.EnvironmentFiles;
+using ServerDesk.Application.Firewall;
 using ServerDesk.Application.Git;
 using ServerDesk.Application.History;
 using ServerDesk.Application.HostTrust;
@@ -143,7 +144,6 @@ public partial class App : System.Windows.Application
             new ConnectionHistoryRemoteSessionFactory(
                 provider.GetRequiredService<RouteAwareRemoteSessionFactory>(),
                 provider.GetRequiredService<IConnectionHistoryRepository>(),
-                provider.GetRequiredService<IConnectionRouteRepository>(),
                 provider.GetRequiredService<IProfileRepository>()));
         services.AddSingleton<IRemoteCommandExecutorFactory, RouteAwareRemoteCommandExecutorFactory>();
         services.AddSingleton<IRemoteFileSystemFactory, RouteAwareSftpRemoteFileSystemFactory>();
@@ -171,6 +171,8 @@ public partial class App : System.Windows.Application
         services.AddSingleton<IServerNetworkService, ServerNetworkService>();
         services.AddSingleton(ServerLogOptions.Default);
         services.AddSingleton<IServerLogService, ServerLogService>();
+        services.AddSingleton(FirewallInventoryOptions.Default);
+        services.AddSingleton<IFirewallManager, FirewallInventoryService>();
         services.AddSingleton(DockerInventoryOptions.Default);
         services.AddSingleton<IDockerInventoryService, DockerInventoryService>();
         services.AddSingleton(DockerContainerDiagnosticsOptions.Default);
