@@ -24,22 +24,26 @@ public sealed class BackupRestoreTests
     [Fact]
     public async Task BackupMustVerifyBeforeExactTargetRestoreIsAvailable()
     {
+        var cancellationToken = TestContext.Current.CancellationToken;
         var state = new FakeRemoteState();
         state.SetDirectory("/backups", 1000, 1000, 755);
         state.SetFile("/etc/app.conf", 12, 0, 0, 640, HashA);
         var profile = Profile();
         var service = new BackupRestoreService(new FakeFactory(state), BackupRestoreOptions.Default);
 
-        var created = await service.CreateBackupAsync(profile, new BackupCreateRequest("/etc/app.conf", "/backups"));
+        var created = await service.CreateBackupAsync(
+            profile,
+            new BackupCreateRequest("/etc/app.conf", "/backups"),
+            cancellationToken);
 
         Assert.True(created.IsSuccess, created.Error?.Message);
         var manifest = Assert.IsType<BackupManifest>(created.Manifest);
         Assert.True(manifest.IsVerified);
         Assert.Equal(HashA, manifest.Sha256);
-        Assert.Equal(640, manifest.Permissions.Mode);
+        Assert.Equal((short)640, manifest.Permissions.Mode);
 
         state.SetFile("/etc/app.conf", 8, 0, 0, 600, HashB);
-        var previewResult = await service.PreviewRestoreAsync(profile, manifest);
+        var previewResult = await service.PreviewRestoreAsync(profile, manifest, cancellationToken);
 
         Assert.True(previewResult.IsSuccess, previewResult.Error?.Message);
         var preview = Assert.IsType<RestorePreview>(previewResult.Preview);
@@ -47,13 +51,13 @@ public sealed class BackupRestoreTests
         Assert.False(preview.Impact.RollbackAvailable);
         Assert.Contains("exactly", preview.Impact.Message, StringComparison.OrdinalIgnoreCase);
 
-        var restored = await service.ExecuteRestoreAsync(profile, preview);
+        var restored = await service.ExecuteRestoreAsync(profile, preview, cancellationToken);
 
         Assert.True(restored.IsSuccess, restored.Error?.Message);
         var target = state.Get("/etc/app.conf");
         Assert.Equal(HashA, target.Hash);
         Assert.Equal(12, target.Size);
-        Assert.Equal(640, target.Mode);
+        Assert.Equal((short)640, target.Mode);
         Assert.Equal(0, target.UserId);
         Assert.Equal(0, target.GroupId);
     }
@@ -61,12 +65,16 @@ public sealed class BackupRestoreTests
     [Fact]
     public async Task CorruptedCopyIsNeverMarkedVerifiedOrSafeForRestore()
     {
+        var cancellationToken = TestContext.Current.CancellationToken;
         var state = new FakeRemoteState { CorruptNextInstall = true };
         state.SetDirectory("/backups", 1000, 1000, 755);
         state.SetFile("/etc/app.conf", 12, 0, 0, 640, HashA);
         var service = new BackupRestoreService(new FakeFactory(state), BackupRestoreOptions.Default);
 
-        var result = await service.CreateBackupAsync(Profile(), new BackupCreateRequest("/etc/app.conf", "/backups"));
+        var result = await service.CreateBackupAsync(
+            Profile(),
+            new BackupCreateRequest("/etc/app.conf", "/backups"),
+            cancellationToken);
 
         Assert.False(result.IsSuccess);
         Assert.Null(result.Manifest);
