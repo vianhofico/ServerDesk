@@ -103,7 +103,9 @@ public partial class DatabaseBackupWindow : Window
             {
                 await RefreshHistorySafeAsync().ConfigureAwait(true);
                 StatusText.Text = _localization.Format(
-                    "Loc.DatabaseBackups.Success",
+                    result.HistoryPersisted
+                        ? "Loc.DatabaseBackups.Success"
+                        : "Loc.DatabaseBackups.SuccessHistoryFailed",
                     result.Manifest.BackupPath.Value);
                 return;
             }
