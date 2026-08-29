@@ -12,7 +12,7 @@ public sealed class PackageAdministrationTests
         Assert.Throws<ArgumentException>(() => PackageAdministrationService.NormalizeRequest(
             new PackageMutationRequest(PackageMutationKind.Install, PackageManagerKind.Apt, ["--allowerasing"])));
         Assert.Throws<ArgumentException>(() => PackageAdministrationService.NormalizeRequest(
-            new PackageMutationRequest(PackageMutationKind.Install, PackageManagerKind.Apt, ["nginx;rm"]))) ;
+            new PackageMutationRequest(PackageMutationKind.Install, PackageManagerKind.Apt, ["nginx;rm"])));
         Assert.Throws<ArgumentException>(() => PackageAdministrationService.NormalizeRequest(
             new PackageMutationRequest(PackageMutationKind.Install, PackageManagerKind.Apt, [])));
     }
