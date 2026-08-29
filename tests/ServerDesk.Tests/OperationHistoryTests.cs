@@ -66,6 +66,15 @@ public sealed class OperationHistoryTests
                 "local",
                 occurred.AddMinutes(2)),
             cancellationToken);
+        await rawAudit.AppendAsync(
+            OperationAuditEntry.Create(
+                "user-administration",
+                "Legacy user mutation",
+                OperationRisk.Mutating,
+                OperationOutcome.Succeeded,
+                "deploy@prod.example.com:2222 local-user:legacy-user",
+                occurred.AddMinutes(3)),
+            cancellationToken);
 
         var service = new OperationHistoryService(rawAudit);
         var result = await service.QueryAsync(
@@ -88,6 +97,17 @@ public sealed class OperationHistoryTests
         Assert.DoesNotContain("prod.example.com", item.Entry.Target!, StringComparison.Ordinal);
         Assert.DoesNotContain("history-private-key-sentinel", item.Entry.Target!, StringComparison.Ordinal);
         Assert.DoesNotContain(secretReference.Value, item.Entry.Target!, StringComparison.Ordinal);
+
+        var legacy = await service.QueryAsync(
+            new OperationAuditQuery(
+                ServerProfileId: profileId,
+                Category: "user-administration",
+                SearchText: "legacy-user",
+                Limit: 25),
+            cancellationToken);
+        var legacyItem = Assert.Single(legacy.Items);
+        Assert.Equal(profileId, legacyItem.ServerProfileId);
+        Assert.Null(legacyItem.Verification);
     }
 
     [Fact]
@@ -133,7 +153,7 @@ public sealed class OperationHistoryTests
     }
 
     [Fact]
-    public void QueryNormalizationRejectsUnboundedOrInvertedRanges()
+    public void QueryNormalizationRejectsUnboundedInvertedOrInvalidEnumFilters()
     {
         Assert.Throws<ArgumentOutOfRangeException>(() =>
             OperationHistoryService.Normalize(new OperationAuditQuery(Limit: OperationHistoryService.MaximumLimit + 1)));
@@ -141,6 +161,10 @@ public sealed class OperationHistoryTests
             OperationHistoryService.Normalize(new OperationAuditQuery(
                 FromUtc: new DateTimeOffset(2026, 8, 30, 0, 0, 0, TimeSpan.Zero),
                 ToUtc: new DateTimeOffset(2026, 8, 29, 0, 0, 0, TimeSpan.Zero))));
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            OperationHistoryService.Normalize(new OperationAuditQuery(Risk: (OperationRisk)999)));
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            OperationHistoryService.Normalize(new OperationAuditQuery(Outcome: (OperationOutcome)999)));
     }
 
     private sealed class TemporaryAppPaths : IAppPaths, IDisposable
