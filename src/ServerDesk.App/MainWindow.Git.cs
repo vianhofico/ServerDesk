@@ -22,6 +22,7 @@ public partial class MainWindow
         EnsureUserAdministrationActionButton();
         EnsurePackageAdministrationActionButton();
         EnsureBackupRestoreActionButton();
+        EnsureOperationHistoryActionButton();
     }
 
     private void EnsureGitActionButton()
