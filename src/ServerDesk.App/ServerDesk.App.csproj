@@ -8,6 +8,7 @@
   <ItemGroup>
     <ProjectReference Include="..\ServerDesk.Application\ServerDesk.Application.csproj" />
     <ProjectReference Include="..\ServerDesk.Domain\ServerDesk.Domain.csproj" />
+    <ProjectReference Include="..\ServerDesk.Infrastructure.Databases\ServerDesk.Infrastructure.Databases.csproj" />
     <ProjectReference Include="..\ServerDesk.Infrastructure.Persistence\ServerDesk.Infrastructure.Persistence.csproj" />
     <ProjectReference Include="..\ServerDesk.Infrastructure.Ssh\ServerDesk.Infrastructure.Ssh.csproj" />
     <ProjectReference Include="..\ServerDesk.Platform.Windows\ServerDesk.Platform.Windows.csproj" />
