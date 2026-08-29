@@ -50,7 +50,9 @@ public sealed class DatabaseProfilePersistenceTests
         Assert.Equal(profile.Username, loaded.Username);
         Assert.Equal(profile.AuthenticationKind, loaded.AuthenticationKind);
         Assert.Equal(reference, loaded.CredentialReference);
-        Assert.Equal(7, await initializer.GetSchemaVersionAsync(cancellationToken));
+        Assert.Equal(
+            SqliteDatabaseInitializer.CurrentSchemaVersion,
+            await initializer.GetSchemaVersionAsync(cancellationToken));
     }
 
     [Fact]
