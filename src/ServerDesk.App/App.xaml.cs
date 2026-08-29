@@ -174,6 +174,12 @@ public partial class App : System.Windows.Application
         services.AddSingleton<IServerLogService, ServerLogService>();
         services.AddSingleton(FirewallInventoryOptions.Default);
         services.AddSingleton<IFirewallManager, FirewallInventoryService>();
+        services.AddSingleton(FirewallMutationOptions.Default);
+        services.AddSingleton<FirewallMutationService>();
+        services.AddSingleton<IFirewallMutationService>(provider =>
+            new AuditedFirewallMutationService(
+                provider.GetRequiredService<FirewallMutationService>(),
+                provider.GetRequiredService<IOperationAudit>()));
         services.AddSingleton(DockerInventoryOptions.Default);
         services.AddSingleton<IDockerInventoryService, DockerInventoryService>();
         services.AddSingleton(DockerContainerDiagnosticsOptions.Default);
