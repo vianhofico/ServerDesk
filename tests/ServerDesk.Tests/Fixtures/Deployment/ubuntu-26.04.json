@@ -1,0 +1,10 @@
+{
+  "distro": "ubuntu-26.04",
+  "targetId": "worker-stage",
+  "environment": "stage",
+  "kind": "GitSystemd",
+  "repositoryPath": "/srv/worker",
+  "systemdUnit": "worker.service",
+  "healthKind": "SystemdService",
+  "healthTarget": "worker.service"
+}
