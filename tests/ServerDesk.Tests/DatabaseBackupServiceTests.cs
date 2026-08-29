@@ -46,7 +46,7 @@ public sealed class DatabaseBackupServiceTests
                 Assert.DoesNotContain(Secret, spec.ToString(), StringComparison.Ordinal);
                 Assert.DoesNotContain(Secret, string.Join('\n', spec.Arguments), StringComparison.Ordinal);
                 Assert.DoesNotContain(Secret, string.Join('\n', spec.Environment?.Values ?? []), StringComparison.Ordinal);
-                var fileIndex = spec.Arguments.IndexOf("--file");
+                var fileIndex = spec.Arguments.ToList().IndexOf("--file");
                 Assert.True(fileIndex >= 0);
                 outputPath = spec.Arguments[fileIndex + 1];
                 return Success();
@@ -204,7 +204,7 @@ public sealed class DatabaseBackupServiceTests
             if (spec.Risk == OperationRisk.Mutating)
             {
                 dumpCount++;
-                var fileIndex = spec.Arguments.IndexOf("--file");
+                var fileIndex = spec.Arguments.ToList().IndexOf("--file");
                 outputPath = spec.Arguments[fileIndex + 1];
                 return RemoteExecutionResult.Failure(
                     new RemoteError(RemoteErrorCode.NetworkInterrupted, "transport interrupted"));
