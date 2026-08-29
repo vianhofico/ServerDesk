@@ -130,7 +130,13 @@ public partial class App : System.Windows.Application
         services.AddSingleton<IConnectionRouteRepository, SqliteConnectionRouteRepository>();
         services.AddSingleton<IServerProfileOrganizationRepository, SqliteServerProfileOrganizationRepository>();
         services.AddSingleton<IConnectionHistoryRepository, SqliteConnectionHistoryRepository>();
-        services.AddSingleton<IOperationAudit, SqliteOperationAudit>();
+        services.AddSingleton<SqliteOperationAudit>();
+        services.AddSingleton<IOperationAuditReader>(provider => provider.GetRequiredService<SqliteOperationAudit>());
+        services.AddSingleton<IOperationAudit>(provider =>
+            new M5EnrichedOperationAudit(
+                provider.GetRequiredService<SqliteOperationAudit>(),
+                provider.GetRequiredService<IProfileRepository>()));
+        services.AddSingleton<IOperationHistoryService, OperationHistoryService>();
 
         services.AddSingleton<IServerProfileService, ServerProfileService>();
         services.AddSingleton<IServerConnectionRouteService, ServerConnectionRouteService>();

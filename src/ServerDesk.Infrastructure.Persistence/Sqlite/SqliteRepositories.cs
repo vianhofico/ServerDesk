@@ -1,3 +1,4 @@
+using System.Text;
 using Microsoft.Data.Sqlite;
 using ServerDesk.Application.Audit;
 using ServerDesk.Application.Profiles;
@@ -148,7 +149,7 @@ public sealed class SqliteProfileRepository : IProfileRepository
     }
 }
 
-public sealed class SqliteOperationAudit : IOperationAudit
+public sealed class SqliteOperationAudit : IOperationAudit, IOperationAuditReader
 {
     private readonly SqliteConnectionFactory _connectionFactory;
 
@@ -199,11 +200,111 @@ public sealed class SqliteOperationAudit : IOperationAudit
             """
             SELECT id, occurred_utc, category, summary, target, risk, outcome
             FROM operation_audit
-            ORDER BY occurred_utc DESC
+            ORDER BY occurred_utc DESC, id DESC
             LIMIT @limit;
             """;
         command.Parameters.AddWithValue("@limit", limit);
+        return await ReadEntriesAsync(command, cancellationToken).ConfigureAwait(false);
+    }
 
+    public async ValueTask<IReadOnlyList<OperationAuditEntry>> QueryAsync(
+        OperationAuditQuery query,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(query);
+        if (query.Limit is < 1 or > OperationHistoryService.MaximumLimit)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(query),
+                $"History limit must be between 1 and {OperationHistoryService.MaximumLimit}.");
+        }
+
+        await using var connection = _connectionFactory.Create();
+        await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
+        await using var command = connection.CreateCommand();
+        var sql = new StringBuilder(
+            "SELECT id, occurred_utc, category, summary, target, risk, outcome FROM operation_audit");
+        var clauses = new List<string>();
+
+        if (query.FromUtc is { } fromUtc)
+        {
+            clauses.Add("julianday(occurred_utc) >= julianday(@from_utc)");
+            command.Parameters.AddWithValue("@from_utc", ToSqlTime(fromUtc));
+        }
+
+        if (query.ToUtc is { } toUtc)
+        {
+            clauses.Add("julianday(occurred_utc) <= julianday(@to_utc)");
+            command.Parameters.AddWithValue("@to_utc", ToSqlTime(toUtc));
+        }
+
+        if (query.ServerProfileId is { } serverProfileId)
+        {
+            clauses.Add(
+                """
+                (
+                    substr(target, 1, length(@server_prefix)) = @server_prefix
+                    OR EXISTS (
+                        SELECT 1
+                        FROM server_profiles AS profile
+                        WHERE profile.id = @server_id
+                          AND (
+                              target = profile.username || '@' || profile.host || ':' || CAST(profile.port AS TEXT)
+                              OR substr(
+                                  target,
+                                  1,
+                                  length(profile.username || '@' || profile.host || ':' || CAST(profile.port AS TEXT) || ' ')) =
+                                  profile.username || '@' || profile.host || ':' || CAST(profile.port AS TEXT) || ' '
+                          )
+                    )
+                )
+                """);
+            command.Parameters.AddWithValue("@server_prefix", $"server:{serverProfileId:D} ");
+            command.Parameters.AddWithValue("@server_id", serverProfileId.ToString("D"));
+        }
+
+        if (!string.IsNullOrWhiteSpace(query.Category))
+        {
+            clauses.Add("category = @category COLLATE NOCASE");
+            command.Parameters.AddWithValue("@category", query.Category);
+        }
+
+        if (query.Risk is { } risk)
+        {
+            clauses.Add("risk = @risk");
+            command.Parameters.AddWithValue("@risk", (int)risk);
+        }
+
+        if (query.Outcome is { } outcome)
+        {
+            clauses.Add("outcome = @outcome");
+            command.Parameters.AddWithValue("@outcome", (int)outcome);
+        }
+
+        if (!string.IsNullOrWhiteSpace(query.SearchText))
+        {
+            clauses.Add(
+                "(instr(lower(category), lower(@search)) > 0 OR " +
+                "instr(lower(summary), lower(@search)) > 0 OR " +
+                "instr(lower(coalesce(target, '')), lower(@search)) > 0)");
+            command.Parameters.AddWithValue("@search", query.SearchText);
+        }
+
+        if (clauses.Count > 0)
+        {
+            sql.Append(" WHERE ").Append(string.Join(" AND ", clauses));
+        }
+
+        sql.Append(" ORDER BY occurred_utc DESC, id DESC LIMIT @limit;");
+        command.Parameters.AddWithValue("@limit", query.Limit);
+        command.CommandText = sql.ToString();
+        return await ReadEntriesAsync(command, cancellationToken).ConfigureAwait(false);
+    }
+
+    private static async ValueTask<IReadOnlyList<OperationAuditEntry>> ReadEntriesAsync(
+        SqliteCommand command,
+        CancellationToken cancellationToken)
+    {
         await using var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
         var entries = new List<OperationAuditEntry>();
         while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
@@ -223,4 +324,7 @@ public sealed class SqliteOperationAudit : IOperationAudit
 
         return entries;
     }
+
+    private static string ToSqlTime(DateTimeOffset value) =>
+        value.ToUniversalTime().ToString("O", System.Globalization.CultureInfo.InvariantCulture);
 }

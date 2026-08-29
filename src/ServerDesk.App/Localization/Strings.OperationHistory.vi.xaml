@@ -1,0 +1,51 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.Action">Lịch sử</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.ActionTooltip">Tìm kiếm lịch sử thao tác chỉ đọc với giới hạn kết quả bắt buộc.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.WindowTitle">Lịch sử thao tác</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.Title">Lịch sử thao tác</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.Subtitle">Màn hình audit chỉ đọc. Bộ lọc được thực thi ở tầng truy vấn persistence với giới hạn kết quả cứng; output lệnh, private key và nội dung backup không thuộc metadata audit M5.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.Search">Tìm kiếm</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.Server">Máy chủ</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.Category">Nhóm thao tác</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.Limit">Số dòng tối đa</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.Risk">Mức rủi ro</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.Outcome">Kết quả</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.FromDate">Từ ngày</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.ToDate">Đến ngày</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.Load">Tải</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.ClearFilters">Xóa bộ lọc</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.Time">Giờ cục bộ</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.Summary">Tóm tắt</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.Details">Chi tiết audit</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.KnownFacts">ServerDesk biết gì</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.Verification">Trạng thái xác minh</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.UnknownFacts">Điều gì vẫn chưa biết</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.TargetMetadata">Metadata đích không chứa bí mật</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.Footer">Trong M5.6, lịch sử chỉ được ghi nối tiếp và đọc. Màn hình này không thể sửa, xóa hoặc chạy lại bản ghi audit hay thao tác remote.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.AllServers">Tất cả máy chủ</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.AllRisks">Tất cả mức rủi ro</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.RiskReadOnly">Chỉ đọc</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.RiskMutating">Có thay đổi</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.RiskDestructive">Phá hủy / mất dữ liệu</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.AllOutcomes">Tất cả kết quả</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.OutcomeSucceeded">Thành công</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.OutcomeFailed">Thất bại</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.OutcomeCancelled">Đã hủy</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.OutcomeUnknown">Mơ hồ / không xác định</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.Ready">Chọn bộ lọc và tải một trang lịch sử có giới hạn.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.LegacyServer">Máy chủ cũ / không xác định</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.LoadedStatus">Đã tải {0} bản ghi audit, giới hạn tối đa {1}.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.NoSelection">Chọn một bản ghi audit để xem trạng thái đã biết và chưa biết.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.VerificationUnavailable">Bản ghi này không có metadata xác minh đã được bổ sung.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.KnownFormat">Thời gian: {0}&#10;Máy chủ: {1}&#10;Nhóm: {2}&#10;Rủi ro: {3}&#10;Kết quả: {4}&#10;Tóm tắt: {5}</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.UnknownAmbiguous">Thao tác remote có thể đã bắt đầu hoặc đã hoàn tất, nhưng ServerDesk không xác định được trạng thái cuối trên máy chủ. Không được coi đây là thất bại và không được tự động thử lại chỉ dựa trên bản ghi audit này.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.UnknownCancelled">Đã ghi nhận hủy thao tác. Bản ghi audit này không chứng minh rằng một mutation đã được gửi trước đó đã được rollback.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.UnknownNone">Không có trạng thái cuối chưa xác định nào được ghi nhận cho thao tác này.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.TargetUnavailable">Không có metadata đích.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.VerificationSucceeded">Trạng thái sau thao tác đã được xác minh một cách xác định.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.VerificationFailed">Thao tác có kết quả thất bại đã xác định.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.VerificationCancelled">Thao tác đã bị hủy; không được suy diễn trạng thái remote cuối chỉ từ việc hủy.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.VerificationUnknown">Trạng thái remote cuối đang mơ hồ / không xác định.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.VerificationLegacy">Bản ghi audit cũ: chưa lưu metadata xác minh mở rộng.</sys:String>
+</ResourceDictionary>
