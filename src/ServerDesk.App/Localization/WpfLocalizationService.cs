@@ -38,6 +38,7 @@ public sealed class WpfLocalizationService : ILocalizationService
         "OperationHistory",
         "DatabaseRuntime",
         "DatabaseBackups",
+        "DatabaseRestores",
     ];
     private readonly ISystemCultureDetector _systemCultureDetector;
 
