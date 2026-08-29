@@ -21,6 +21,11 @@
     <system:String x:Key="Loc.Firewall.AdapterConflict">Multiple supported firewall adapters report active state. ServerDesk will not guess which one owns policy.</system:String>
     <system:String x:Key="Loc.Firewall.Empty">The active firewall has no normalized common rules.</system:String>
     <system:String x:Key="Loc.Firewall.AdapterSummary">Adapters: {0}</system:String>
+    <system:String x:Key="Loc.Firewall.AdapterStateActive">active</system:String>
+    <system:String x:Key="Loc.Firewall.AdapterStateInactive">inactive</system:String>
+    <system:String x:Key="Loc.Firewall.AdapterStateUnavailable">CLI unavailable</system:String>
+    <system:String x:Key="Loc.Firewall.AdapterStatePermission">permission denied</system:String>
+    <system:String x:Key="Loc.Firewall.AdapterStateProbeFailed">probe failed</system:String>
     <system:String x:Key="Loc.Firewall.RuleId">Rule</system:String>
     <system:String x:Key="Loc.Firewall.Adapter">Adapter</system:String>
     <system:String x:Key="Loc.Firewall.Zone">Zone</system:String>
