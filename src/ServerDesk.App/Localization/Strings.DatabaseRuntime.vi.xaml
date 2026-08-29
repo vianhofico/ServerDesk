@@ -1,0 +1,31 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseRuntime.Action">Cơ sở dữ liệu</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseRuntime.ActionTooltip">Kiểm tra runtime PostgreSQL, MySQL/MariaDB và Redis mà không cần thông tin đăng nhập cơ sở dữ liệu.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseRuntime.WindowTitle">Runtime cơ sở dữ liệu</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseRuntime.Title">Runtime cơ sở dữ liệu — {0}</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseRuntime.Subtitle">Khám phá chỉ đọc phía máy chủ cho PostgreSQL, MySQL/MariaDB và Redis. M6.1 không kết nối vào cơ sở dữ liệu và không yêu cầu thông tin đăng nhập DB.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseRuntime.Refresh">Làm mới</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseRuntime.Cancel">Hủy</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseRuntime.Engine">Engine</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseRuntime.Status">Trạng thái</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseRuntime.Version">Phiên bản</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseRuntime.Service">Dịch vụ</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseRuntime.Runtime">Runtime</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseRuntime.Ready">Sẵn sàng kiểm tra các runtime cơ sở dữ liệu.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseRuntime.Disconnected">Máy chủ chưa được kết nối. Việc kiểm tra runtime có thể thất bại cho đến khi kết nối được khôi phục.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseRuntime.Loading">Đang kiểm tra khả năng runtime cơ sở dữ liệu…</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseRuntime.Loaded">Đã hoàn tất kiểm tra runtime cơ sở dữ liệu.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseRuntime.LoadFailed">Kiểm tra runtime cơ sở dữ liệu thất bại.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseRuntime.NoEngines">Không phát hiện binary máy chủ cơ sở dữ liệu hoặc runtime systemd được hỗ trợ.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseRuntime.Cancelled">Đã hủy kiểm tra runtime cơ sở dữ liệu.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseRuntime.Summary">Đã phát hiện: {0}; đang chạy: {1}.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseRuntime.NoSelection">Chọn một engine để xem thông tin chỉ đọc phía máy chủ.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseRuntime.ExecutableFormat">Executable: {0}</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseRuntime.VersionFormat">Phiên bản: {0}</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseRuntime.ServiceFormat">Dịch vụ: {0} — {1}/{2}</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseRuntime.JournalFormat">Nguồn journal dự kiến: {0}. Quyền đọc chưa được xác minh trong M6.1.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseRuntime.JournalUnavailable">Chưa xác định được nguồn journal dự kiến cho runtime này.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseRuntime.UnknownValue">không xác định</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseRuntime.SafetyFooter">M6.1 chỉ khám phá phía máy chủ ở chế độ chỉ đọc: không đăng nhập DB, không chạy SQL/lệnh Redis, không thay đổi dịch vụ và không mở cổng cơ sở dữ liệu ra Internet.</sys:String>
+</ResourceDictionary>
