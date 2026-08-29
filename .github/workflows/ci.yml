@@ -48,7 +48,7 @@ jobs:
   ssh-integration:
     name: OpenSSH integration
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
 
     env:
       SERVERDESK_SSH_HOST: 127.0.0.1
@@ -64,6 +64,11 @@ jobs:
       SERVERDESK_HTTP_PROXY_PORT: 18081
       SERVERDESK_SOCKS4_PROXY_PORT: 18082
       SERVERDESK_SOCKS5_PROXY_PORT: 18083
+      SERVERDESK_DB_PASSWORD: serverdesk-db-password
+      SERVERDESK_POSTGRES_PORT: 15432
+      SERVERDESK_MYSQL_PORT: 13306
+      SERVERDESK_MARIADB_PORT: 13307
+      SERVERDESK_REDIS_PORT: 16379
 
     steps:
       - name: Checkout
@@ -136,16 +141,58 @@ jobs:
           done
 
           cat /tmp/serverdesk-sshd.log || true
-          cat /tmp/serverdesk-forward-http.log || true
-          cat /tmp/serverdesk-http-proxy.log || true
-          cat /tmp/serverdesk-socks4-proxy.log || true
-          cat /tmp/serverdesk-socks5-proxy.log || true
+          exit 1
+
+      - name: Configure certified database engine fixtures
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run -d --name serverdesk-postgres \
+            -e POSTGRES_USER=serverdesk \
+            -e POSTGRES_PASSWORD="$SERVERDESK_DB_PASSWORD" \
+            -e POSTGRES_DB=serverdesk \
+            -p 127.0.0.1:${SERVERDESK_POSTGRES_PORT}:5432 \
+            postgres:18.6
+          docker run -d --name serverdesk-mysql \
+            -e MYSQL_DATABASE=serverdesk \
+            -e MYSQL_USER=serverdesk \
+            -e MYSQL_PASSWORD="$SERVERDESK_DB_PASSWORD" \
+            -e MYSQL_ROOT_PASSWORD=serverdesk-root-password \
+            -p 127.0.0.1:${SERVERDESK_MYSQL_PORT}:3306 \
+            mysql:8.4.11
+          docker run -d --name serverdesk-mariadb \
+            -e MARIADB_DATABASE=serverdesk \
+            -e MARIADB_USER=serverdesk \
+            -e MARIADB_PASSWORD="$SERVERDESK_DB_PASSWORD" \
+            -e MARIADB_ROOT_PASSWORD=serverdesk-root-password \
+            -p 127.0.0.1:${SERVERDESK_MARIADB_PORT}:3306 \
+            mariadb:11.8.9
+          docker run -d --name serverdesk-redis \
+            -p 127.0.0.1:${SERVERDESK_REDIS_PORT}:6379 \
+            redis:8.10.0 redis-server --requirepass "$SERVERDESK_DB_PASSWORD"
+
+          for attempt in {1..90}; do
+            postgres_ready=false
+            mysql_ready=false
+            mariadb_ready=false
+            redis_ready=false
+            docker exec serverdesk-postgres pg_isready -U serverdesk -d serverdesk >/dev/null 2>&1 && postgres_ready=true
+            docker exec serverdesk-mysql mysqladmin ping -h 127.0.0.1 -u serverdesk -p"$SERVERDESK_DB_PASSWORD" --silent >/dev/null 2>&1 && mysql_ready=true
+            docker exec serverdesk-mariadb mariadb-admin ping -h 127.0.0.1 -u serverdesk -p"$SERVERDESK_DB_PASSWORD" --silent >/dev/null 2>&1 && mariadb_ready=true
+            docker exec -e REDISCLI_AUTH="$SERVERDESK_DB_PASSWORD" serverdesk-redis redis-cli ping 2>/dev/null | grep -qx PONG && redis_ready=true
+            if $postgres_ready && $mysql_ready && $mariadb_ready && $redis_ready; then
+              exit 0
+            fi
+            sleep 1
+          done
+
+          docker ps -a
           exit 1
 
       - name: Restore integration tests
         run: dotnet restore tests/ServerDesk.Ssh.IntegrationTests/ServerDesk.Ssh.IntegrationTests.csproj
 
-      - name: Run SSH, SFTP, PTY, forwarding and routing integration tests
+      - name: Run SSH, SFTP, PTY, forwarding, routing and database integration tests
         run: dotnet test tests/ServerDesk.Ssh.IntegrationTests/ServerDesk.Ssh.IntegrationTests.csproj --configuration Release --no-restore
 
       - name: Show fixture logs on failure
@@ -156,3 +203,8 @@ jobs:
           cat /tmp/serverdesk-http-proxy.log || true
           cat /tmp/serverdesk-socks4-proxy.log || true
           cat /tmp/serverdesk-socks5-proxy.log || true
+          docker ps -a || true
+          docker logs serverdesk-postgres || true
+          docker logs serverdesk-mysql || true
+          docker logs serverdesk-mariadb || true
+          docker logs serverdesk-redis || true

@@ -2,10 +2,10 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="{DynamicResource Loc.DatabaseProfiles.WindowTitle}"
-        Width="1180"
-        Height="760"
-        MinWidth="960"
-        MinHeight="620"
+        Width="1320"
+        Height="820"
+        MinWidth="1080"
+        MinHeight="680"
         WindowStartupLocation="CenterOwner">
     <Grid Margin="20">
         <Grid.RowDefinitions>
@@ -41,7 +41,7 @@
 
         <Grid Grid.Row="2">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="5*" />
+                <ColumnDefinition Width="7*" />
                 <ColumnDefinition Width="14" />
                 <ColumnDefinition Width="4*" />
             </Grid.ColumnDefinitions>
@@ -63,7 +63,70 @@
                             Padding="12,6"
                             Margin="8,0,0,0"
                             Click="TestTunnelOnClick" />
+                    <Button x:Name="InspectButton"
+                            Content="{DynamicResource Loc.DatabaseProfiles.Inspect}"
+                            MinWidth="126"
+                            Padding="12,6"
+                            Margin="8,0,0,0"
+                            Click="InspectOnClick" />
                 </StackPanel>
+
+                <Border DockPanel.Dock="Bottom"
+                        Margin="0,12,0,0"
+                        BorderThickness="1"
+                        BorderBrush="#22000000"
+                        CornerRadius="6"
+                        Padding="12"
+                        Height="290">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="260" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <TextBlock Text="{DynamicResource Loc.DatabaseProfiles.DiagnosticsTitle}"
+                                           FontSize="16"
+                                           FontWeight="SemiBold" />
+                                <TextBlock x:Name="DiagnosticsSummaryText"
+                                           Margin="0,3,12,0"
+                                           Opacity="0.7"
+                                           TextWrapping="Wrap" />
+                            </StackPanel>
+                            <TextBox x:Name="DiagnosticsSearchBox"
+                                     Grid.Column="1"
+                                     VerticalAlignment="Top"
+                                     Margin="12,0,0,0"
+                                     ToolTip="{DynamicResource Loc.DatabaseProfiles.DiagnosticsSearch}"
+                                     TextChanged="DiagnosticsSearchChanged" />
+                        </Grid>
+                        <TextBlock x:Name="DiagnosticsNoticeText"
+                                   Grid.Row="1"
+                                   Margin="0,6,0,6"
+                                   Opacity="0.72"
+                                   TextWrapping="Wrap" />
+                        <DataGrid x:Name="DiagnosticsGrid"
+                                  Grid.Row="2"
+                                  AutoGenerateColumns="False"
+                                  IsReadOnly="True"
+                                  HeadersVisibility="Column"
+                                  EnableRowVirtualization="True"
+                                  EnableColumnVirtualization="True">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="{DynamicResource Loc.DatabaseProfiles.DiagnosticsKind}" Binding="{Binding Kind}" Width="105" />
+                                <DataGridTextColumn Header="{DynamicResource Loc.DatabaseProfiles.DiagnosticsName}" Binding="{Binding Name}" Width="2*" />
+                                <DataGridTextColumn Header="{DynamicResource Loc.DatabaseProfiles.DiagnosticsValue}" Binding="{Binding Value}" Width="2*" />
+                                <DataGridTextColumn Header="{DynamicResource Loc.DatabaseProfiles.DiagnosticsDetail}" Binding="{Binding Detail}" Width="3*" />
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </Grid>
+                </Border>
+
                 <DataGrid x:Name="ProfilesGrid"
                           AutoGenerateColumns="False"
                           IsReadOnly="True"

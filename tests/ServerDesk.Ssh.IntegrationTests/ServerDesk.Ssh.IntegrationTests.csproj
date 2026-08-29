@@ -11,6 +11,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\ServerDesk.Application\ServerDesk.Application.csproj" />
     <ProjectReference Include="..\..\src\ServerDesk.Domain\ServerDesk.Domain.csproj" />
+    <ProjectReference Include="..\..\src\ServerDesk.Infrastructure.Databases\ServerDesk.Infrastructure.Databases.csproj" />
     <ProjectReference Include="..\..\src\ServerDesk.Infrastructure.Ssh\ServerDesk.Infrastructure.Ssh.csproj" />
   </ItemGroup>
   <ItemGroup>
