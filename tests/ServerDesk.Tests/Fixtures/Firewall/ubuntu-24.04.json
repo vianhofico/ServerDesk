@@ -1,0 +1,5 @@
+{
+  "adapter": "ufw",
+  "version": "ufw 0.36.2",
+  "status": "Status: active\n\n     To                         Action      From\n     --                         ------      ----\n[ 1] 22/tcp                     ALLOW IN    10.20.0.0/16\n[ 2] 80/tcp                     ALLOW IN    Anywhere\n[ 3] 443/tcp                    ALLOW IN    Anywhere\n[ 4] 53/udp                     DENY OUT    192.0.2.53"
+}
