@@ -14,6 +14,7 @@ public partial class DatabaseProfilesWindow : Window
     private readonly IDatabaseTunnelConnectivityService _connectivityService;
     private readonly ILocalizationService _localization;
     private readonly ServerProfile _serverProfile;
+    private readonly bool _connected;
     private readonly ObservableCollection<DatabaseConnectionProfile> _profiles = [];
     private DatabaseConnectionProfile? _selectedProfile;
     private DatabaseEngineKind? _lastEngine;
@@ -24,12 +25,14 @@ public partial class DatabaseProfilesWindow : Window
         IDatabaseProfileService profileService,
         IDatabaseTunnelConnectivityService connectivityService,
         ILocalizationService localization,
-        ServerProfile serverProfile)
+        ServerProfile serverProfile,
+        bool connected)
     {
         _profileService = profileService ?? throw new ArgumentNullException(nameof(profileService));
         _connectivityService = connectivityService ?? throw new ArgumentNullException(nameof(connectivityService));
         _localization = localization ?? throw new ArgumentNullException(nameof(localization));
         _serverProfile = serverProfile ?? throw new ArgumentNullException(nameof(serverProfile));
+        _connected = connected;
 
         InitializeComponent();
         ProfilesGrid.ItemsSource = _profiles;
@@ -39,7 +42,7 @@ public partial class DatabaseProfilesWindow : Window
         Closed += OnClosed;
         ApplyLocalizedState();
         ResetEditor();
-        Loaded += async (_, _) => await RefreshAsync().ConfigureAwait(true);
+        Loaded += async (_, _) => await RefreshSafeAsync().ConfigureAwait(true);
     }
 
     private void OnClosed(object? sender, EventArgs e) =>
@@ -51,10 +54,15 @@ public partial class DatabaseProfilesWindow : Window
     {
         TitleText.Text = _localization.Format("Loc.DatabaseProfiles.Title", _serverProfile.Name);
         UpdatePasswordHint();
+        TestTunnelButton.IsEnabled = !_busy && _connected;
+        if (!_connected && string.IsNullOrWhiteSpace(StatusText.Text))
+        {
+            StatusText.Text = _localization.Get("Loc.DatabaseProfiles.Disconnected");
+        }
     }
 
     private async void RefreshOnClick(object sender, RoutedEventArgs e) =>
-        await RefreshAsync(_selectedProfile?.Id).ConfigureAwait(true);
+        await RefreshSafeAsync(_selectedProfile?.Id).ConfigureAwait(true);
 
     private void NewOnClick(object sender, RoutedEventArgs e)
     {
@@ -104,7 +112,7 @@ public partial class DatabaseProfilesWindow : Window
 
             PasswordBox.Clear();
             StatusText.Text = _localization.Get("Loc.DatabaseProfiles.Saved");
-            await RefreshAsync(saved.Id).ConfigureAwait(true);
+            await RefreshSafeAsync(saved.Id).ConfigureAwait(true);
         }
         catch (Exception exception)
         {
@@ -142,7 +150,7 @@ public partial class DatabaseProfilesWindow : Window
             _selectedProfile = null;
             ResetEditor();
             StatusText.Text = _localization.Get("Loc.DatabaseProfiles.Deleted");
-            await RefreshAsync().ConfigureAwait(true);
+            await RefreshSafeAsync().ConfigureAwait(true);
         }
         catch (Exception exception)
         {
@@ -156,6 +164,12 @@ public partial class DatabaseProfilesWindow : Window
 
     private async void TestTunnelOnClick(object sender, RoutedEventArgs e)
     {
+        if (!_connected)
+        {
+            StatusText.Text = _localization.Get("Loc.DatabaseProfiles.Disconnected");
+            return;
+        }
+
         if (_busy || _selectedProfile is null)
         {
             StatusText.Text = _localization.Get("Loc.DatabaseProfiles.SelectFirst");
@@ -239,6 +253,18 @@ public partial class DatabaseProfilesWindow : Window
         UpdatePasswordHint();
     }
 
+    private async Task RefreshSafeAsync(Guid? selectId = null)
+    {
+        try
+        {
+            await RefreshAsync(selectId).ConfigureAwait(true);
+        }
+        catch (Exception exception)
+        {
+            StatusText.Text = _localization.Format("Loc.DatabaseProfiles.LoadFailed", exception.Message);
+        }
+    }
+
     private async Task RefreshAsync(Guid? selectId = null)
     {
         var profiles = await _profileService.ListForServerAsync(_serverProfile.Id, CancellationToken.None)
@@ -273,6 +299,10 @@ public partial class DatabaseProfilesWindow : Window
         if (_profiles.Count == 0)
         {
             StatusText.Text = _localization.Get("Loc.DatabaseProfiles.Empty");
+        }
+        else if (!_connected)
+        {
+            StatusText.Text = _localization.Get("Loc.DatabaseProfiles.Disconnected");
         }
     }
 
@@ -377,5 +407,6 @@ public partial class DatabaseProfilesWindow : Window
         _busy = value;
         SaveButton.IsEnabled = !value;
         ProfilesGrid.IsEnabled = !value;
+        TestTunnelButton.IsEnabled = !value && _connected;
     }
 }
