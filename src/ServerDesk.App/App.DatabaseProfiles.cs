@@ -12,7 +12,7 @@ namespace ServerDesk.App;
 
 public partial class App
 {
-    internal void OpenDatabaseProfiles(ServerProfile profile, Window owner)
+    internal void OpenDatabaseProfiles(ServerProfile profile, bool connected, Window owner)
     {
         ArgumentNullException.ThrowIfNull(profile);
         ArgumentNullException.ThrowIfNull(owner);
@@ -33,7 +33,8 @@ public partial class App
             profileService,
             connectivityService,
             provider.GetRequiredService<ILocalizationService>(),
-            profile)
+            profile,
+            connected)
         {
             Owner = owner,
         };
