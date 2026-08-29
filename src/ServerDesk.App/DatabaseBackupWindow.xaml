@@ -92,7 +92,8 @@
                     <TextBlock Text="{DynamicResource Loc.DatabaseBackups.HistoryTitle}"
                                FontSize="17"
                                FontWeight="SemiBold" />
-                    <Button Grid.Column="1"
+                    <Button x:Name="RefreshButton"
+                            Grid.Column="1"
                             Content="{DynamicResource Loc.DatabaseBackups.Refresh}"
                             Padding="12,6"
                             Click="RefreshOnClick" />
