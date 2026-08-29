@@ -35,6 +35,7 @@ public sealed class WpfLocalizationService : ILocalizationService
         "UserAdministration",
         "PackageAdministration",
         "BackupRestore",
+        "OperationHistory",
     ];
     private readonly ISystemCultureDetector _systemCultureDetector;
 
