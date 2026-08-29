@@ -41,6 +41,8 @@ public sealed class DatabaseRuntimeLocalizationTests
         Assert.Contains("127.0.0.1", vietnamese["Loc.DatabaseProfiles.SafetyFooter"], StringComparison.Ordinal);
         Assert.Contains("no silent direct", english["Loc.DatabaseProfiles.SafetyFooter"], StringComparison.OrdinalIgnoreCase);
         Assert.Contains("không có cơ chế âm thầm", vietnamese["Loc.DatabaseProfiles.SafetyFooter"], StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("protocol probe", english["Loc.DatabaseProfiles.SafetyFooter"], StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("probe giao thức", vietnamese["Loc.DatabaseProfiles.SafetyFooter"], StringComparison.OrdinalIgnoreCase);
         Assert.Contains("credentials were not tested", english["Loc.DatabaseProfiles.TunnelSucceeded"], StringComparison.OrdinalIgnoreCase);
         Assert.Contains("chưa kiểm tra thông tin đăng nhập", vietnamese["Loc.DatabaseProfiles.TunnelSucceeded"], StringComparison.OrdinalIgnoreCase);
     }
