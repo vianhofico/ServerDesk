@@ -21,6 +21,7 @@ public partial class MainWindow
         EnsureFirewallActionButton();
         EnsureUserAdministrationActionButton();
         EnsurePackageAdministrationActionButton();
+        EnsureBackupRestoreActionButton();
     }
 
     private void EnsureGitActionButton()
