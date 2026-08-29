@@ -291,7 +291,7 @@ public sealed class SqliteDatabaseInitializer
                         (authentication_kind = 0 AND credential_reference IS NULL) OR
                         (authentication_kind = 1 AND credential_reference IS NOT NULL)
                     ),
-                    FOREIGN KEY(server_profile_id) REFERENCES server_profiles(id) ON DELETE CASCADE
+                    FOREIGN KEY(server_profile_id) REFERENCES server_profiles(id) ON DELETE RESTRICT
                 );
 
                 CREATE INDEX ix_database_profiles_server
