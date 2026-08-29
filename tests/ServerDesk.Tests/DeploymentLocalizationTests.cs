@@ -6,11 +6,13 @@ namespace ServerDesk.Tests;
 
 public sealed class DeploymentLocalizationTests
 {
-    [Fact]
-    public void DeploymentEnglishAndVietnameseResourcesHaveIdenticalKeys()
+    [Theory]
+    [InlineData("Strings.Deployment.en.xaml", "Strings.Deployment.vi.xaml")]
+    [InlineData("Strings.DeploymentResults.en.xaml", "Strings.DeploymentResults.vi.xaml")]
+    public void DeploymentEnglishAndVietnameseResourcesHaveIdenticalKeys(string englishFile, string vietnameseFile)
     {
-        var english = ReadResources("Strings.Deploy.en.xaml");
-        var vietnamese = ReadResources("Strings.Deploy.vi.xaml");
+        var english = ReadResources(englishFile);
+        var vietnamese = ReadResources(vietnameseFile);
 
         Assert.NotEmpty(english);
         Assert.Equal(
@@ -27,8 +29,8 @@ public sealed class DeploymentLocalizationTests
         string environment,
         int mutationCount)
     {
-        var english = ReadResources("Strings.Deploy.en.xaml");
-        var vietnamese = ReadResources("Strings.Deploy.vi.xaml");
+        var english = ReadResources("Strings.Deployment.en.xaml");
+        var vietnamese = ReadResources("Strings.Deployment.vi.xaml");
         var arguments = key == "Loc.Deploy.ExecuteConfirmMessage"
             ? new object?[] { targetId, environment, mutationCount }
             : new object?[] { targetId, environment };
