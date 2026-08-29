@@ -21,6 +21,11 @@
     <system:String x:Key="Loc.Firewall.AdapterConflict">Nhiều adapter tường lửa được hỗ trợ cùng báo đang hoạt động. ServerDesk sẽ không tự đoán adapter sở hữu policy.</system:String>
     <system:String x:Key="Loc.Firewall.Empty">Tường lửa đang hoạt động không có common rule nào đã chuẩn hóa.</system:String>
     <system:String x:Key="Loc.Firewall.AdapterSummary">Adapter: {0}</system:String>
+    <system:String x:Key="Loc.Firewall.AdapterStateActive">đang hoạt động</system:String>
+    <system:String x:Key="Loc.Firewall.AdapterStateInactive">không hoạt động</system:String>
+    <system:String x:Key="Loc.Firewall.AdapterStateUnavailable">không có CLI</system:String>
+    <system:String x:Key="Loc.Firewall.AdapterStatePermission">không đủ quyền</system:String>
+    <system:String x:Key="Loc.Firewall.AdapterStateProbeFailed">kiểm tra thất bại</system:String>
     <system:String x:Key="Loc.Firewall.RuleId">Rule</system:String>
     <system:String x:Key="Loc.Firewall.Adapter">Adapter</system:String>
     <system:String x:Key="Loc.Firewall.Zone">Zone</system:String>
