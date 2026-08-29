@@ -1,3 +1,4 @@
+using ServerDesk.Application.Databases;
 using ServerDesk.Application.Routing;
 using ServerDesk.Application.Secrets;
 using ServerDesk.Domain.Secrets;
@@ -49,15 +50,18 @@ public sealed class ServerProfileService : IServerProfileService
     private readonly IProfileRepository _profileRepository;
     private readonly ISecretStore _secretStore;
     private readonly IConnectionRouteRepository? _connectionRouteRepository;
+    private readonly IDatabaseProfileRepository? _databaseProfileRepository;
 
     public ServerProfileService(
         IProfileRepository profileRepository,
         ISecretStore secretStore,
-        IConnectionRouteRepository? connectionRouteRepository = null)
+        IConnectionRouteRepository? connectionRouteRepository = null,
+        IDatabaseProfileRepository? databaseProfileRepository = null)
     {
         _profileRepository = profileRepository;
         _secretStore = secretStore;
         _connectionRouteRepository = connectionRouteRepository;
+        _databaseProfileRepository = databaseProfileRepository;
     }
 
     public ValueTask<IReadOnlyList<ServerProfile>> ListAsync(CancellationToken cancellationToken = default) =>
@@ -186,11 +190,15 @@ public sealed class ServerProfileService : IServerProfileService
         var route = _connectionRouteRepository is null
             ? null
             : await _connectionRouteRepository.GetAsync(id, cancellationToken).ConfigureAwait(false);
+        var databaseProfiles = _databaseProfileRepository is null
+            ? []
+            : await _databaseProfileRepository.ListForServerAsync(id, cancellationToken).ConfigureAwait(false);
         var references = new[]
             {
                 existing.CredentialReference,
                 route?.ProxyCredentialReference,
             }
+            .Concat(databaseProfiles.Select(profile => profile.CredentialReference))
             .Where(reference => reference is not null)
             .Select(reference => reference!.Value)
             .Distinct()
