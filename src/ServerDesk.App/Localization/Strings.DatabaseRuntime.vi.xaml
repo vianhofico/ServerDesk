@@ -57,6 +57,8 @@
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.DeleteConfirm">Xóa hồ sơ cơ sở dữ liệu '{0}' và mật khẩu đã lưu an toàn của hồ sơ này nếu có?</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.TestingTunnel">Đang mở SSH tunnel loopback tạm thời và kiểm tra khả năng truy cập TCP…</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.TunnelSucceeded">SSH tunnel tạm thời hoạt động qua {0}:{1}. Tunnel hiện đã được đóng. M6.2 chưa kiểm tra thông tin đăng nhập cơ sở dữ liệu.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.Disconnected">Máy chủ đang mất kết nối. Vẫn có thể sửa hồ sơ đã lưu, nhưng không thể kiểm tra SSH tunnel cho đến khi máy chủ kết nối lại.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.LoadFailed">Không thể tải hồ sơ cơ sở dữ liệu: {0}</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.PasswordExistingHint">Đã có mật khẩu được lưu an toàn. Để trống để giữ nguyên; chỉ nhập giá trị khi muốn thay mật khẩu.</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.PasswordNewHint">Nhập mật khẩu. Mật khẩu sẽ được lưu trong kho secret an toàn và không được ghi vào SQLite.</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.PasswordDisabledHint">Hồ sơ này sẽ không lưu mật khẩu cơ sở dữ liệu.</sys:String>
