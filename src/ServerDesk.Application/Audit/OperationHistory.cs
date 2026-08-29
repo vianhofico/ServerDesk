@@ -56,9 +56,10 @@ public sealed class OperationHistoryService : IOperationHistoryService
         var normalized = Normalize(query);
         var entries = await _reader.QueryAsync(normalized, cancellationToken).ConfigureAwait(false);
         var items = entries
+            .Take(normalized.Limit)
             .Select(entry => new OperationHistoryItem(
                 entry,
-                OperationAuditMetadata.TryGetServerProfileId(entry.Target),
+                OperationAuditMetadata.TryGetServerProfileId(entry.Target) ?? normalized.ServerProfileId,
                 OperationAuditMetadata.TryGetVerification(entry.Target),
                 entry.Outcome == OperationOutcome.Unknown))
             .ToArray();
@@ -86,6 +87,16 @@ public sealed class OperationHistoryService : IOperationHistoryService
         if (query.ServerProfileId == Guid.Empty)
         {
             throw new ArgumentException("Server profile filter cannot be an empty GUID.", nameof(query));
+        }
+
+        if (query.Risk is { } risk && !Enum.IsDefined(risk))
+        {
+            throw new ArgumentOutOfRangeException(nameof(query), "History risk filter is invalid.");
+        }
+
+        if (query.Outcome is { } outcome && !Enum.IsDefined(outcome))
+        {
+            throw new ArgumentOutOfRangeException(nameof(query), "History outcome filter is invalid.");
         }
 
         return query with
