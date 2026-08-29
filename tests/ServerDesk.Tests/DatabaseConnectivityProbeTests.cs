@@ -79,7 +79,7 @@ public sealed class DatabaseConnectivityProbeTests
     {
         var cancellationToken = TestContext.Current.CancellationToken;
         using var listener = StartListener(out var port);
-        var serverTask = ServeBytesAsync(listener, Encoding.ASCII.GetBytes("H"), cancellationToken);
+        var serverTask = ServeInvalidPostgreSqlAsync(listener, cancellationToken);
         var probe = new DatabaseEngineConnectivityProbe();
 
         var result = await probe.ProbeAsync(
@@ -126,6 +126,19 @@ public sealed class DatabaseConnectivityProbeTests
         await ReadExactlyAsync(stream, request, cancellationToken);
         Assert.Equal(new byte[] { 0, 0, 0, 8, 4, 210, 22, 47 }, request);
         await stream.WriteAsync(new byte[] { (byte)'N' }, cancellationToken);
+        await stream.FlushAsync(cancellationToken);
+    }
+
+    private static async Task ServeInvalidPostgreSqlAsync(
+        TcpListener listener,
+        CancellationToken cancellationToken)
+    {
+        using var client = await listener.AcceptTcpClientAsync(cancellationToken);
+        await using var stream = client.GetStream();
+        var request = new byte[8];
+        await ReadExactlyAsync(stream, request, cancellationToken);
+        Assert.Equal(new byte[] { 0, 0, 0, 8, 4, 210, 22, 47 }, request);
+        await stream.WriteAsync(new byte[] { (byte)'H' }, cancellationToken);
         await stream.FlushAsync(cancellationToken);
     }
 
