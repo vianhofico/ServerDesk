@@ -27,11 +27,11 @@ public sealed class RedisDiagnosticAdapter : IDatabaseEngineDiagnosticAdapter
             await client.ConnectAsync(request.LocalAddress, request.LocalPort, deadline.Token).ConfigureAwait(false);
             await using var stream = client.GetStream();
 
-            if (request.Profile.AuthenticationKind == DatabaseAuthenticationKind.Password)
+            if (request.AuthenticationKind == DatabaseAuthenticationKind.Password)
             {
-                var arguments = string.IsNullOrWhiteSpace(request.Profile.Username)
+                var arguments = string.IsNullOrWhiteSpace(request.Username)
                     ? new[] { "AUTH", request.Secret ?? string.Empty }
-                    : new[] { "AUTH", request.Profile.Username!, request.Secret ?? string.Empty };
+                    : new[] { "AUTH", request.Username!, request.Secret ?? string.Empty };
                 await WriteCommandAsync(stream, arguments, deadline.Token).ConfigureAwait(false);
                 var auth = await ReadRespAsync(stream, deadline.Token).ConfigureAwait(false);
                 if (auth.IsError)
@@ -68,15 +68,18 @@ public sealed class RedisDiagnosticAdapter : IDatabaseEngineDiagnosticAdapter
                     ExpiringItemCount: item.Expires))
                 .ToArray();
             var metrics = BuildMetrics(info.Values);
-            var metadata = BuildMetadata(info.Values, request.Options.MaxMetadataItems);
-            var identity = string.IsNullOrWhiteSpace(request.Profile.Username)
-                ? "default"
-                : request.Profile.Username;
+            var metadata = BuildMetadata(
+                info.Values,
+                request.Options.MaxMetadataItems,
+                request.Options.MaxTextLength);
+            var identity = DatabaseDiagnosticAdapterUtilities.BoundText(
+                string.IsNullOrWhiteSpace(request.Username) ? "default" : request.Username,
+                request.Options.MaxTextLength);
 
             return DatabaseDiagnosticResult.Success(
                 new DatabaseDiagnosticSnapshot(
                     Engine,
-                    version,
+                    DatabaseDiagnosticAdapterUtilities.BoundText(version, request.Options.MaxTextLength),
                     "Redis",
                     identity,
                     catalogs,
@@ -105,16 +108,16 @@ public sealed class RedisDiagnosticAdapter : IDatabaseEngineDiagnosticAdapter
 
     private static DatabaseDiagnosticResult ClassifyServerError(string? message)
     {
+        if (message?.Contains("NOPERM", StringComparison.OrdinalIgnoreCase) == true)
+        {
+            return DatabaseDiagnosticAdapterUtilities.Authorization(DatabaseEngineKind.Redis);
+        }
+
         if (message?.Contains("NOAUTH", StringComparison.OrdinalIgnoreCase) == true ||
             message?.Contains("WRONGPASS", StringComparison.OrdinalIgnoreCase) == true ||
             message?.Contains("AUTH", StringComparison.OrdinalIgnoreCase) == true)
         {
             return DatabaseDiagnosticAdapterUtilities.Authentication(DatabaseEngineKind.Redis);
-        }
-
-        if (message?.Contains("NOPERM", StringComparison.OrdinalIgnoreCase) == true)
-        {
-            return DatabaseDiagnosticAdapterUtilities.Authorization(DatabaseEngineKind.Redis);
         }
 
         return DatabaseDiagnosticResult.Failed(
@@ -147,7 +150,8 @@ public sealed class RedisDiagnosticAdapter : IDatabaseEngineDiagnosticAdapter
 
     private static IReadOnlyList<DatabaseDiagnosticMetadata> BuildMetadata(
         IReadOnlyDictionary<string, string> values,
-        int maxItems)
+        int maxItems,
+        int maxTextLength)
     {
         var names = new[]
         {
@@ -174,7 +178,9 @@ public sealed class RedisDiagnosticAdapter : IDatabaseEngineDiagnosticAdapter
 
             if (values.TryGetValue(name, out var value))
             {
-                metadata.Add(new DatabaseDiagnosticMetadata(name, value));
+                metadata.Add(new DatabaseDiagnosticMetadata(
+                    name,
+                    DatabaseDiagnosticAdapterUtilities.BoundText(value, maxTextLength)));
             }
         }
 

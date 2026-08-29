@@ -50,9 +50,9 @@ public abstract class MySqlFamilyDiagnosticAdapter : IDatabaseEngineDiagnosticAd
             {
                 Server = request.LocalAddress.ToString(),
                 Port = (uint)request.LocalPort,
-                UserID = request.Profile.Username ?? string.Empty,
+                UserID = request.Username ?? string.Empty,
                 Password = request.Secret ?? string.Empty,
-                Database = request.Profile.DatabaseName ?? string.Empty,
+                Database = request.DatabaseName ?? string.Empty,
                 Pooling = false,
                 ConnectionTimeout = timeout,
                 DefaultCommandTimeout = timeout,
@@ -62,19 +62,26 @@ public abstract class MySqlFamilyDiagnosticAdapter : IDatabaseEngineDiagnosticAd
             await using var connection = new MySqlConnection(builder.ConnectionString);
             await connection.OpenAsync(deadline.Token).ConfigureAwait(false);
 
-            var identity = await ReadIdentityAsync(connection, deadline.Token).ConfigureAwait(false);
-            var catalogs = await ReadCatalogsAsync(connection, request.Options.MaxCatalogs, deadline.Token)
+            var identity = await ReadIdentityAsync(connection, request.Options.MaxTextLength, deadline.Token)
+                .ConfigureAwait(false);
+            var catalogs = await ReadCatalogsAsync(
+                    connection,
+                    request.Options.MaxCatalogs,
+                    request.Options.MaxTextLength,
+                    deadline.Token)
                 .ConfigureAwait(false);
             var metrics = await ReadNameValueRowsAsync(
                     connection,
                     "SHOW GLOBAL STATUS WHERE Variable_name IN " +
                     "('Threads_connected','Threads_running','Connections','Aborted_connects');",
+                    request.Options.MaxTextLength,
                     deadline.Token)
                 .ConfigureAwait(false);
             var metadataRows = await ReadNameValueRowsAsync(
                     connection,
                     "SHOW VARIABLES WHERE Variable_name IN " +
                     "('version','version_comment','log_error','general_log','slow_query_log','slow_query_log_file');",
+                    request.Options.MaxTextLength,
                     deadline.Token)
                 .ConfigureAwait(false);
 
@@ -88,7 +95,9 @@ public abstract class MySqlFamilyDiagnosticAdapter : IDatabaseEngineDiagnosticAd
                 .Take(request.Options.MaxMetadataItems)
                 .Select(pair => new DatabaseDiagnosticMetadata(pair.Key, pair.Value))
                 .ToArray();
-            var serverVersion = connection.ServerVersion;
+            var serverVersion = DatabaseDiagnosticAdapterUtilities.BoundText(
+                connection.ServerVersion,
+                request.Options.MaxTextLength);
             var flavor = serverVersion.Contains("MariaDB", StringComparison.OrdinalIgnoreCase)
                 ? "MariaDB"
                 : "MySQL";
@@ -139,6 +148,7 @@ public abstract class MySqlFamilyDiagnosticAdapter : IDatabaseEngineDiagnosticAd
 
     private static async Task<string> ReadIdentityAsync(
         MySqlConnection connection,
+        int maxTextLength,
         CancellationToken cancellationToken)
     {
         await using var command = new MySqlCommand(
@@ -151,12 +161,15 @@ public abstract class MySqlFamilyDiagnosticAdapter : IDatabaseEngineDiagnosticAd
         }
 
         var database = reader.IsDBNull(1) ? "(none)" : reader.GetString(1);
-        return $"{reader.GetString(0)}@{database}";
+        return DatabaseDiagnosticAdapterUtilities.BoundText(
+            $"{reader.GetString(0)}@{database}",
+            maxTextLength);
     }
 
     private static async Task<(IReadOnlyList<DatabaseCatalogItem> Items, bool IsTruncated)> ReadCatalogsAsync(
         MySqlConnection connection,
         int maxCatalogs,
+        int maxTextLength,
         CancellationToken cancellationToken)
     {
         const string sql = "SELECT s.schema_name, COALESCE(SUM(t.data_length + t.index_length), 0) AS size_bytes " +
@@ -176,7 +189,9 @@ public abstract class MySqlFamilyDiagnosticAdapter : IDatabaseEngineDiagnosticAd
                 break;
             }
 
-            items.Add(new DatabaseCatalogItem(reader.GetString(0), Convert.ToInt64(reader.GetValue(1), CultureInfo.InvariantCulture)));
+            items.Add(new DatabaseCatalogItem(
+                DatabaseDiagnosticAdapterUtilities.BoundText(reader.GetString(0), maxTextLength),
+                Convert.ToInt64(reader.GetValue(1), CultureInfo.InvariantCulture)));
         }
 
         return (items, truncated);
@@ -185,6 +200,7 @@ public abstract class MySqlFamilyDiagnosticAdapter : IDatabaseEngineDiagnosticAd
     private static async Task<IReadOnlyList<KeyValuePair<string, string>>> ReadNameValueRowsAsync(
         MySqlConnection connection,
         string sql,
+        int maxTextLength,
         CancellationToken cancellationToken)
     {
         await using var command = new MySqlCommand(sql, connection);
@@ -192,7 +208,9 @@ public abstract class MySqlFamilyDiagnosticAdapter : IDatabaseEngineDiagnosticAd
         var items = new List<KeyValuePair<string, string>>();
         while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
         {
-            items.Add(new KeyValuePair<string, string>(reader.GetString(0), reader.GetString(1)));
+            items.Add(new KeyValuePair<string, string>(
+                DatabaseDiagnosticAdapterUtilities.BoundText(reader.GetString(0), maxTextLength),
+                DatabaseDiagnosticAdapterUtilities.BoundText(reader.GetString(1), maxTextLength)));
         }
 
         return items;

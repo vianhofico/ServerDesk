@@ -69,6 +69,8 @@ public sealed record DatabaseDiagnosticOptions(
         MaxMetadataItems: 32,
         CommandTimeout: TimeSpan.FromSeconds(8));
 
+    public int MaxTextLength { get; init; } = 1024;
+
     public void Validate()
     {
         if (MaxCatalogs is < 1 or > 500)
@@ -81,6 +83,11 @@ public sealed record DatabaseDiagnosticOptions(
             throw new ArgumentOutOfRangeException(nameof(MaxMetadataItems));
         }
 
+        if (MaxTextLength is < 64 or > 4096)
+        {
+            throw new ArgumentOutOfRangeException(nameof(MaxTextLength));
+        }
+
         if (CommandTimeout <= TimeSpan.Zero || CommandTimeout > TimeSpan.FromMinutes(1))
         {
             throw new ArgumentOutOfRangeException(nameof(CommandTimeout));
@@ -89,9 +96,13 @@ public sealed record DatabaseDiagnosticOptions(
 }
 
 public sealed record DatabaseEngineDiagnosticRequest(
-    DatabaseConnectionProfile Profile,
+    Guid ProfileId,
+    DatabaseEngineKind Engine,
     IPAddress LocalAddress,
     int LocalPort,
+    string? DatabaseName,
+    string? Username,
+    DatabaseAuthenticationKind AuthenticationKind,
     string? Secret,
     DatabaseDiagnosticOptions Options);
 
@@ -136,7 +147,9 @@ public sealed class DatabaseDiagnosticService : IDatabaseDiagnosticService
             ArgumentNullException.ThrowIfNull(adapter);
             if (!resolved.TryAdd(adapter.Engine, adapter))
             {
-                throw new ArgumentException($"Multiple database diagnostic adapters are registered for {adapter.Engine}.", nameof(adapters));
+                throw new ArgumentException(
+                    $"Multiple database diagnostic adapters are registered for {adapter.Engine}.",
+                    nameof(adapters));
             }
         }
 
@@ -165,7 +178,21 @@ public sealed class DatabaseDiagnosticService : IDatabaseDiagnosticService
                     "The database profile does not contain a credential reference.");
             }
 
-            secret = await _secretStore.GetAsync(reference, cancellationToken).ConfigureAwait(false);
+            try
+            {
+                secret = await _secretStore.GetAsync(reference, cancellationToken).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch
+            {
+                return DatabaseDiagnosticResult.Failed(
+                    DatabaseDiagnosticFailureKind.SecretUnavailable,
+                    "The stored database credential could not be read from the secure secret store.");
+            }
+
             if (string.IsNullOrEmpty(secret))
             {
                 return DatabaseDiagnosticResult.Failed(
@@ -189,12 +216,29 @@ public sealed class DatabaseDiagnosticService : IDatabaseDiagnosticService
             }
 
             var request = new DatabaseEngineDiagnosticRequest(
-                profile,
+                profile.Id,
+                profile.Engine,
                 localAddress,
                 endpoint.LocalPort,
+                profile.DatabaseName,
+                profile.Username,
+                profile.AuthenticationKind,
                 secret,
                 _options);
-            return await adapter.InspectAsync(request, cancellationToken).ConfigureAwait(false);
+            try
+            {
+                return await adapter.InspectAsync(request, cancellationToken).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch
+            {
+                return DatabaseDiagnosticResult.Failed(
+                    DatabaseDiagnosticFailureKind.Unexpected,
+                    $"{profile.Engine} diagnostics failed unexpectedly. No credential details were retained.");
+            }
         }
         catch (OperationCanceledException)
         {

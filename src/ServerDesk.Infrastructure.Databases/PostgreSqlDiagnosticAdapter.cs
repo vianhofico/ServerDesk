@@ -25,9 +25,9 @@ public sealed class PostgreSqlDiagnosticAdapter : IDatabaseEngineDiagnosticAdapt
             {
                 Host = request.LocalAddress.ToString(),
                 Port = request.LocalPort,
-                Username = request.Profile.Username ?? string.Empty,
+                Username = request.Username ?? string.Empty,
                 Password = request.Secret ?? string.Empty,
-                Database = request.Profile.DatabaseName ?? "postgres",
+                Database = request.DatabaseName ?? "postgres",
                 Pooling = false,
                 Timeout = DatabaseDiagnosticAdapterUtilities.TimeoutSeconds(request.Options.CommandTimeout),
                 CommandTimeout = DatabaseDiagnosticAdapterUtilities.TimeoutSeconds(request.Options.CommandTimeout),
@@ -38,23 +38,28 @@ public sealed class PostgreSqlDiagnosticAdapter : IDatabaseEngineDiagnosticAdapt
             await using var connection = new NpgsqlConnection(builder.ConnectionString);
             await connection.OpenAsync(deadline.Token).ConfigureAwait(false);
 
-            var identity = await ReadIdentityAsync(connection, deadline.Token).ConfigureAwait(false);
+            var identity = await ReadIdentityAsync(connection, request.Options.MaxTextLength, deadline.Token)
+                .ConfigureAwait(false);
             var catalogs = await ReadCatalogsAsync(
                     connection,
                     request.Options.MaxCatalogs,
+                    request.Options.MaxTextLength,
                     deadline.Token)
                 .ConfigureAwait(false);
             var metrics = await ReadMetricsAsync(connection, deadline.Token).ConfigureAwait(false);
             var metadata = await ReadMetadataAsync(
                     connection,
                     request.Options.MaxMetadataItems,
+                    request.Options.MaxTextLength,
                     deadline.Token)
                 .ConfigureAwait(false);
 
             return DatabaseDiagnosticResult.Success(
                 new DatabaseDiagnosticSnapshot(
                     Engine,
-                    connection.PostgreSqlVersion.ToString(),
+                    DatabaseDiagnosticAdapterUtilities.BoundText(
+                        connection.PostgreSqlVersion.ToString(),
+                        request.Options.MaxTextLength),
                     "PostgreSQL",
                     identity,
                     catalogs.Items,
@@ -95,6 +100,7 @@ public sealed class PostgreSqlDiagnosticAdapter : IDatabaseEngineDiagnosticAdapt
 
     private static async Task<string> ReadIdentityAsync(
         NpgsqlConnection connection,
+        int maxTextLength,
         CancellationToken cancellationToken)
     {
         await using var command = new NpgsqlCommand(
@@ -106,12 +112,15 @@ public sealed class PostgreSqlDiagnosticAdapter : IDatabaseEngineDiagnosticAdapt
             throw new FormatException("PostgreSQL identity row was missing.");
         }
 
-        return $"{reader.GetString(0)}@{reader.GetString(1)}";
+        return DatabaseDiagnosticAdapterUtilities.BoundText(
+            $"{reader.GetString(0)}@{reader.GetString(1)}",
+            maxTextLength);
     }
 
     private static async Task<(IReadOnlyList<DatabaseCatalogItem> Items, bool IsTruncated)> ReadCatalogsAsync(
         NpgsqlConnection connection,
         int maxCatalogs,
+        int maxTextLength,
         CancellationToken cancellationToken)
     {
         await using var command = new NpgsqlCommand(
@@ -131,7 +140,9 @@ public sealed class PostgreSqlDiagnosticAdapter : IDatabaseEngineDiagnosticAdapt
                 break;
             }
 
-            items.Add(new DatabaseCatalogItem(reader.GetString(0), reader.GetInt64(1)));
+            items.Add(new DatabaseCatalogItem(
+                DatabaseDiagnosticAdapterUtilities.BoundText(reader.GetString(0), maxTextLength),
+                reader.GetInt64(1)));
         }
 
         return (items, truncated);
@@ -164,6 +175,7 @@ public sealed class PostgreSqlDiagnosticAdapter : IDatabaseEngineDiagnosticAdapt
     private static async Task<IReadOnlyList<DatabaseDiagnosticMetadata>> ReadMetadataAsync(
         NpgsqlConnection connection,
         int maxItems,
+        int maxTextLength,
         CancellationToken cancellationToken)
     {
         const string sql = "SELECT current_setting('server_version', true), " +
@@ -186,7 +198,9 @@ public sealed class PostgreSqlDiagnosticAdapter : IDatabaseEngineDiagnosticAdapt
             {
                 items.Add(new DatabaseDiagnosticMetadata(
                     names[index],
-                    Convert.ToString(reader.GetValue(index), CultureInfo.InvariantCulture) ?? string.Empty));
+                    DatabaseDiagnosticAdapterUtilities.BoundText(
+                        Convert.ToString(reader.GetValue(index), CultureInfo.InvariantCulture),
+                        maxTextLength)));
             }
         }
 

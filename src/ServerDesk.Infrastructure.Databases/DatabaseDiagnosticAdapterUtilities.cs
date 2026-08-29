@@ -19,11 +19,11 @@ internal static class DatabaseDiagnosticAdapterUtilities
                 new RemoteError(RemoteErrorCode.InvalidEndpoint, "Database diagnostics endpoint was not loopback-only."));
         }
 
-        if (!supportedEngines.Contains(request.Profile.Engine))
+        if (!supportedEngines.Contains(request.Engine))
         {
             return DatabaseDiagnosticResult.Failed(
                 DatabaseDiagnosticFailureKind.UnsupportedEngine,
-                $"The diagnostic adapter does not support {request.Profile.Engine}.");
+                $"The diagnostic adapter does not support {request.Engine}.");
         }
 
         return null;
@@ -31,6 +31,18 @@ internal static class DatabaseDiagnosticAdapterUtilities
 
     public static int TimeoutSeconds(TimeSpan value) =>
         Math.Clamp((int)Math.Ceiling(value.TotalSeconds), 1, 60);
+
+    public static string BoundText(string? value, int maximumLength)
+    {
+        if (string.IsNullOrEmpty(value))
+        {
+            return string.Empty;
+        }
+
+        return value.Length <= maximumLength
+            ? value
+            : value[..maximumLength];
+    }
 
     public static DatabaseDiagnosticResult Timeout(DatabaseEngineKind engine) =>
         DatabaseDiagnosticResult.Failed(
