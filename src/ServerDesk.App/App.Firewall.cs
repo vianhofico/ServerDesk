@@ -16,6 +16,7 @@ public partial class App
         var service = provider.GetRequiredService<IFirewallManager>();
         var window = new FirewallInventoryWindow(
             service,
+            provider.GetRequiredService<IFirewallMutationService>(),
             provider.GetRequiredService<ILocalizationService>(),
             profile,
             connected)
