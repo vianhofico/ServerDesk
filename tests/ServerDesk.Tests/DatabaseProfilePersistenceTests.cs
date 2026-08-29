@@ -85,7 +85,7 @@ public sealed class DatabaseProfilePersistenceTests
     }
 
     [Fact]
-    public async Task DeletingServerCascadesDatabaseProfilesButDoesNotRequireSecretMaterial()
+    public async Task DeletingServerWithDatabaseProfilesFailsClosedInsteadOfOrphaningSecrets()
     {
         var cancellationToken = TestContext.Current.CancellationToken;
         using var paths = new TemporaryAppPaths();
@@ -111,9 +111,11 @@ public sealed class DatabaseProfilePersistenceTests
                 null),
             cancellationToken);
 
-        await serverRepository.DeleteAsync(server.Id, cancellationToken);
+        await Assert.ThrowsAsync<SqliteException>(async () =>
+            await serverRepository.DeleteAsync(server.Id, cancellationToken));
 
-        Assert.Empty(await databaseRepository.ListForServerAsync(server.Id, cancellationToken));
+        Assert.NotNull(await serverRepository.GetAsync(server.Id, cancellationToken));
+        Assert.Single(await databaseRepository.ListForServerAsync(server.Id, cancellationToken));
     }
 
     private sealed class TemporaryAppPaths : IAppPaths, IDisposable
