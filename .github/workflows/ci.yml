@@ -130,7 +130,7 @@ jobs:
           LogLevel VERBOSE
           EOF
 
-          sudo /usr/sbin/sshd -f /tmp/serverdesk-sshd_config -E /tmp/serverdesk-sshd.log
+          sudo /usr/sbin/sshd -f /tmp/serverdesk_sshd_config -E /tmp/serverdesk-sshd.log
           for attempt in {1..30}; do
             if ssh-keyscan -p 2222 127.0.0.1 >/dev/null 2>&1 && \
                ssh-keyscan -p 2223 127.0.0.1 >/dev/null 2>&1 && \
@@ -249,11 +249,13 @@ jobs:
           EOF
           cat <<'EOF' | sudo tee /usr/local/bin/mysql >/dev/null
           #!/usr/bin/env bash
-          exec docker run --rm -i --network host -e MYSQL_PWD mysql:8.4.11 mysql "$@"
+          exec docker run --rm -i --network host -e MYSQL_PWD mysql:8.4.11 mysql "$@" \
+            2> >(tee -a /tmp/serverdesk-mysql-client.stderr >&2)
           EOF
           cat <<'EOF' | sudo tee /usr/local/bin/mariadb >/dev/null
           #!/usr/bin/env bash
-          exec docker run --rm -i --network host -e MYSQL_PWD mariadb:11.8.9 mariadb "$@"
+          exec docker run --rm -i --network host -e MYSQL_PWD mariadb:11.8.9 mariadb "$@" \
+            2> >(tee -a /tmp/serverdesk-mariadb-client.stderr >&2)
           EOF
           sudo chmod 0755 /usr/local/bin/pg_restore /usr/local/bin/psql /usr/local/bin/mysql /usr/local/bin/mariadb
           sudo -u serverdesk_ci docker version >/dev/null
@@ -272,6 +274,14 @@ jobs:
             --no-restore \
             2>&1 | tee artifacts/test-results/ssh-integration.log
 
+      - name: Collect database restore diagnostics
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p artifacts/test-results
+          cp /tmp/serverdesk-mysql-client.stderr artifacts/test-results/mysql-client.stderr 2>/dev/null || true
+          cp /tmp/serverdesk-mariadb-client.stderr artifacts/test-results/mariadb-client.stderr 2>/dev/null || true
+
       - name: Upload SSH integration test results
         if: always()
         uses: actions/upload-artifact@v4
@@ -289,6 +299,8 @@ jobs:
           cat /tmp/serverdesk-http-proxy.log || true
           cat /tmp/serverdesk-socks4-proxy.log || true
           cat /tmp/serverdesk-socks5-proxy.log || true
+          cat /tmp/serverdesk-mysql-client.stderr || true
+          cat /tmp/serverdesk-mariadb-client.stderr || true
           docker ps -a || true
           docker logs serverdesk-postgres || true
           docker logs serverdesk-mysql || true
