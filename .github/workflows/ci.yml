@@ -262,7 +262,24 @@ jobs:
         run: dotnet restore tests/ServerDesk.Ssh.IntegrationTests/ServerDesk.Ssh.IntegrationTests.csproj
 
       - name: Run SSH, SFTP, PTY, forwarding, routing and database integration tests
-        run: dotnet test tests/ServerDesk.Ssh.IntegrationTests/ServerDesk.Ssh.IntegrationTests.csproj --configuration Release --no-restore
+        shell: bash
+        run: |
+          mkdir -p artifacts/test-results
+          dotnet test tests/ServerDesk.Ssh.IntegrationTests/ServerDesk.Ssh.IntegrationTests.csproj \
+            --configuration Release \
+            --no-restore \
+            --logger "console;verbosity=detailed" \
+            --logger "trx;LogFileName=ssh-integration.trx" \
+            --results-directory artifacts/test-results
+
+      - name: Upload SSH integration test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ssh-integration-test-results
+          path: artifacts/test-results/**
+          if-no-files-found: warn
+          retention-days: 7
 
       - name: Show fixture logs on failure
         if: failure()
