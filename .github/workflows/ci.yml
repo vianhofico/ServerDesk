@@ -264,13 +264,13 @@ jobs:
       - name: Run SSH, SFTP, PTY, forwarding, routing and database integration tests
         shell: bash
         run: |
+          set -o pipefail
           mkdir -p artifacts/test-results
-          dotnet test tests/ServerDesk.Ssh.IntegrationTests/ServerDesk.Ssh.IntegrationTests.csproj \
+          dotnet test \
+            --project tests/ServerDesk.Ssh.IntegrationTests/ServerDesk.Ssh.IntegrationTests.csproj \
             --configuration Release \
             --no-restore \
-            --logger "console;verbosity=detailed" \
-            --logger "trx;LogFileName=ssh-integration.trx" \
-            --results-directory artifacts/test-results
+            2>&1 | tee artifacts/test-results/ssh-integration.log
 
       - name: Upload SSH integration test results
         if: always()
