@@ -224,11 +224,72 @@ jobs:
           sudo chmod 0755 /usr/local/bin/pg_dump /usr/local/bin/pg_restore /usr/local/bin/mysqldump /usr/local/bin/mariadb-dump
           sudo -u serverdesk_ci docker version >/dev/null
 
+      - name: Configure certified database restore targets and tool wrappers
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          docker exec serverdesk-postgres psql -v ON_ERROR_STOP=1 -U serverdesk -d postgres \
+            -c 'DROP DATABASE IF EXISTS serverdesk_restore' \
+            -c 'CREATE DATABASE serverdesk_restore'
+          docker exec serverdesk-mysql mysql -uroot -pserverdesk-root-password \
+            -e "DROP DATABASE IF EXISTS serverdesk_restore; CREATE DATABASE serverdesk_restore; GRANT ALL PRIVILEGES ON serverdesk_restore.* TO 'serverdesk'@'%'; FLUSH PRIVILEGES;"
+          docker exec serverdesk-mariadb mariadb -uroot -pserverdesk-root-password \
+            -e "DROP DATABASE IF EXISTS serverdesk_restore; CREATE DATABASE serverdesk_restore; GRANT ALL PRIVILEGES ON serverdesk_restore.* TO 'serverdesk'@'%'; FLUSH PRIVILEGES;"
+
+          cat <<'EOF' | sudo tee /usr/local/bin/pg_restore >/dev/null
+          #!/usr/bin/env bash
+          exec docker run --rm -i --network host -e PGPASSWORD \
+            -v /tmp/serverdesk-db-backups:/tmp/serverdesk-db-backups \
+            postgres:18.6 pg_restore "$@"
+          EOF
+          cat <<'EOF' | sudo tee /usr/local/bin/psql >/dev/null
+          #!/usr/bin/env bash
+          exec docker run --rm -i --network host -e PGPASSWORD postgres:18.6 psql "$@"
+          EOF
+          cat <<'EOF' | sudo tee /usr/local/bin/mysql >/dev/null
+          #!/usr/bin/env bash
+          exec docker run --rm -i --network host -e MYSQL_PWD mysql:8.4.11 mysql "$@" \
+            2> >(tee -a /tmp/serverdesk-mysql-client.stderr >&2)
+          EOF
+          cat <<'EOF' | sudo tee /usr/local/bin/mariadb >/dev/null
+          #!/usr/bin/env bash
+          exec docker run --rm -i --network host -e MYSQL_PWD mariadb:11.8.9 mariadb "$@" \
+            2> >(tee -a /tmp/serverdesk-mariadb-client.stderr >&2)
+          EOF
+          sudo chmod 0755 /usr/local/bin/pg_restore /usr/local/bin/psql /usr/local/bin/mysql /usr/local/bin/mariadb
+          sudo -u serverdesk_ci docker version >/dev/null
+
       - name: Restore integration tests
         run: dotnet restore tests/ServerDesk.Ssh.IntegrationTests/ServerDesk.Ssh.IntegrationTests.csproj
 
       - name: Run SSH, SFTP, PTY, forwarding, routing and database integration tests
-        run: dotnet test tests/ServerDesk.Ssh.IntegrationTests/ServerDesk.Ssh.IntegrationTests.csproj --configuration Release --no-restore
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p artifacts/test-results
+          dotnet test \
+            --project tests/ServerDesk.Ssh.IntegrationTests/ServerDesk.Ssh.IntegrationTests.csproj \
+            --configuration Release \
+            --no-restore \
+            2>&1 | tee artifacts/test-results/ssh-integration.log
+
+      - name: Collect database restore diagnostics
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p artifacts/test-results
+          cp /tmp/serverdesk-mysql-client.stderr artifacts/test-results/mysql-client.stderr 2>/dev/null || true
+          cp /tmp/serverdesk-mariadb-client.stderr artifacts/test-results/mariadb-client.stderr 2>/dev/null || true
+
+      - name: Upload SSH integration test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ssh-integration-test-results
+          path: artifacts/test-results/**
+          if-no-files-found: warn
+          retention-days: 7
 
       - name: Show fixture logs on failure
         if: failure()
@@ -238,6 +299,8 @@ jobs:
           cat /tmp/serverdesk-http-proxy.log || true
           cat /tmp/serverdesk-socks4-proxy.log || true
           cat /tmp/serverdesk-socks5-proxy.log || true
+          cat /tmp/serverdesk-mysql-client.stderr || true
+          cat /tmp/serverdesk-mariadb-client.stderr || true
           docker ps -a || true
           docker logs serverdesk-postgres || true
           docker logs serverdesk-mysql || true

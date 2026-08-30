@@ -22,7 +22,10 @@ public partial class App
         var provider = _serviceProvider ?? throw new InvalidOperationException("ServerDesk services are not initialized.");
         var connectionFactory = provider.GetRequiredService<SqliteConnectionFactory>();
         var repository = new SqliteDatabaseProfileRepository(connectionFactory);
+        var manifestRepository = new SqliteDatabaseBackupManifestRepository(connectionFactory);
         var secretStore = provider.GetRequiredService<ISecretStore>();
+        var remoteCommands = provider.GetRequiredService<IRemoteCommandExecutorFactory>();
+        var audit = provider.GetRequiredService<IOperationAudit>();
         var profileService = new DatabaseProfileService(
             repository,
             provider.GetRequiredService<IProfileRepository>(),
@@ -47,10 +50,18 @@ public partial class App
             new DatabaseBackupService(
                 repository,
                 secretStore,
-                provider.GetRequiredService<IRemoteCommandExecutorFactory>(),
-                new SqliteDatabaseBackupManifestRepository(connectionFactory),
+                remoteCommands,
+                manifestRepository,
                 DatabaseBackupOptions.Default),
-            provider.GetRequiredService<IOperationAudit>());
+            audit);
+        var restoreService = new AuditedDatabaseRestoreService(
+            new DatabaseRestoreService(
+                repository,
+                manifestRepository,
+                secretStore,
+                remoteCommands,
+                DatabaseRestoreOptions.Default),
+            audit);
         var window = new DatabaseProfilesWindow(
             profileService,
             connectivityService,
@@ -61,7 +72,7 @@ public partial class App
         {
             Owner = owner,
         };
-        window.InitializeBackupWorkflow(backupService);
+        window.InitializeBackupWorkflow(backupService, restoreService);
         window.Show();
     }
 }
