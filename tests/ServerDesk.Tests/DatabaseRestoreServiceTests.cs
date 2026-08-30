@@ -271,7 +271,7 @@ public sealed class DatabaseRestoreServiceTests
     [Theory]
     [InlineData(DatabaseEngineKind.MySql, "mysql")]
     [InlineData(DatabaseEngineKind.MariaDb, "mariadb")]
-    public async Task MySqlFamilyRestoreUsesOneDatabaseAndRemoteFileRedirectionWithoutSecretArguments(
+    public async Task MySqlFamilyRestoreUsesVerifiedManifestAndRemoteFileRedirectionWithoutSecretArguments(
         DatabaseEngineKind engine,
         string tool)
     {
@@ -286,7 +286,7 @@ public sealed class DatabaseRestoreServiceTests
         Assert.Equal("sh", preview.Executable);
         Assert.Contains(tool, preview.Arguments);
         Assert.Contains(fixture.Manifest.BackupPath.Value, preview.Arguments);
-        Assert.Contains("--one-database", preview.Arguments);
+        Assert.DoesNotContain("--one-database", preview.Arguments);
         Assert.Contains("--database=appdb", preview.Arguments);
         Assert.DoesNotContain(Secret, string.Join('\n', preview.Arguments), StringComparison.Ordinal);
 

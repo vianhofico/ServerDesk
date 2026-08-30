@@ -797,7 +797,6 @@ public sealed class DatabaseRestoreService : IDatabaseRestoreService
             $"--port={profile.RemotePort.ToString(CultureInfo.InvariantCulture)}",
             "--batch",
             "--raw",
-            "--one-database",
             $"--database={targetDatabase}",
         };
         if (!string.IsNullOrWhiteSpace(profile.Username))
@@ -963,7 +962,7 @@ public sealed class DatabaseRestoreService : IDatabaseRestoreService
         DatabaseEngineKind.PostgreSql =>
             $"Destructive data-loss-sensitive logical restore targets exactly '{targetDatabase}'. Objects represented in the archive may be dropped/recreated. Objects absent from the archive may remain. No automatic rollback is claimed, and ambiguous transport completion must be inspected before any next action.",
         DatabaseEngineKind.MySql or DatabaseEngineKind.MariaDb =>
-            $"Destructive data-loss-sensitive logical restore is restricted to exactly '{targetDatabase}' with --one-database. DDL/DML in the verified dump may overwrite or drop represented objects; objects absent from the dump may remain. No automatic rollback is available.",
+            $"Destructive data-loss-sensitive logical restore is restricted to the verified ServerDesk backup manifest bound to exactly '{targetDatabase}'. DDL/DML in that checksum-verified dump may overwrite or drop represented objects; objects absent from the dump may remain. No automatic rollback is available.",
         _ => "Restore is unsupported.",
     };
 
@@ -978,7 +977,7 @@ public sealed class DatabaseRestoreService : IDatabaseRestoreService
         }
 
         var tool = profile.Engine == DatabaseEngineKind.MariaDb ? "mariadb" : "mysql";
-        return $"{tool} --host={Token(profile.RemoteHost)} --port={profile.RemotePort.ToString(CultureInfo.InvariantCulture)} --one-database --database={Token(targetDatabase)} < {Token(manifest.BackupPath.Value)} [credential via sensitive stdin when configured]";
+        return $"{tool} --host={Token(profile.RemoteHost)} --port={profile.RemotePort.ToString(CultureInfo.InvariantCulture)} --database={Token(targetDatabase)} < {Token(manifest.BackupPath.Value)} [verified manifest/checksum; credential via sensitive stdin when configured]";
     }
 
     private static string Token(string value) =>
