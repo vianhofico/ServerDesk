@@ -130,7 +130,7 @@ jobs:
           LogLevel VERBOSE
           EOF
 
-          sudo /usr/sbin/sshd -f /tmp/serverdesk_sshd_config -E /tmp/serverdesk-sshd.log
+          sudo /usr/sbin/sshd -f /tmp/serverdesk-sshd_config -E /tmp/serverdesk-sshd.log
           for attempt in {1..30}; do
             if ssh-keyscan -p 2222 127.0.0.1 >/dev/null 2>&1 && \
                ssh-keyscan -p 2223 127.0.0.1 >/dev/null 2>&1 && \
