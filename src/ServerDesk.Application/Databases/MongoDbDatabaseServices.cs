@@ -159,6 +159,11 @@ public sealed class MongoDbDatabaseBackupService : IDatabaseBackupService
             return Unsupported("The MongoDB backup service refuses non-MongoDB profiles.");
         }
 
+        if (!MongoDbServiceUtilities.IsLoopbackRemoteToolHost(profile.RemoteHost))
+        {
+            return Unsupported("MongoDB backup is certified only for a literal loopback database endpoint on the SSH host; direct/public remote-tool connections are refused.");
+        }
+
         if (profile.ServerProfileId != serverProfile.Id ||
             !string.Equals(profile.DatabaseName, databaseName, StringComparison.Ordinal))
         {
@@ -694,6 +699,11 @@ public sealed class MongoDbDatabaseRestoreService : IDatabaseRestoreService
             return BindingRead.UnsupportedMode("The MongoDB restore service refuses non-MongoDB bindings.");
         }
 
+        if (!MongoDbServiceUtilities.IsLoopbackRemoteToolHost(profile.RemoteHost))
+        {
+            return BindingRead.UnsupportedMode("MongoDB restore is certified only for a literal loopback database endpoint on the SSH host; direct/public remote-tool connections are refused.");
+        }
+
         if (!manifest.IsVerified || manifest.Format != DatabaseBackupFormat.MongoDbArchive ||
             manifest.Verification.SizeBytes <= 0 || manifest.Verification.Sha256.Length != 64)
         {
@@ -786,6 +796,9 @@ internal static class MongoDbServiceUtilities
             ["LC_ALL"] = "C",
             ["LANG"] = "C",
         };
+
+    public static bool IsLoopbackRemoteToolHost(string host) =>
+        System.Net.IPAddress.TryParse(host, out var address) && System.Net.IPAddress.IsLoopback(address);
 
     public static async Task<CertifiedRead> ReadCertifiedSnapshotAsync(
         IDatabaseDiagnosticService diagnostics,

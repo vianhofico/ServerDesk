@@ -90,7 +90,54 @@ public sealed class MongoDbBackupRestoreIntegrationTests
         Assert.Equal(1, restored.RowCount);
     }
 
-    private static Fixture CreateFixture()
+    [Fact]
+    public async Task RemoteToolBackupRefusesNonLoopbackEndpointBeforeDispatch()
+    {
+        var fixture = CreateFixture("203.0.113.10");
+
+        var result = await fixture.Backup.CreateAsync(
+            fixture.Server,
+            new DatabaseBackupRequest(fixture.Profile.Id, DatabaseName, BackupDirectory),
+            TestContext.Current.CancellationToken);
+
+        Assert.False(result.IsSuccess);
+        Assert.True(result.Unsupported);
+        Assert.Null(result.Manifest);
+        Assert.Contains("loopback", result.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task RemoteToolRestorePreviewRefusesNonLoopbackEndpointBeforeDispatch()
+    {
+        var fixture = CreateFixture("203.0.113.10");
+        var backupId = Guid.NewGuid();
+        fixture.Manifests.Items.Add(new DatabaseBackupManifest(
+            backupId,
+            fixture.Server.Id,
+            fixture.Profile.Id,
+            DatabaseEngineKind.MongoDb,
+            DatabaseName,
+            "serverdesk",
+            ServerDesk.Application.RemoteFiles.RemotePath.Parse($"{BackupDirectory}/serverdesk-db-backup-{backupId:N}.archive.gz"),
+            DatabaseBackupFormat.MongoDbArchive,
+            "mongodump",
+            "100.18.0",
+            DateTimeOffset.UtcNow,
+            new DatabaseBackupVerificationEvidence(1, new string('A', 64), "fixture", DateTimeOffset.UtcNow),
+            true));
+
+        var result = await fixture.Restore.PreviewAsync(
+            fixture.Server,
+            new DatabaseRestoreRequest(fixture.Profile.Id, backupId, DatabaseName),
+            TestContext.Current.CancellationToken);
+
+        Assert.False(result.IsSuccess);
+        Assert.True(result.Unsupported);
+        Assert.Null(result.Preview);
+        Assert.Contains("loopback", result.Error?.Message ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static Fixture CreateFixture(string remoteHost = "127.0.0.1")
     {
         var serverId = Guid.NewGuid();
         var sshReference = SecretReference.ForServerProfile(serverId);
@@ -109,7 +156,7 @@ public sealed class MongoDbBackupRestoreIntegrationTests
             server.Id,
             "MongoDB 8.0.29 standalone fixture",
             DatabaseEngineKind.MongoDb,
-            "127.0.0.1",
+            remoteHost,
             MongoDbPort,
             DatabaseName,
             "serverdesk",
@@ -161,7 +208,7 @@ public sealed class MongoDbBackupRestoreIntegrationTests
             commands,
             diagnostics,
             DatabaseRestoreOptions.Default);
-        return new Fixture(server, profile, backup, restore);
+        return new Fixture(server, profile, backup, restore, manifests);
     }
 
     private static async Task ResetProbeAsync(CancellationToken cancellationToken)
@@ -217,7 +264,8 @@ public sealed class MongoDbBackupRestoreIntegrationTests
         ServerProfile Server,
         DatabaseConnectionProfile Profile,
         MongoDbDatabaseBackupService Backup,
-        MongoDbDatabaseRestoreService Restore);
+        MongoDbDatabaseRestoreService Restore,
+        MemoryManifestRepository Manifests);
 
     private sealed record ProbeState(string Marker, long RowCount);
 
