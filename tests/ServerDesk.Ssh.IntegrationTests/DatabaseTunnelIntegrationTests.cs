@@ -29,6 +29,7 @@ public sealed class DatabaseTunnelIntegrationTests
     [InlineData(DatabaseEngineKind.MySql)]
     [InlineData(DatabaseEngineKind.MariaDb)]
     [InlineData(DatabaseEngineKind.Redis)]
+    [InlineData(DatabaseEngineKind.SqlServer)]
     public async Task DatabaseTunnelCarriesEngineProbeAndClosesAutomaticLoopbackPort(DatabaseEngineKind engine)
     {
         var cancellationToken = TestContext.Current.CancellationToken;
@@ -84,7 +85,10 @@ public sealed class DatabaseTunnelIntegrationTests
         Assert.InRange(result.Endpoint.LocalPort, 1, 65535);
         Assert.Equal(databaseProfile.RemoteHost, result.Endpoint.RemoteHost);
         Assert.Equal(databaseProfile.RemotePort, result.Endpoint.RemotePort);
-        Assert.Contains(engine.ToString(), result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(
+            engine == DatabaseEngineKind.SqlServer ? "SQL Server" : engine.ToString(),
+            result.Message,
+            StringComparison.OrdinalIgnoreCase);
         Assert.Contains("credentials are not tested", result.Message, StringComparison.OrdinalIgnoreCase);
 
         using var closedProbe = new TcpClient(AddressFamily.InterNetwork);
@@ -126,6 +130,19 @@ public sealed class DatabaseTunnelIntegrationTests
                     Assert.Equal("*1\r\n$4\r\nPING\r\n", Encoding.ASCII.GetString(request));
                     await stream.WriteAsync(
                         Encoding.ASCII.GetBytes("-NOAUTH Authentication required.\r\n"),
+                        cancellationToken);
+                    break;
+                }
+
+            case DatabaseEngineKind.SqlServer:
+                {
+                    var request = new byte[26];
+                    await ReadExactlyAsync(stream, request, cancellationToken);
+                    Assert.Equal(0x12, request[0]);
+                    Assert.Equal(0x01, request[1]);
+                    Assert.Equal(26, (request[2] << 8) | request[3]);
+                    await stream.WriteAsync(
+                        new byte[] { 0x04, 0x01, 0x00, 0x08, 0x00, 0x00, 0x01, 0x00 },
                         cancellationToken);
                     break;
                 }
