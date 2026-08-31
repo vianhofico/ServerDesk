@@ -10,6 +10,7 @@ public enum DatabaseBackupFormat
     MySqlSql,
     MariaDbSql,
     SqlServerNative,
+    MongoDbArchive,
 }
 
 public sealed record DatabaseBackupRequest(
