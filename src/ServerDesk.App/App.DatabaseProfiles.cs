@@ -45,6 +45,7 @@ public partial class App
                 new MariaDbDiagnosticAdapter(),
                 new RedisDiagnosticAdapter(),
                 new SqlServerDiagnosticAdapter(),
+                new MongoDbDiagnosticAdapter(),
             ],
             DatabaseDiagnosticOptions.Default);
 
@@ -60,8 +61,16 @@ public partial class App
             remoteCommands,
             manifestRepository,
             DatabaseBackupOptions.Default);
+        var mongoDbBackup = new MongoDbDatabaseBackupService(
+            repository,
+            secretStore,
+            remoteCommands,
+            manifestRepository,
+            diagnosticService,
+            DatabaseBackupOptions.Default);
+        var sqlAwareBackup = new DatabaseBackupServiceRouter(repository, standardBackup, sqlServerBackup);
         var backupService = new HistoryDatabaseBackupService(
-            new DatabaseBackupServiceRouter(repository, standardBackup, sqlServerBackup),
+            new MongoDbDatabaseBackupServiceRouter(repository, sqlAwareBackup, mongoDbBackup),
             repository,
             audit);
 
@@ -77,8 +86,16 @@ public partial class App
             secretStore,
             remoteCommands,
             DatabaseRestoreOptions.Default);
+        var mongoDbRestore = new MongoDbDatabaseRestoreService(
+            repository,
+            manifestRepository,
+            secretStore,
+            remoteCommands,
+            diagnosticService,
+            DatabaseRestoreOptions.Default);
+        var sqlAwareRestore = new DatabaseRestoreServiceRouter(repository, standardRestore, sqlServerRestore);
         var restoreService = new HistoryDatabaseRestoreService(
-            new DatabaseRestoreServiceRouter(repository, standardRestore, sqlServerRestore),
+            new MongoDbDatabaseRestoreServiceRouter(repository, sqlAwareRestore, mongoDbRestore),
             audit);
 
         var window = new DatabaseProfilesWindow(
