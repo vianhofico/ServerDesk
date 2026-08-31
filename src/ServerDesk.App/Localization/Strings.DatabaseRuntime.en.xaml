@@ -27,7 +27,7 @@
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseRuntime.JournalFormat">Journal source candidate: {0}. Read permission has not been verified by runtime inventory.</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseRuntime.JournalUnavailable">No journal source candidate was established for this runtime.</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseRuntime.UnknownValue">unknown</sys:String>
-    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseRuntime.SafetyFooter">Host-side runtime discovery is read-only: it does not request database passwords, execute arbitrary SQL, change services or expose database ports publicly.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseRuntime.SafetyFooter">Host-side runtime discovery is read-only: it does not request database passwords, does not execute arbitrary SQL, does not change services and does not expose database ports publicly.</sys:String>
 
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.Action">DB profiles</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.ActionTooltip">Manage secret-safe database profiles and tunneled read-only diagnostics.</sys:String>
