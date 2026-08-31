@@ -310,10 +310,12 @@ public partial class OperationHistoryWindow : Window
         _ => engine.ToString(),
     };
 
-    private string BuildCertificationSummary() =>
-        string.Join(
-            Environment.NewLine,
-            DatabaseCertificationMatrix.Entries.Select(entry => _localization.Format(
+    private string BuildCertificationSummary()
+    {
+        var rows = new List<string>();
+        foreach (var entry in DatabaseCertificationMatrix.Entries)
+        {
+            rows.Add(_localization.Format(
                 "Loc.OperationHistory.CertificationRowFormat",
                 EngineDisplay(entry.Engine),
                 entry.Version,
@@ -322,6 +324,10 @@ public partial class OperationHistoryWindow : Window
                 CertificationLevelDisplay(DatabaseCertificationMatrix.LevelFor(entry.Engine, entry.Version, DatabaseCapabilityKind.Diagnostics)),
                 CertificationLevelDisplay(DatabaseCertificationMatrix.LevelFor(entry.Engine, entry.Version, DatabaseCapabilityKind.Backup)),
                 CertificationLevelDisplay(DatabaseCertificationMatrix.LevelFor(entry.Engine, entry.Version, DatabaseCapabilityKind.Restore))));
+        }
+
+        return string.Join(Environment.NewLine, rows);
+    }
 
     private string CertificationLevelDisplay(DatabaseCertificationLevel level) => level switch
     {
