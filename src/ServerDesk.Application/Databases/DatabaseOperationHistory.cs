@@ -181,25 +181,25 @@ public sealed class HistoryDatabaseBackupService : IDatabaseBackupService
         var verification = result.IsSuccess
             ? "backup-verified"
             : result.AmbiguousState ? "ambiguous-unknown" : result.Unsupported ? "unsupported" : "failed-known";
-        var target = DatabaseOperationAuditMetadata.ForOperation(
-            serverProfile,
-            request.DatabaseProfileId,
-            profile?.Engine,
-            request.DatabaseName,
-            result.Manifest?.BackupId,
-            "backup",
-            verification);
-        var summary =
-            $"Database backup outcome={outcome}; failure-class={FailureClass(result.Error)}; duration-ms={(long)elapsed.TotalMilliseconds}; artifact={(result.Manifest is null ? "unverified" : "verified-manifest")}.";
-        var entry = OperationAuditEntry.Create(
-            "database-backup",
-            summary,
-            OperationRisk.Mutating,
-            outcome,
-            target);
 
         try
         {
+            var target = DatabaseOperationAuditMetadata.ForOperation(
+                serverProfile,
+                request.DatabaseProfileId,
+                profile?.Engine,
+                request.DatabaseName,
+                result.Manifest?.BackupId,
+                "backup",
+                verification);
+            var summary =
+                $"Database backup outcome={outcome}; failure-class={FailureClass(result.Error)}; duration-ms={(long)elapsed.TotalMilliseconds}; artifact={(result.Manifest is null ? "unverified" : "verified-manifest")}.";
+            var entry = OperationAuditEntry.Create(
+                "database-backup",
+                summary,
+                OperationRisk.Mutating,
+                outcome,
+                target);
             await _audit.AppendAsync(entry, CancellationToken.None).ConfigureAwait(false);
             return result;
         }
@@ -247,14 +247,22 @@ public sealed class HistoryDatabaseRestoreService : IDatabaseRestoreService
         }
         catch (OperationCanceledException)
         {
-            await AppendAsync(
-                    serverProfile,
-                    preview,
-                    OperationOutcome.Cancelled,
-                    "cancelled",
-                    RemoteErrorCode.OperationCancelled.ToString(),
-                    Stopwatch.GetElapsedTime(started))
-                .ConfigureAwait(false);
+            try
+            {
+                await AppendAsync(
+                        serverProfile,
+                        preview,
+                        OperationOutcome.Cancelled,
+                        "cancelled",
+                        RemoteErrorCode.OperationCancelled.ToString(),
+                        Stopwatch.GetElapsedTime(started))
+                    .ConfigureAwait(false);
+            }
+            catch
+            {
+                // History is local evidence only; never replace the original cancellation outcome.
+            }
+
             throw;
         }
 
