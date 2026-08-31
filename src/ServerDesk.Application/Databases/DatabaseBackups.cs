@@ -9,6 +9,7 @@ public enum DatabaseBackupFormat
     PostgreSqlCustom,
     MySqlSql,
     MariaDbSql,
+    SqlServerNative,
 }
 
 public sealed record DatabaseBackupRequest(
