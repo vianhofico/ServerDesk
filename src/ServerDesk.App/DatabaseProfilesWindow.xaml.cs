@@ -61,6 +61,7 @@ public partial class DatabaseProfilesWindow : Window
     {
         TitleText.Text = _localization.Format("Loc.DatabaseProfiles.Title", _serverProfile.Name);
         UpdatePasswordHint();
+        UpdateMongoOptionsState();
         TestTunnelButton.IsEnabled = !_busy && _connected;
         InspectButton.IsEnabled = !_busy && _connected && _selectedProfile is not null;
         if (!_connected && string.IsNullOrWhiteSpace(StatusText.Text))
@@ -299,7 +300,13 @@ public partial class DatabaseProfilesWindow : Window
             PortBox.Text = DatabaseConnectionProfile.DefaultPortFor(engine).ToString(CultureInfo.InvariantCulture);
         }
 
+        if (engine == DatabaseEngineKind.MongoDb && string.IsNullOrWhiteSpace(AuthenticationDatabaseBox.Text))
+        {
+            AuthenticationDatabaseBox.Text = "admin";
+        }
+
         _lastEngine = engine;
+        UpdateMongoOptionsState();
     }
 
     private void AuthenticationSelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -315,6 +322,7 @@ public partial class DatabaseProfilesWindow : Window
         }
 
         UpdatePasswordHint();
+        UpdateMongoOptionsState();
     }
 
     private async Task RefreshSafeAsync(Guid? selectId = null)
@@ -386,6 +394,8 @@ public partial class DatabaseProfilesWindow : Window
             DatabaseNameBox.Text = string.Empty;
             UsernameBox.Text = string.Empty;
             AuthenticationBox.SelectedItem = DatabaseAuthenticationKind.Password;
+            AuthenticationDatabaseBox.Text = "admin";
+            TlsRequiredBox.IsChecked = false;
             PasswordBox.Clear();
         }
         finally
@@ -394,6 +404,7 @@ public partial class DatabaseProfilesWindow : Window
         }
 
         UpdatePasswordHint();
+        UpdateMongoOptionsState();
     }
 
     private void LoadEditor(DatabaseConnectionProfile profile)
@@ -409,6 +420,8 @@ public partial class DatabaseProfilesWindow : Window
             DatabaseNameBox.Text = profile.DatabaseName ?? string.Empty;
             UsernameBox.Text = profile.Username ?? string.Empty;
             AuthenticationBox.SelectedItem = profile.AuthenticationKind;
+            AuthenticationDatabaseBox.Text = profile.AuthenticationDatabase ?? "admin";
+            TlsRequiredBox.IsChecked = profile.TlsMode == DatabaseTlsMode.Required;
             PasswordBox.Clear();
         }
         finally
@@ -417,6 +430,7 @@ public partial class DatabaseProfilesWindow : Window
         }
 
         UpdatePasswordHint();
+        UpdateMongoOptionsState();
     }
 
     private bool TryBuildSpec(out DatabaseProfileSpec? spec, out string error)
@@ -437,6 +451,13 @@ public partial class DatabaseProfilesWindow : Window
             return false;
         }
 
+        var authenticationDatabase = engine == DatabaseEngineKind.MongoDb &&
+            authenticationKind == DatabaseAuthenticationKind.Password
+                ? AuthenticationDatabaseBox.Text
+                : null;
+        var tlsMode = engine == DatabaseEngineKind.MongoDb && TlsRequiredBox.IsChecked == true
+            ? DatabaseTlsMode.Required
+            : DatabaseTlsMode.Disabled;
         spec = new DatabaseProfileSpec(
             NameBox.Text,
             engine,
@@ -444,7 +465,9 @@ public partial class DatabaseProfilesWindow : Window
             port,
             DatabaseNameBox.Text,
             UsernameBox.Text,
-            authenticationKind);
+            authenticationKind,
+            authenticationDatabase,
+            tlsMode);
         return true;
     }
 
@@ -466,6 +489,22 @@ public partial class DatabaseProfilesWindow : Window
             : _selectedProfile?.AuthenticationKind == DatabaseAuthenticationKind.Password
                 ? _localization.Get("Loc.DatabaseProfiles.PasswordExistingHint")
                 : _localization.Get("Loc.DatabaseProfiles.PasswordNewHint");
+    }
+
+    private void UpdateMongoOptionsState()
+    {
+        if (AuthenticationDatabaseBox is null || TlsRequiredBox is null || MongoOptionsHintText is null)
+        {
+            return;
+        }
+
+        var isMongoDb = EngineBox?.SelectedItem is DatabaseEngineKind.MongoDb;
+        var isPassword = AuthenticationBox?.SelectedItem is DatabaseAuthenticationKind.Password;
+        AuthenticationDatabaseBox.IsEnabled = isMongoDb && isPassword;
+        TlsRequiredBox.IsEnabled = isMongoDb;
+        MongoOptionsHintText.Text = isMongoDb
+            ? _localization.Get("Loc.DatabaseProfiles.MongoOptionsHint")
+            : _localization.Get("Loc.DatabaseProfiles.MongoOptionsDisabledHint");
     }
 
     private void LoadDiagnostics(DatabaseDiagnosticSnapshot snapshot)
