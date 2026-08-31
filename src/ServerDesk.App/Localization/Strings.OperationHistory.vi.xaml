@@ -59,4 +59,10 @@
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.VerificationBackupVerified">Artifact backup và checksum đã được xác minh xác định trước khi được đánh dấu có thể sử dụng.</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.VerificationRestoreVerified">Lệnh restore thành công và định danh chính xác của database đích đã được xác minh sau restore.</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.VerificationUnsupported">Thao tác không được hỗ trợ và đã fail-closed trước đường mutation được chứng nhận.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.CertificationTitle">Chứng nhận cơ sở dữ liệu</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.CertificationScope">Chỉ áp dụng cho đúng version fixture M6. Version không được liệt kê không phải Certified; backup và restore Redis vẫn là Unsupported.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.CertificationRowFormat">{0} {1} — Runtime: {2}; tunnel SSH: {3}; Diagnostics: {4}; Backup: {5}; Restore: {6}</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.CertificationCertified">Đã chứng nhận</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.CertificationTested">Đã kiểm thử</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.CertificationUnsupported">Không hỗ trợ</sys:String>
 </ResourceDictionary>
