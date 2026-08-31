@@ -1,4 +1,4 @@
-name: Normalize MongoDB slice files
+name: Patch MongoDB tools CI pipeline
 
 on:
   push:
@@ -9,7 +9,7 @@ permissions:
   contents: write
 
 jobs:
-  normalize:
+  patch:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout branch
@@ -17,66 +17,29 @@ jobs:
         with:
           ref: feat/111-mongodb-support
 
-      - name: Append required final newlines only
+      - name: Replace SIGPIPE-prone archive pipeline
         shell: bash
         run: |
           set -euo pipefail
-          files=(
-            src/ServerDesk.Application/Databases/DatabaseBackups.cs
-            src/ServerDesk.Application/Databases/DatabaseCertificationMatrix.cs
-            src/ServerDesk.Application/Databases/DatabaseConnectivityProbes.cs
-            src/ServerDesk.Application/Databases/DatabaseDiagnostics.cs
-            src/ServerDesk.Application/Databases/DatabaseProfiles.cs
-            src/ServerDesk.Application/Databases/DatabaseRuntimeModels.cs
-            src/ServerDesk.Application/Databases/MongoDbDatabaseServices.cs
-            src/ServerDesk.Application/Databases/MongoDbRuntimeService.cs
-            src/ServerDesk.Infrastructure.Persistence/Sqlite/SqliteDatabase.cs
-            src/ServerDesk.Infrastructure.Persistence/Sqlite/SqliteDatabaseBackupManifestRepository.cs
-            src/ServerDesk.Infrastructure.Persistence/Sqlite/SqliteDatabaseProfileRepository.cs
-            src/ServerDesk.App/App.DatabaseProfiles.cs
-            src/ServerDesk.App/App.DatabaseRuntime.cs
-            src/ServerDesk.App/DatabaseProfilesWindow.xaml.cs
-            tests/ServerDesk.Tests/DatabaseExpansionPersistenceTests.cs
-            src/ServerDesk.Infrastructure.Databases/MongoDbDiagnosticAdapter.cs
-          )
-
-          for file in "${files[@]}"; do
-            test -f "$file"
-            last_byte="$(tail -c 1 -- "$file" | od -An -t u1 | tr -d '[:space:]')"
-            if [ "$last_byte" != "10" ]; then
-              printf '\n' >> "$file"
-            fi
-          done
-
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('.github/workflows/ci.yml')
+          text = path.read_text()
+          old = 'tools_root="$(tar -tzf /tmp/mongodb-database-tools.tgz | head -n 1 | cut -d/ -f1)"'
+          new = 'tools_root="$(tar -tzf /tmp/mongodb-database-tools.tgz | awk -F/ \'NR == 1 { root = $1 } END { print root }\')"'
+          if text.count(old) != 1:
+              raise SystemExit(f'Expected exactly one target pipeline, found {text.count(old)}')
+          path.write_text(text.replace(old, new))
+          PY
           git diff --check
-          git diff --stat
+          git diff -- .github/workflows/ci.yml
 
-      - name: Commit normalization if needed
+      - name: Commit CI patch
         shell: bash
         run: |
           set -euo pipefail
-          if git diff --quiet; then
-            echo 'No normalization changes required.'
-            exit 0
-          fi
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -- \
-            src/ServerDesk.Application/Databases/DatabaseBackups.cs \
-            src/ServerDesk.Application/Databases/DatabaseCertificationMatrix.cs \
-            src/ServerDesk.Application/Databases/DatabaseConnectivityProbes.cs \
-            src/ServerDesk.Application/Databases/DatabaseDiagnostics.cs \
-            src/ServerDesk.Application/Databases/DatabaseProfiles.cs \
-            src/ServerDesk.Application/Databases/DatabaseRuntimeModels.cs \
-            src/ServerDesk.Application/Databases/MongoDbDatabaseServices.cs \
-            src/ServerDesk.Application/Databases/MongoDbRuntimeService.cs \
-            src/ServerDesk.Infrastructure.Persistence/Sqlite/SqliteDatabase.cs \
-            src/ServerDesk.Infrastructure.Persistence/Sqlite/SqliteDatabaseBackupManifestRepository.cs \
-            src/ServerDesk.Infrastructure.Persistence/Sqlite/SqliteDatabaseProfileRepository.cs \
-            src/ServerDesk.App/App.DatabaseProfiles.cs \
-            src/ServerDesk.App/App.DatabaseRuntime.cs \
-            src/ServerDesk.App/DatabaseProfilesWindow.xaml.cs \
-            tests/ServerDesk.Tests/DatabaseExpansionPersistenceTests.cs \
-            src/ServerDesk.Infrastructure.Databases/MongoDbDiagnosticAdapter.cs
-          git commit -m 'style: normalize MongoDB slice final newlines'
+          git add -- .github/workflows/ci.yml
+          git commit -m 'fix(ci): avoid SIGPIPE while locating MongoDB tools root'
           git push origin HEAD:feat/111-mongodb-support
