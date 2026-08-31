@@ -1,0 +1,91 @@
+name: Patch MongoDB loopback mutation guard
+
+on:
+  push:
+    branches:
+      - feat/111-mongodb-support
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v6
+        with:
+          ref: feat/111-mongodb-support
+
+      - name: Add fail-closed loopback guards and regressions
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          def replace_once(text: str, old: str, new: str, label: str) -> str:
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f'{label}: expected one anchor, found {count}')
+              return text.replace(old, new, 1)
+
+          source_path = Path('src/ServerDesk.Application/Databases/MongoDbDatabaseServices.cs')
+          source = source_path.read_text()
+          source = replace_once(
+              source,
+              '''        if (profile.Engine != DatabaseEngineKind.MongoDb)\n        {\n            return Unsupported("The MongoDB backup service refuses non-MongoDB profiles.");\n        }\n\n        if (profile.ServerProfileId != serverProfile.Id ||\n''',
+              '''        if (profile.Engine != DatabaseEngineKind.MongoDb)\n        {\n            return Unsupported("The MongoDB backup service refuses non-MongoDB profiles.");\n        }\n\n        if (!MongoDbServiceUtilities.IsLoopbackRemoteToolHost(profile.RemoteHost))\n        {\n            return Unsupported("MongoDB backup is certified only for a literal loopback database endpoint on the SSH host; direct/public remote-tool connections are refused.");\n        }\n\n        if (profile.ServerProfileId != serverProfile.Id ||\n''',
+              'backup guard')
+          source = replace_once(
+              source,
+              '''        if (profile.Engine != DatabaseEngineKind.MongoDb || manifest.Engine != DatabaseEngineKind.MongoDb)\n        {\n            return BindingRead.UnsupportedMode("The MongoDB restore service refuses non-MongoDB bindings.");\n        }\n\n        if (!manifest.IsVerified || manifest.Format != DatabaseBackupFormat.MongoDbArchive ||\n''',
+              '''        if (profile.Engine != DatabaseEngineKind.MongoDb || manifest.Engine != DatabaseEngineKind.MongoDb)\n        {\n            return BindingRead.UnsupportedMode("The MongoDB restore service refuses non-MongoDB bindings.");\n        }\n\n        if (!MongoDbServiceUtilities.IsLoopbackRemoteToolHost(profile.RemoteHost))\n        {\n            return BindingRead.UnsupportedMode("MongoDB restore is certified only for a literal loopback database endpoint on the SSH host; direct/public remote-tool connections are refused.");\n        }\n\n        if (!manifest.IsVerified || manifest.Format != DatabaseBackupFormat.MongoDbArchive ||\n''',
+              'restore guard')
+          source = replace_once(
+              source,
+              '''    public static async Task<CertifiedRead> ReadCertifiedSnapshotAsync(\n''',
+              '''    public static bool IsLoopbackRemoteToolHost(string host) =>\n        System.Net.IPAddress.TryParse(host, out var address) && System.Net.IPAddress.IsLoopback(address);\n\n    public static async Task<CertifiedRead> ReadCertifiedSnapshotAsync(\n''',
+              'loopback helper')
+          source_path.write_text(source)
+
+          test_path = Path('tests/ServerDesk.Ssh.IntegrationTests/MongoDbBackupRestoreIntegrationTests.cs')
+          test = test_path.read_text()
+          test = replace_once(
+              test,
+              '''    private static Fixture CreateFixture()\n    {\n''',
+              '''    [Fact]\n    public async Task RemoteToolBackupRefusesNonLoopbackEndpointBeforeDispatch()\n    {\n        var fixture = CreateFixture("203.0.113.10");\n\n        var result = await fixture.Backup.CreateAsync(\n            fixture.Server,\n            new DatabaseBackupRequest(fixture.Profile.Id, DatabaseName, BackupDirectory),\n            TestContext.Current.CancellationToken);\n\n        Assert.False(result.IsSuccess);\n        Assert.True(result.Unsupported);\n        Assert.Null(result.Manifest);\n        Assert.Contains("loopback", result.Message, StringComparison.OrdinalIgnoreCase);\n    }\n\n    [Fact]\n    public async Task RemoteToolRestorePreviewRefusesNonLoopbackEndpointBeforeDispatch()\n    {\n        var fixture = CreateFixture("203.0.113.10");\n        var backupId = Guid.NewGuid();\n        fixture.Manifests.Items.Add(new DatabaseBackupManifest(\n            backupId,\n            fixture.Server.Id,\n            fixture.Profile.Id,\n            DatabaseEngineKind.MongoDb,\n            DatabaseName,\n            "serverdesk",\n            ServerDesk.Application.RemoteFiles.RemotePath.Parse($"{BackupDirectory}/serverdesk-db-backup-{backupId:N}.archive.gz"),\n            DatabaseBackupFormat.MongoDbArchive,\n            "mongodump",\n            "100.18.0",\n            DateTimeOffset.UtcNow,\n            new DatabaseBackupVerificationEvidence(1, new string('A', 64), "fixture", DateTimeOffset.UtcNow),\n            true));\n\n        var result = await fixture.Restore.PreviewAsync(\n            fixture.Server,\n            new DatabaseRestoreRequest(fixture.Profile.Id, backupId, DatabaseName),\n            TestContext.Current.CancellationToken);\n\n        Assert.False(result.IsSuccess);\n        Assert.True(result.Unsupported);\n        Assert.Null(result.Preview);\n        Assert.Contains("loopback", result.Error?.Message ?? string.Empty, StringComparison.OrdinalIgnoreCase);\n    }\n\n    private static Fixture CreateFixture(string remoteHost = "127.0.0.1")\n    {\n''',
+              'test insertion')
+          test = replace_once(
+              test,
+              '''            DatabaseEngineKind.MongoDb,\n            "127.0.0.1",\n            MongoDbPort,\n''',
+              '''            DatabaseEngineKind.MongoDb,\n            remoteHost,\n            MongoDbPort,\n''',
+              'fixture remote host')
+          test = replace_once(
+              test,
+              '''        return new Fixture(server, profile, backup, restore);\n''',
+              '''        return new Fixture(server, profile, backup, restore, manifests);\n''',
+              'fixture return')
+          test = replace_once(
+              test,
+              '''    private sealed record Fixture(\n        ServerProfile Server,\n        DatabaseConnectionProfile Profile,\n        MongoDbDatabaseBackupService Backup,\n        MongoDbDatabaseRestoreService Restore);\n''',
+              '''    private sealed record Fixture(\n        ServerProfile Server,\n        DatabaseConnectionProfile Profile,\n        MongoDbDatabaseBackupService Backup,\n        MongoDbDatabaseRestoreService Restore,\n        MemoryManifestRepository Manifests);\n''',
+              'fixture record')
+          test_path.write_text(test)
+          PY
+          git diff --check
+          git diff -- src/ServerDesk.Application/Databases/MongoDbDatabaseServices.cs tests/ServerDesk.Ssh.IntegrationTests/MongoDbBackupRestoreIntegrationTests.cs
+
+      - name: Commit patch if needed
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet; then
+            echo 'Loopback guard patch already applied.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- src/ServerDesk.Application/Databases/MongoDbDatabaseServices.cs tests/ServerDesk.Ssh.IntegrationTests/MongoDbBackupRestoreIntegrationTests.cs
+          git commit -m 'fix(db): fail closed for non-loopback MongoDB tool paths'
+          git push origin HEAD:feat/111-mongodb-support
