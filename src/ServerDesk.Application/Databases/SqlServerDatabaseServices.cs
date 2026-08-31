@@ -2,7 +2,6 @@ using System.Collections.Concurrent;
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
-using System.Text.Json;
 using ServerDesk.Application.Remote;
 using ServerDesk.Application.RemoteFiles;
 using ServerDesk.Application.Secrets;
@@ -746,10 +745,10 @@ public sealed class SqlServerDatabaseRestoreService : IDatabaseRestoreService
 
     private const string TargetQuery =
         "SET NOCOUNT ON; " +
-        "SELECT DB_NAME() AS [database], SUSER_SNAME() AS [identity], " +
-        "CAST(SERVERPROPERTY('ProductVersion') AS nvarchar(128)) AS [version], " +
-        "(SELECT COUNT_BIG(*) FROM sys.tables WHERE is_ms_shipped = 0) AS [objects] " +
-        "FOR JSON PATH, WITHOUT_ARRAY_WRAPPER;";
+        "SELECT DB_NAME(); " +
+        "SELECT SUSER_SNAME(); " +
+        "SELECT CAST(SERVERPROPERTY('ProductVersion') AS nvarchar(128)); " +
+        "SELECT CAST((SELECT COUNT_BIG(*) FROM sys.tables WHERE is_ms_shipped = 0) AS nvarchar(32));";
 
     private readonly IDatabaseProfileRepository _profiles;
     private readonly IDatabaseBackupManifestRepository _manifests;
@@ -1155,26 +1154,27 @@ public sealed class SqlServerDatabaseRestoreService : IDatabaseRestoreService
             return new TargetRead(null, new RemoteError(RemoteErrorCode.CapabilityUnavailable, "SQL Server target inspection output exceeded the configured safety bound."));
         }
 
-        var json = SqlServerDatabaseBackupService.FirstUsefulLine(execution.Command.StandardOutput, string.Empty);
-        try
-        {
-            using var document = JsonDocument.Parse(json);
-            var root = document.RootElement;
-            var databaseName = root.GetProperty("database").GetString() ?? string.Empty;
-            var identity = root.GetProperty("identity").GetString() ?? string.Empty;
-            var version = root.GetProperty("version").GetString() ?? string.Empty;
-            var objects = root.GetProperty("objects").GetInt64();
-            if (!string.Equals(databaseName, database, StringComparison.Ordinal) || identity.Length == 0 || version.Length == 0 || objects < 0)
-            {
-                return new TargetRead(null, new RemoteError(RemoteErrorCode.PathConflict, "SQL Server reported a restore target identity different from the explicit target."));
-            }
-
-            return new TargetRead(new DatabaseRestoreTargetSnapshot(databaseName, Bound(identity), Bound(version), objects), null);
-        }
-        catch (JsonException)
+        var fields = execution.Command.StandardOutput
+            .Replace("\r", string.Empty, StringComparison.Ordinal)
+            .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (fields.Length != 4 ||
+            !long.TryParse(fields[3], NumberStyles.None, CultureInfo.InvariantCulture, out var objects))
         {
             return new TargetRead(null, new RemoteError(RemoteErrorCode.ParseFailed, "SQL Server restore target inspection returned an unrecognized identity payload."));
         }
+
+        var databaseName = fields[0];
+        var identity = fields[1];
+        var version = fields[2];
+        if (!string.Equals(databaseName, database, StringComparison.Ordinal) ||
+            identity.Length is 0 or > 128 ||
+            version.Length is 0 or > 128 ||
+            objects < 0)
+        {
+            return new TargetRead(null, new RemoteError(RemoteErrorCode.PathConflict, "SQL Server reported a restore target identity different from the explicit target."));
+        }
+
+        return new TargetRead(new DatabaseRestoreTargetSnapshot(databaseName, Bound(identity), Bound(version), objects), null);
     }
 
     private CommandPlan BuildRestorePlan(
@@ -1265,7 +1265,7 @@ public sealed class SqlServerDatabaseRestoreService : IDatabaseRestoreService
 
         if (compactOutput)
         {
-            arguments.AddRange(["-h", "-1", "-y", "0"]);
+            arguments.AddRange(["-h", "-1", "-W"]);
         }
 
         arguments.AddRange(["-Q", query]);
