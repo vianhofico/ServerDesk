@@ -30,9 +30,9 @@ public static class DatabaseCertificationMatrix
 {
     public static IReadOnlyList<DatabaseEngineCertification> Entries { get; } =
     [
-        CertifiedSql(DatabaseEngineKind.PostgreSql, "18.6", "postgres:18.6 OpenSSH CI fixture"),
-        CertifiedSql(DatabaseEngineKind.MySql, "8.4.11", "mysql:8.4.11 OpenSSH CI fixture"),
-        CertifiedSql(DatabaseEngineKind.MariaDb, "11.8.9", "mariadb:11.8.9 OpenSSH CI fixture"),
+        CertifiedFullPath(DatabaseEngineKind.PostgreSql, "18.6", "postgres:18.6 OpenSSH CI fixture"),
+        CertifiedFullPath(DatabaseEngineKind.MySql, "8.4.11", "mysql:8.4.11 OpenSSH CI fixture"),
+        CertifiedFullPath(DatabaseEngineKind.MariaDb, "11.8.9", "mariadb:11.8.9 OpenSSH CI fixture"),
         new DatabaseEngineCertification(
             DatabaseEngineKind.Redis,
             "8.10.0",
@@ -43,10 +43,14 @@ public static class DatabaseCertificationMatrix
                 Unsupported(DatabaseCapabilityKind.Backup, "Deterministic persistence-copy semantics are not certified."),
                 Unsupported(DatabaseCapabilityKind.Restore, "Deterministic persistence recovery semantics are not certified."),
             ]),
-        CertifiedSql(
+        CertifiedFullPath(
             DatabaseEngineKind.SqlServer,
             "17.0.4075.5",
             "Microsoft SQL Server 2025 CU8 (17.0.4075.5) real OpenSSH CI fixture"),
+        CertifiedFullPath(
+            DatabaseEngineKind.MongoDb,
+            "8.0.29",
+            "mongo:8.0.29 standalone OpenSSH CI fixture; backup/restore additionally require exact standalone topology"),
     ];
 
     public static DatabaseCertificationLevel LevelFor(
@@ -60,7 +64,7 @@ public static class DatabaseCertificationMatrix
             ?? DatabaseCertificationLevel.Unsupported;
     }
 
-    private static DatabaseEngineCertification CertifiedSql(
+    private static DatabaseEngineCertification CertifiedFullPath(
         DatabaseEngineKind engine,
         string version,
         string evidence) =>
