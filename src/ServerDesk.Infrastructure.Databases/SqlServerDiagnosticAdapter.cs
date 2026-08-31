@@ -48,6 +48,11 @@ public sealed class SqlServerDiagnosticAdapter : IDatabaseEngineDiagnosticAdapte
             await using var connection = new SqlConnection(builder.ConnectionString);
             await connection.OpenAsync(deadline.Token).ConfigureAwait(false);
 
+            var serverVersion = await ReadServerVersionAsync(
+                    connection,
+                    request.Options.MaxTextLength,
+                    deadline.Token)
+                .ConfigureAwait(false);
             var identity = await ReadIdentityAsync(connection, request.Options.MaxTextLength, deadline.Token)
                 .ConfigureAwait(false);
             var catalogs = await ReadCatalogsAsync(
@@ -67,9 +72,7 @@ public sealed class SqlServerDiagnosticAdapter : IDatabaseEngineDiagnosticAdapte
             return DatabaseDiagnosticResult.Success(
                 new DatabaseDiagnosticSnapshot(
                     Engine,
-                    DatabaseDiagnosticAdapterUtilities.BoundText(
-                        connection.ServerVersion,
-                        request.Options.MaxTextLength),
+                    serverVersion,
                     "Microsoft SQL Server",
                     identity,
                     catalogs.Items,
@@ -106,6 +109,24 @@ public sealed class SqlServerDiagnosticAdapter : IDatabaseEngineDiagnosticAdapte
         {
             return DatabaseDiagnosticAdapterUtilities.Parse(Engine);
         }
+    }
+
+    private static async Task<string> ReadServerVersionAsync(
+        SqlConnection connection,
+        int maxTextLength,
+        CancellationToken cancellationToken)
+    {
+        const string sql = "SELECT CAST(SERVERPROPERTY('ProductVersion') AS nvarchar(128));";
+        await using var command = new SqlCommand(sql, connection);
+        var value = Convert.ToString(
+            await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false),
+            CultureInfo.InvariantCulture);
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            throw new FormatException("SQL Server product version was missing.");
+        }
+
+        return DatabaseDiagnosticAdapterUtilities.BoundText(value, maxTextLength);
     }
 
     private static async Task<string> ReadIdentityAsync(
