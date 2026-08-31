@@ -46,15 +46,16 @@ public partial class App
                 new RedisDiagnosticAdapter(),
             ],
             DatabaseDiagnosticOptions.Default);
-        var backupService = new AuditedDatabaseBackupService(
+        var backupService = new HistoryDatabaseBackupService(
             new DatabaseBackupService(
                 repository,
                 secretStore,
                 remoteCommands,
                 manifestRepository,
                 DatabaseBackupOptions.Default),
+            repository,
             audit);
-        var restoreService = new AuditedDatabaseRestoreService(
+        var restoreService = new HistoryDatabaseRestoreService(
             new DatabaseRestoreService(
                 repository,
                 manifestRepository,
