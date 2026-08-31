@@ -138,6 +138,10 @@
             <Border Grid.Column="2" BorderThickness="1" BorderBrush="#22000000" CornerRadius="6" Padding="14">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel>
+                        <TextBlock Text="{DynamicResource Loc.OperationHistory.CertificationTitle}" FontSize="18" FontWeight="SemiBold" />
+                        <TextBlock x:Name="CertificationText" Margin="0,6,0,0" TextWrapping="Wrap" />
+                        <TextBlock Text="{DynamicResource Loc.OperationHistory.CertificationScope}" Margin="0,6,0,0" Opacity="0.68" TextWrapping="Wrap" />
+                        <Separator Margin="0,14,0,14" />
                         <TextBlock Text="{DynamicResource Loc.OperationHistory.Details}" FontSize="18" FontWeight="SemiBold" />
                         <TextBlock Text="{DynamicResource Loc.OperationHistory.KnownFacts}" FontWeight="SemiBold" Margin="0,12,0,4" />
                         <TextBlock x:Name="KnownFactsText" TextWrapping="Wrap" />
