@@ -43,6 +43,10 @@ public static class DatabaseCertificationMatrix
                 Unsupported(DatabaseCapabilityKind.Backup, "Deterministic persistence-copy semantics are not certified."),
                 Unsupported(DatabaseCapabilityKind.Restore, "Deterministic persistence recovery semantics are not certified."),
             ]),
+        CertifiedSql(
+            DatabaseEngineKind.SqlServer,
+            "17.0.4075.5",
+            "Microsoft SQL Server 2025 CU8 (17.0.4075.5) real OpenSSH CI fixture"),
     ];
 
     public static DatabaseCertificationLevel LevelFor(

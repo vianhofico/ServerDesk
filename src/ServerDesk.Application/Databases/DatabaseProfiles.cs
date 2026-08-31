@@ -159,6 +159,7 @@ public sealed class DatabaseConnectionProfile
         DatabaseEngineKind.PostgreSql => 5432,
         DatabaseEngineKind.MySql or DatabaseEngineKind.MariaDb => 3306,
         DatabaseEngineKind.Redis => 6379,
+        DatabaseEngineKind.SqlServer => 1433,
         _ => throw new ArgumentOutOfRangeException(nameof(engine)),
     };
 

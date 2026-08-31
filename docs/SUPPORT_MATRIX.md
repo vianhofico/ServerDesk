@@ -112,9 +112,9 @@ Each capability is detected independently.
 | Debian/Ubuntu | APT |
 | Rocky/Alma/RHEL family | DNF |
 
-### Databases — M6 certification matrix
+### Databases — certified engine/version matrix
 
-The rows below are tied to the exact container/client fixtures exercised by the M6 OpenSSH CI path. **Certified** means the real engine fixture is exercised for that capability. **Tested** is reserved for useful test evidence that does not include the full real-engine certification path; no unlisted version is silently promoted to Certified. **Unsupported** means ServerDesk fails closed for that capability.
+The rows below are tied to exact real-engine fixtures exercised by the OpenSSH CI path. **Certified** means the real engine fixture is exercised for that capability. **Tested** is reserved for useful test evidence that does not include the full real-engine certification path; no unlisted version is silently promoted to Certified. **Unsupported** means ServerDesk fails closed for that capability.
 
 | Engine | Exact fixture version | Runtime / inventory | SSH tunneled connectivity | Diagnostics | Backup | Restore |
 |---|---:|---|---|---|---|---|
@@ -122,15 +122,19 @@ The rows below are tied to the exact container/client fixtures exercised by the 
 | MySQL | 8.4.11 | Certified | Certified | Certified | Certified | Certified |
 | MariaDB | 11.8.9 | Certified | Certified | Certified | Certified | Certified |
 | Redis | 8.10.0 | Certified | Certified | Certified | Unsupported | Unsupported |
+| Microsoft SQL Server | 17.0.4075.5 (SQL Server 2025 CU8) | Certified | Certified | Certified | Certified | Certified |
 
 Evidence and boundaries:
 
-- CI runs the PostgreSQL `18.6`, MySQL `8.4.11`, MariaDB `11.8.9`, and Redis `8.10.0` fixtures through the real OpenSSH integration job.
+- CI runs PostgreSQL `18.6`, MySQL `8.4.11`, MariaDB `11.8.9`, Redis `8.10.0`, and Microsoft SQL Server `17.0.4075.5` through the real OpenSSH integration job.
 - PostgreSQL/MySQL/MariaDB backup is marked usable only after deterministic artifact verification; restore requires the exact verified manifest/target identity, fresh preview/confirmation, destructive dispatch handling, and post-restore target verification.
+- SQL Server backup uses a native `.bak` artifact and is not marked usable until a bounded file check, SHA-256 verification, and `RESTORE VERIFYONLY ... WITH CHECKSUM` all succeed. Restore is tied to the exact verified manifest/database target, requires a fresh destructive preview/confirmation, preserves Ambiguous/Unknown after uncertain dispatch, and post-verifies the target identity.
+- SQL Server runtime inventory distinguishes server package/service discovery from client tooling; `sqlcmd` alone is not treated as a running SQL Server instance. Exact live server version is obtained through authenticated diagnostics before version-gated backup/restore certification.
+- SQL Server credentials remain in the secret abstraction. The CI fixture generates and masks its SA password at runtime; credential values are not persisted into profile metadata, history, rendered commands, or uploaded diagnostic artifacts.
 - Redis backup/restore is **Unsupported** because deterministic persistence-copy/recovery semantics have not been proven. The UI/application must fail closed before generating a certified backup/restore mutation.
-- Any engine version not explicitly listed above is **not Certified** by M6 merely because parsing or a client command happens to work. It remains unsupported/unknown for certification purposes until explicit evidence promotes it.
-- `Tested` is an available support level for future partial evidence, but M6 does not currently label an exact engine/version row Tested: the listed fixtures are either Certified for a capability or explicitly Unsupported.
-- Arbitrary/basic SQL query execution is outside certified M6 scope.
+- Any engine version not explicitly listed above is **not Certified** merely because parsing or a client command happens to work. It remains unsupported/unknown for certification purposes until explicit evidence promotes it.
+- `Tested` is available for future partial evidence, but the currently listed exact engine/version rows are either Certified for a capability or explicitly Unsupported.
+- Arbitrary/basic SQL query execution remains outside the certified database scope; ServerDesk does not provide a SQL query console as part of this matrix.
 
 ## 5. Capability state semantics
 

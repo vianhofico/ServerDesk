@@ -20,6 +20,8 @@ public sealed class DatabaseDiagnosticIntegrationTests
     private static readonly string Username = Environment.GetEnvironmentVariable("SERVERDESK_SSH_USER") ?? "serverdesk_ci";
     private static readonly string SshPassword = Environment.GetEnvironmentVariable("SERVERDESK_SSH_PASSWORD") ?? "serverdesk-password";
     private static readonly string DatabasePassword = Environment.GetEnvironmentVariable("SERVERDESK_DB_PASSWORD") ?? "serverdesk-db-password";
+    private static readonly string SqlServerPassword = Environment.GetEnvironmentVariable("SERVERDESK_SQLSERVER_PASSWORD")
+        ?? throw new InvalidOperationException("SERVERDESK_SQLSERVER_PASSWORD is required for the SQL Server integration fixture.");
 
     public static TheoryData<DatabaseEngineKind, string, int, string> CertifiedEngines => new()
     {
@@ -27,6 +29,7 @@ public sealed class DatabaseDiagnosticIntegrationTests
         { DatabaseEngineKind.MySql, "SERVERDESK_MYSQL_PORT", 13306, "8.4." },
         { DatabaseEngineKind.MariaDb, "SERVERDESK_MARIADB_PORT", 13307, "11.8." },
         { DatabaseEngineKind.Redis, "SERVERDESK_REDIS_PORT", 16379, "8.10." },
+        { DatabaseEngineKind.SqlServer, "SERVERDESK_SQLSERVER_PORT", 11433, "17.0.4075.5" },
     };
 
     [Theory]
@@ -58,15 +61,16 @@ public sealed class DatabaseDiagnosticIntegrationTests
             "127.0.0.1",
             ReadPort(portVariable, fallbackPort),
             engine == DatabaseEngineKind.Redis ? null : "serverdesk",
-            engine == DatabaseEngineKind.Redis ? null : "serverdesk",
+            DatabaseUsername(engine),
             DatabaseAuthenticationKind.Password,
             databaseReference);
         var profiles = new MemoryProfileRepository(server);
+        var databaseSecret = DatabaseSecret(engine);
         var secrets = new MemorySecretStore(
             new Dictionary<SecretReference, string>
             {
                 [sshReference] = SshPassword,
-                [databaseReference] = DatabasePassword,
+                [databaseReference] = databaseSecret,
             });
         var sessionFactory = new SshPortForwardSessionFactory(
             secrets,
@@ -93,10 +97,10 @@ public sealed class DatabaseDiagnosticIntegrationTests
         Assert.StartsWith(expectedVersionPrefix, result.Snapshot.ServerVersion, StringComparison.OrdinalIgnoreCase);
         Assert.NotEmpty(result.Snapshot.Metrics);
         Assert.NotEmpty(result.Snapshot.Metadata);
-        Assert.DoesNotContain(DatabasePassword, result.Snapshot.ConnectionIdentity ?? string.Empty, StringComparison.Ordinal);
+        Assert.DoesNotContain(databaseSecret, result.Snapshot.ConnectionIdentity ?? string.Empty, StringComparison.Ordinal);
         Assert.DoesNotContain(
             result.Snapshot.Metadata,
-            item => item.Value.Contains(DatabasePassword, StringComparison.Ordinal));
+            item => item.Value.Contains(databaseSecret, StringComparison.Ordinal));
         Assert.InRange(result.Snapshot.Catalogs.Count, 0, 25);
     }
 
@@ -106,8 +110,19 @@ public sealed class DatabaseDiagnosticIntegrationTests
         DatabaseEngineKind.MySql => new MySqlDiagnosticAdapter(),
         DatabaseEngineKind.MariaDb => new MariaDbDiagnosticAdapter(),
         DatabaseEngineKind.Redis => new RedisDiagnosticAdapter(),
+        DatabaseEngineKind.SqlServer => new SqlServerDiagnosticAdapter(),
         _ => throw new ArgumentOutOfRangeException(nameof(engine)),
     };
+
+    private static string? DatabaseUsername(DatabaseEngineKind engine) => engine switch
+    {
+        DatabaseEngineKind.Redis => null,
+        DatabaseEngineKind.SqlServer => "sa",
+        _ => "serverdesk",
+    };
+
+    private static string DatabaseSecret(DatabaseEngineKind engine) =>
+        engine == DatabaseEngineKind.SqlServer ? SqlServerPassword : DatabasePassword;
 
     private static int ReadPort(string name, int fallback) => int.Parse(
         Environment.GetEnvironmentVariable(name) ?? fallback.ToString(CultureInfo.InvariantCulture),

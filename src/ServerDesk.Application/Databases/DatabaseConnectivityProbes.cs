@@ -24,6 +24,15 @@ public sealed class DatabaseEngineConnectivityProbe : IDatabaseEngineConnectivit
 {
     private static readonly byte[] PostgreSqlSslRequest = [0, 0, 0, 8, 4, 210, 22, 47];
     private static readonly byte[] RedisPing = Encoding.ASCII.GetBytes("*1\r\n$4\r\nPING\r\n");
+    private static readonly byte[] SqlServerPreLogin =
+    [
+        0x12, 0x01, 0x00, 0x1A, 0x00, 0x00, 0x01, 0x00,
+        0x00, 0x00, 0x0B, 0x00, 0x06,
+        0x01, 0x00, 0x11, 0x00, 0x01,
+        0xFF,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00,
+    ];
 
     public async Task<DatabaseEngineProbeResult> ProbeAsync(
         DatabaseEngineKind engine,
@@ -66,6 +75,11 @@ public sealed class DatabaseEngineConnectivityProbe : IDatabaseEngineConnectivit
                         deadline.Token)
                     .ConfigureAwait(false),
                 DatabaseEngineKind.Redis => await ProbeRedisAsync(
+                        localAddress,
+                        localPort,
+                        deadline.Token)
+                    .ConfigureAwait(false),
+                DatabaseEngineKind.SqlServer => await ProbeSqlServerAsync(
                         localAddress,
                         localPort,
                         deadline.Token)
@@ -152,6 +166,27 @@ public sealed class DatabaseEngineConnectivityProbe : IDatabaseEngineConnectivit
             : Failure(
                 RemoteErrorCode.ParseFailed,
                 "The tunneled endpoint did not return a valid Redis PING response.");
+    }
+
+    private static async Task<DatabaseEngineProbeResult> ProbeSqlServerAsync(
+        IPAddress address,
+        int port,
+        CancellationToken cancellationToken)
+    {
+        using var client = new TcpClient(AddressFamily.InterNetwork);
+        await client.ConnectAsync(address, port, cancellationToken).ConfigureAwait(false);
+        await using var stream = client.GetStream();
+        await stream.WriteAsync(SqlServerPreLogin, cancellationToken).ConfigureAwait(false);
+        await stream.FlushAsync(cancellationToken).ConfigureAwait(false);
+
+        var header = new byte[8];
+        await ReadExactlyAsync(stream, header, cancellationToken).ConfigureAwait(false);
+        var packetLength = (header[2] << 8) | header[3];
+        return header[0] == 0x04 && packetLength >= 8
+            ? Success("Microsoft SQL Server TDS pre-login reachability succeeded through the SSH tunnel.")
+            : Failure(
+                RemoteErrorCode.ParseFailed,
+                "The tunneled endpoint did not return a valid SQL Server TDS pre-login response.");
     }
 
     private static async Task ReadExactlyAsync(

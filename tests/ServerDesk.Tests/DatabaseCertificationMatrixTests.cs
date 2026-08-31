@@ -9,7 +9,8 @@ public sealed class DatabaseCertificationMatrixTests
     [InlineData(DatabaseEngineKind.PostgreSql, "18.6")]
     [InlineData(DatabaseEngineKind.MySql, "8.4.11")]
     [InlineData(DatabaseEngineKind.MariaDb, "11.8.9")]
-    public void SqlFixturesAreCertifiedForFullM6CapabilityPath(DatabaseEngineKind engine, string version)
+    [InlineData(DatabaseEngineKind.SqlServer, "17.0.4075.5")]
+    public void CertifiedSqlFixturesCoverTheFullDatabaseCapabilityPath(DatabaseEngineKind engine, string version)
     {
         Assert.Equal(DatabaseCertificationLevel.Certified, DatabaseCertificationMatrix.LevelFor(engine, version, DatabaseCapabilityKind.RuntimeInventory));
         Assert.Equal(DatabaseCertificationLevel.Certified, DatabaseCertificationMatrix.LevelFor(engine, version, DatabaseCapabilityKind.SshTunneledConnectivity));
@@ -34,6 +35,12 @@ public sealed class DatabaseCertificationMatrixTests
         Assert.Equal(
             DatabaseCertificationLevel.Unsupported,
             DatabaseCertificationMatrix.LevelFor(DatabaseEngineKind.PostgreSql, "17.0", DatabaseCapabilityKind.Restore));
+        Assert.Equal(
+            DatabaseCertificationLevel.Unsupported,
+            DatabaseCertificationMatrix.LevelFor(DatabaseEngineKind.SqlServer, "17.0.4075.4", DatabaseCapabilityKind.Backup));
+        Assert.Equal(
+            DatabaseCertificationLevel.Unsupported,
+            DatabaseCertificationMatrix.LevelFor(DatabaseEngineKind.SqlServer, "16.0.1000.6", DatabaseCapabilityKind.Diagnostics));
         Assert.Contains(Enum.GetValues<DatabaseCertificationLevel>(), level => level == DatabaseCertificationLevel.Tested);
     }
 }

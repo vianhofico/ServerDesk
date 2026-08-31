@@ -123,6 +123,7 @@ public partial class OperationHistoryWindow : Window
             new DatabaseEngineFilterOption(DatabaseEngineKind.MySql, "MySQL"),
             new DatabaseEngineFilterOption(DatabaseEngineKind.MariaDb, "MariaDB"),
             new DatabaseEngineFilterOption(DatabaseEngineKind.Redis, "Redis"),
+            new DatabaseEngineFilterOption(DatabaseEngineKind.SqlServer, "Microsoft SQL Server"),
         };
         DatabaseEngineComboBox.SelectedItem = DatabaseEngineComboBox.Items
             .Cast<DatabaseEngineFilterOption>()
@@ -307,6 +308,7 @@ public partial class OperationHistoryWindow : Window
         DatabaseEngineKind.MySql => "MySQL",
         DatabaseEngineKind.MariaDb => "MariaDB",
         DatabaseEngineKind.Redis => "Redis",
+        DatabaseEngineKind.SqlServer => "Microsoft SQL Server",
         _ => engine.ToString(),
     };
 

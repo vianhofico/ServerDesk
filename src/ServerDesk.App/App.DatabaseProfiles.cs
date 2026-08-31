@@ -44,25 +44,43 @@ public partial class App
                 new MySqlDiagnosticAdapter(),
                 new MariaDbDiagnosticAdapter(),
                 new RedisDiagnosticAdapter(),
+                new SqlServerDiagnosticAdapter(),
             ],
             DatabaseDiagnosticOptions.Default);
+
+        var standardBackup = new DatabaseBackupService(
+            repository,
+            secretStore,
+            remoteCommands,
+            manifestRepository,
+            DatabaseBackupOptions.Default);
+        var sqlServerBackup = new SqlServerDatabaseBackupService(
+            repository,
+            secretStore,
+            remoteCommands,
+            manifestRepository,
+            DatabaseBackupOptions.Default);
         var backupService = new HistoryDatabaseBackupService(
-            new DatabaseBackupService(
-                repository,
-                secretStore,
-                remoteCommands,
-                manifestRepository,
-                DatabaseBackupOptions.Default),
+            new DatabaseBackupServiceRouter(repository, standardBackup, sqlServerBackup),
             repository,
             audit);
+
+        var standardRestore = new DatabaseRestoreService(
+            repository,
+            manifestRepository,
+            secretStore,
+            remoteCommands,
+            DatabaseRestoreOptions.Default);
+        var sqlServerRestore = new SqlServerDatabaseRestoreService(
+            repository,
+            manifestRepository,
+            secretStore,
+            remoteCommands,
+            DatabaseRestoreOptions.Default);
         var restoreService = new HistoryDatabaseRestoreService(
-            new DatabaseRestoreService(
-                repository,
-                manifestRepository,
-                secretStore,
-                remoteCommands,
-                DatabaseRestoreOptions.Default),
+            new DatabaseRestoreServiceRouter(repository, standardRestore, sqlServerRestore),
             audit);
+
         var window = new DatabaseProfilesWindow(
             profileService,
             connectivityService,
