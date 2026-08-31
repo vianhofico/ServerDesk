@@ -37,6 +37,7 @@ public sealed class DatabaseRuntimeIntegrationTests
             ["mariadbd"] = RemotePath.Parse($"{Home}/serverdesk-db-mariadbd-{token}"),
             ["redis-server"] = RemotePath.Parse($"{Home}/serverdesk-db-redis-{token}"),
             ["systemctl"] = RemotePath.Parse($"{Home}/serverdesk-db-systemctl-{token}"),
+            ["dpkg-query"] = RemotePath.Parse($"{Home}/serverdesk-db-dpkg-query-{token}"),
         };
         var fixtures = new Dictionary<string, string>(StringComparer.Ordinal)
         {
@@ -45,6 +46,7 @@ public sealed class DatabaseRuntimeIntegrationTests
             ["mariadbd"] = "database-mariadbd-fixture.sh",
             ["redis-server"] = "database-redis-fixture.sh",
             ["systemctl"] = "database-systemctl-fixture.sh",
+            ["dpkg-query"] = "database-dpkg-query-fixture.sh",
         };
 
         foreach (var pair in paths)
@@ -57,14 +59,18 @@ public sealed class DatabaseRuntimeIntegrationTests
             var tracking = new TrackingRewriteFactory(
                 fixture.CommandFactory,
                 paths.ToDictionary(pair => pair.Key, pair => pair.Value.Value, StringComparer.Ordinal));
-            var service = new DatabaseRuntimeService(tracking, DatabaseRuntimeOptions.Default);
+            var baseline = new DatabaseRuntimeService(tracking, DatabaseRuntimeOptions.Default);
+            var service = new SqlServerAwareDatabaseRuntimeService(
+                baseline,
+                tracking,
+                DatabaseRuntimeOptions.Default);
 
             var result = await service.InspectAsync(fixture.Profile, cancellationToken);
 
             Assert.True(result.IsSuccess, result.Error?.Message);
             Assert.NotNull(result.Snapshot);
-            Assert.Equal(4, result.Snapshot.Engines.Count);
-            Assert.Equal(4, result.Snapshot.ActiveEngineCount);
+            Assert.Equal(5, result.Snapshot.Engines.Count);
+            Assert.Equal(5, result.Snapshot.ActiveEngineCount);
             Assert.All(result.Snapshot.Engines, engine => Assert.Equal(DatabaseEngineRuntimeStatus.Active, engine.Status));
             Assert.Contains(result.Snapshot.Engines, engine =>
                 engine.Engine == DatabaseEngineKind.PostgreSql && engine.Version!.Contains("17.4", StringComparison.Ordinal));
@@ -74,8 +80,10 @@ public sealed class DatabaseRuntimeIntegrationTests
                 engine.Engine == DatabaseEngineKind.MariaDb && engine.Version!.Contains("11.4.5", StringComparison.Ordinal));
             Assert.Contains(result.Snapshot.Engines, engine =>
                 engine.Engine == DatabaseEngineKind.Redis && engine.Version!.Contains("8.0.2", StringComparison.Ordinal));
+            Assert.Contains(result.Snapshot.Engines, engine =>
+                engine.Engine == DatabaseEngineKind.SqlServer && engine.Version == "17.0.4075.5" && engine.ServiceUnit == "mssql-server.service");
 
-            Assert.Equal(8, tracking.Commands.Count);
+            Assert.Equal(10, tracking.Commands.Count);
             Assert.All(tracking.Commands, command =>
             {
                 Assert.Equal(OperationRisk.ReadOnly, command.Risk);
@@ -83,7 +91,7 @@ public sealed class DatabaseRuntimeIntegrationTests
                 Assert.Equal("C", command.Environment["LC_ALL"]);
             });
             Assert.DoesNotContain(tracking.Commands, command =>
-                command.Executable is "psql" or "mysql" or "redis-cli");
+                command.Executable is "psql" or "mysql" or "redis-cli" or "sqlcmd" or "/opt/mssql/bin/sqlservr");
         }
         finally
         {
