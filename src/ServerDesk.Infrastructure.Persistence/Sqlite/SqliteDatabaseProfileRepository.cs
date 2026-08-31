@@ -22,7 +22,8 @@ public sealed class SqliteDatabaseProfileRepository : IDatabaseProfileRepository
         command.CommandText =
             """
             SELECT id, server_profile_id, name, engine, remote_host, remote_port,
-                   database_name, username, authentication_kind, credential_reference
+                   database_name, username, authentication_kind, credential_reference,
+                   authentication_database, tls_mode
             FROM database_profiles
             ORDER BY server_profile_id, name COLLATE NOCASE, id;
             """;
@@ -44,7 +45,8 @@ public sealed class SqliteDatabaseProfileRepository : IDatabaseProfileRepository
         command.CommandText =
             """
             SELECT id, server_profile_id, name, engine, remote_host, remote_port,
-                   database_name, username, authentication_kind, credential_reference
+                   database_name, username, authentication_kind, credential_reference,
+                   authentication_database, tls_mode
             FROM database_profiles
             WHERE server_profile_id = @server_profile_id
             ORDER BY name COLLATE NOCASE, id;
@@ -68,7 +70,8 @@ public sealed class SqliteDatabaseProfileRepository : IDatabaseProfileRepository
         command.CommandText =
             """
             SELECT id, server_profile_id, name, engine, remote_host, remote_port,
-                   database_name, username, authentication_kind, credential_reference
+                   database_name, username, authentication_kind, credential_reference,
+                   authentication_database, tls_mode
             FROM database_profiles
             WHERE id = @id;
             """;
@@ -93,11 +96,11 @@ public sealed class SqliteDatabaseProfileRepository : IDatabaseProfileRepository
             INSERT INTO database_profiles (
                 id, server_profile_id, name, engine, remote_host, remote_port,
                 database_name, username, authentication_kind, credential_reference,
-                created_utc, updated_utc)
+                authentication_database, tls_mode, created_utc, updated_utc)
             VALUES (
                 @id, @server_profile_id, @name, @engine, @remote_host, @remote_port,
                 @database_name, @username, @authentication_kind, @credential_reference,
-                @now, @now)
+                @authentication_database, @tls_mode, @now, @now)
             ON CONFLICT(id) DO UPDATE SET
                 server_profile_id = excluded.server_profile_id,
                 name = excluded.name,
@@ -108,6 +111,8 @@ public sealed class SqliteDatabaseProfileRepository : IDatabaseProfileRepository
                 username = excluded.username,
                 authentication_kind = excluded.authentication_kind,
                 credential_reference = excluded.credential_reference,
+                authentication_database = excluded.authentication_database,
+                tls_mode = excluded.tls_mode,
                 updated_utc = excluded.updated_utc;
             """;
 
@@ -124,6 +129,10 @@ public sealed class SqliteDatabaseProfileRepository : IDatabaseProfileRepository
         command.Parameters.AddWithValue(
             "@credential_reference",
             profile.CredentialReference is null ? DBNull.Value : profile.CredentialReference.Value.Value);
+        command.Parameters.AddWithValue(
+            "@authentication_database",
+            (object?)profile.AuthenticationDatabase ?? DBNull.Value);
+        command.Parameters.AddWithValue("@tls_mode", (int)profile.TlsMode);
         command.Parameters.AddWithValue("@now", now);
         await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
     }
@@ -168,5 +177,7 @@ public sealed class SqliteDatabaseProfileRepository : IDatabaseProfileRepository
             reader.IsDBNull(6) ? null : reader.GetString(6),
             reader.IsDBNull(7) ? null : reader.GetString(7),
             (DatabaseAuthenticationKind)reader.GetInt32(8),
-            reader.IsDBNull(9) ? null : SecretReference.Parse(reader.GetString(9)));
+            reader.IsDBNull(9) ? null : SecretReference.Parse(reader.GetString(9)),
+            reader.IsDBNull(10) ? null : reader.GetString(10),
+            (DatabaseTlsMode)reader.GetInt32(11));
 }
