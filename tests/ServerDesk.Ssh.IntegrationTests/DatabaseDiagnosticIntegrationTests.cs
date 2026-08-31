@@ -30,6 +30,7 @@ public sealed class DatabaseDiagnosticIntegrationTests
         { DatabaseEngineKind.MariaDb, "SERVERDESK_MARIADB_PORT", 13307, "11.8." },
         { DatabaseEngineKind.Redis, "SERVERDESK_REDIS_PORT", 16379, "8.10." },
         { DatabaseEngineKind.SqlServer, "SERVERDESK_SQLSERVER_PORT", 11433, "17.0.4075.5" },
+        { DatabaseEngineKind.MongoDb, "SERVERDESK_MONGODB_PORT", 17017, "8.0.29" },
     };
 
     [Theory]
@@ -63,7 +64,8 @@ public sealed class DatabaseDiagnosticIntegrationTests
             engine == DatabaseEngineKind.Redis ? null : "serverdesk",
             DatabaseUsername(engine),
             DatabaseAuthenticationKind.Password,
-            databaseReference);
+            databaseReference,
+            engine == DatabaseEngineKind.MongoDb ? "admin" : null);
         var profiles = new MemoryProfileRepository(server);
         var databaseSecret = DatabaseSecret(engine);
         var secrets = new MemorySecretStore(
@@ -111,6 +113,7 @@ public sealed class DatabaseDiagnosticIntegrationTests
         DatabaseEngineKind.MariaDb => new MariaDbDiagnosticAdapter(),
         DatabaseEngineKind.Redis => new RedisDiagnosticAdapter(),
         DatabaseEngineKind.SqlServer => new SqlServerDiagnosticAdapter(),
+        DatabaseEngineKind.MongoDb => new MongoDbDiagnosticAdapter(),
         _ => throw new ArgumentOutOfRangeException(nameof(engine)),
     };
 
