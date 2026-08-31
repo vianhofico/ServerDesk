@@ -4,7 +4,7 @@
 
 > Bản English là source of truth khi có khác biệt ngoài ý muốn giữa hai bản dịch.
 
-ServerDesk phân biệt rõ hành vi **certified**, **experimental/best-effort** và **unsupported/unknown**. Một distro chỉ được coi là certified sau khi các compatibility gate tự động/thủ công bắt buộc vượt qua cho release tương ứng.
+ServerDesk phân biệt rõ hành vi **certified**, **tested**, **experimental/best-effort** và **unsupported/unknown**. Một distro hoặc capability theo engine/version chỉ được coi là certified sau khi các compatibility gate tự động/thủ công bắt buộc vượt qua cho release tương ứng.
 
 ## 1. Nền tảng client
 
@@ -114,15 +114,25 @@ Mỗi capability được phát hiện độc lập.
 | Debian/Ubuntu | APT |
 | Rocky/Alma/RHEL family | DNF |
 
-### Databases
+### Databases — ma trận chứng nhận M6
 
-Hỗ trợ server-oriented ban đầu:
+Các dòng dưới đây gắn với đúng container/client fixture được thực thi trong luồng OpenSSH CI của M6. **Certified** nghĩa là capability đó đã chạy với engine fixture thật. **Tested** dành cho bằng chứng test hữu ích nhưng chưa có đầy đủ đường certification với engine thật; version chưa liệt kê không được tự động nâng lên Certified. **Unsupported** nghĩa là ServerDesk fail-closed cho capability đó.
 
-- PostgreSQL;
-- MySQL/MariaDB;
-- Redis.
+| Engine | Version fixture chính xác | Runtime / inventory | Kết nối tunnel SSH | Diagnostics | Backup | Restore |
+|---|---:|---|---|---|---|---|
+| PostgreSQL | 18.6 | Certified | Certified | Certified | Certified | Certified |
+| MySQL | 8.4.11 | Certified | Certified | Certified | Certified | Certified |
+| MariaDB | 11.8.9 | Certified | Certified | Certified | Certified | Certified |
+| Redis | 8.10.0 | Certified | Certified | Certified | Unsupported | Unsupported |
 
-Các major version cụ thể chỉ được certified khi integration test của M6 định nghĩa và thực thi chúng.
+Bằng chứng và ranh giới:
+
+- CI chạy fixture PostgreSQL `18.6`, MySQL `8.4.11`, MariaDB `11.8.9` và Redis `8.10.0` qua job OpenSSH integration thật.
+- Backup PostgreSQL/MySQL/MariaDB chỉ được đánh dấu có thể sử dụng sau xác minh artifact xác định; restore yêu cầu đúng verified manifest/định danh target, preview/xác nhận mới, xử lý destructive dispatch và xác minh target sau restore.
+- Backup/restore Redis là **Unsupported** vì chưa chứng minh được semantics sao chép/khôi phục persistence một cách xác định. UI/application phải fail-closed trước khi tạo mutation backup/restore được chứng nhận.
+- Mọi engine version không được liệt kê rõ ở trên đều **không được Certified** bởi M6 chỉ vì parser hay client command tình cờ hoạt động. Chúng vẫn là unsupported/unknown cho mục đích certification cho đến khi có bằng chứng rõ ràng để promote.
+- `Tested` là mức hỗ trợ dành cho bằng chứng từng phần trong tương lai, nhưng M6 hiện không gắn một dòng engine/version cụ thể nào là Tested: các fixture được liệt kê hoặc Certified cho capability, hoặc được ghi rõ Unsupported.
+- Thực thi SQL query tùy ý/basic query console nằm ngoài phạm vi M6 được certified.
 
 ## 5. Ý nghĩa trạng thái capability
 
@@ -153,6 +163,8 @@ Ví dụ:
 - manual core workflow checklist pass trên hệ thống đại diện;
 - known limitation được ghi tài liệu;
 - không có required test nào bị skip vĩnh viễn cho target đó.
+
+Với capability theo database engine/version, promotion còn yêu cầu một dòng matrix rõ ràng và fixture OpenSSH integration với engine thật cho đúng version/capability đó.
 
 ## 7. Removal / deprecation
 
