@@ -4,6 +4,7 @@ using System.Windows;
 using System.Windows.Controls;
 using ServerDesk.App.Localization;
 using ServerDesk.Application.Audit;
+using ServerDesk.Application.Databases;
 using ServerDesk.Application.Profiles;
 using ServerDesk.Domain.Audit;
 using ServerDesk.Domain.Operations;
@@ -79,6 +80,7 @@ public partial class OperationHistoryWindow : Window
         var selectedServerId = (ServerComboBox.SelectedItem as ServerFilterOption)?.Id ?? _initialServerProfileId;
         var selectedRisk = (RiskComboBox.SelectedItem as RiskFilterOption)?.Value;
         var selectedOutcome = (OutcomeComboBox.SelectedItem as OutcomeFilterOption)?.Value;
+        var selectedEngine = (DatabaseEngineComboBox.SelectedItem as DatabaseEngineFilterOption)?.Value;
 
         ServerComboBox.ItemsSource = new[]
         {
@@ -114,6 +116,20 @@ public partial class OperationHistoryWindow : Window
             .FirstOrDefault(option => option.Value == selectedOutcome)
             ?? OutcomeComboBox.Items[0];
 
+        DatabaseEngineComboBox.ItemsSource = new[]
+        {
+            new DatabaseEngineFilterOption(null, _localization.Get("Loc.OperationHistory.AllDatabaseEngines")),
+            new DatabaseEngineFilterOption(DatabaseEngineKind.PostgreSql, "PostgreSQL"),
+            new DatabaseEngineFilterOption(DatabaseEngineKind.MySql, "MySQL"),
+            new DatabaseEngineFilterOption(DatabaseEngineKind.MariaDb, "MariaDB"),
+            new DatabaseEngineFilterOption(DatabaseEngineKind.Redis, "Redis"),
+        };
+        DatabaseEngineComboBox.SelectedItem = DatabaseEngineComboBox.Items
+            .Cast<DatabaseEngineFilterOption>()
+            .FirstOrDefault(option => option.Value == selectedEngine)
+            ?? DatabaseEngineComboBox.Items[0];
+
+        CertificationText.Text = BuildCertificationSummary();
         if (string.IsNullOrWhiteSpace(StatusText.Text))
         {
             StatusText.Text = _localization.Get("Loc.OperationHistory.Ready");
@@ -133,6 +149,8 @@ public partial class OperationHistoryWindow : Window
         ServerComboBox.SelectedIndex = 0;
         RiskComboBox.SelectedIndex = 0;
         OutcomeComboBox.SelectedIndex = 0;
+        DatabaseEngineComboBox.SelectedIndex = 0;
+        DatabaseOnlyCheckBox.IsChecked = false;
         LimitComboBox.SelectedItem = 250;
         await LoadHistoryAsync();
     }
@@ -155,7 +173,9 @@ public partial class OperationHistoryWindow : Window
                 Risk: (RiskComboBox.SelectedItem as RiskFilterOption)?.Value,
                 Outcome: (OutcomeComboBox.SelectedItem as OutcomeFilterOption)?.Value,
                 SearchText: SearchTextBox.Text,
-                Limit: LimitComboBox.SelectedItem is int limit ? limit : 250);
+                Limit: LimitComboBox.SelectedItem is int limit ? limit : 250,
+                DatabaseOnly: DatabaseOnlyCheckBox.IsChecked == true,
+                DatabaseEngine: (DatabaseEngineComboBox.SelectedItem as DatabaseEngineFilterOption)?.Value);
             var result = await _historyService.QueryAsync(query, _lifetime.Token);
             _lastItems = result.Items;
             RebuildRows();
@@ -190,10 +210,13 @@ public partial class OperationHistoryWindow : Window
                 : item.ServerProfileId is not null
                     ? item.ServerProfileId.Value.ToString("D")
                     : _localization.Get("Loc.OperationHistory.LegacyServer");
+            var database = item.DatabaseContext;
             _rows.Add(new OperationHistoryRow(
                 entry.Id,
                 entry.OccurredAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.CurrentCulture),
                 serverName,
+                database?.Engine is { } engine ? EngineDisplay(engine) : _localization.Get("Loc.OperationHistory.NotDatabaseOperation"),
+                database?.DatabaseName ?? "—",
                 entry.Category,
                 RiskDisplay(entry.Risk),
                 OutcomeDisplay(entry.Outcome),
@@ -201,7 +224,8 @@ public partial class OperationHistoryWindow : Window
                 entry.Target,
                 VerificationDisplay(item.Verification),
                 item.HasUnknownRemoteState,
-                entry.Outcome));
+                entry.Outcome,
+                database));
         }
 
         if (selectedId is { } id)
@@ -230,7 +254,7 @@ public partial class OperationHistoryWindow : Window
             return;
         }
 
-        KnownFactsText.Text = _localization.Format(
+        var known = _localization.Format(
             "Loc.OperationHistory.KnownFormat",
             row.OccurredAtLocal,
             row.ServerName,
@@ -238,6 +262,18 @@ public partial class OperationHistoryWindow : Window
             row.RiskDisplay,
             row.OutcomeDisplay,
             row.Summary);
+        if (row.DatabaseContext is { } database)
+        {
+            known += Environment.NewLine + _localization.Format(
+                "Loc.OperationHistory.DatabaseKnownFormat",
+                database.DatabaseProfileId,
+                database.Engine is { } engine ? EngineDisplay(engine) : _localization.Get("Loc.OperationHistory.UnknownDatabaseEngine"),
+                database.DatabaseName,
+                database.BackupId?.ToString("D") ?? _localization.Get("Loc.OperationHistory.NoBackupId"),
+                database.Operation);
+        }
+
+        KnownFactsText.Text = known;
         VerificationText.Text = row.VerificationDisplay;
         UnknownFactsText.Text = row.Outcome switch
         {
@@ -265,8 +301,47 @@ public partial class OperationHistoryWindow : Window
         _ => outcome.ToString(),
     };
 
+    private static string EngineDisplay(DatabaseEngineKind engine) => engine switch
+    {
+        DatabaseEngineKind.PostgreSql => "PostgreSQL",
+        DatabaseEngineKind.MySql => "MySQL",
+        DatabaseEngineKind.MariaDb => "MariaDB",
+        DatabaseEngineKind.Redis => "Redis",
+        _ => engine.ToString(),
+    };
+
+    private string BuildCertificationSummary()
+    {
+        var rows = new List<string>();
+        foreach (var entry in DatabaseCertificationMatrix.Entries)
+        {
+            rows.Add(_localization.Format(
+                "Loc.OperationHistory.CertificationRowFormat",
+                EngineDisplay(entry.Engine),
+                entry.Version,
+                CertificationLevelDisplay(DatabaseCertificationMatrix.LevelFor(entry.Engine, entry.Version, DatabaseCapabilityKind.RuntimeInventory)),
+                CertificationLevelDisplay(DatabaseCertificationMatrix.LevelFor(entry.Engine, entry.Version, DatabaseCapabilityKind.SshTunneledConnectivity)),
+                CertificationLevelDisplay(DatabaseCertificationMatrix.LevelFor(entry.Engine, entry.Version, DatabaseCapabilityKind.Diagnostics)),
+                CertificationLevelDisplay(DatabaseCertificationMatrix.LevelFor(entry.Engine, entry.Version, DatabaseCapabilityKind.Backup)),
+                CertificationLevelDisplay(DatabaseCertificationMatrix.LevelFor(entry.Engine, entry.Version, DatabaseCapabilityKind.Restore))));
+        }
+
+        return string.Join(Environment.NewLine, rows);
+    }
+
+    private string CertificationLevelDisplay(DatabaseCertificationLevel level) => level switch
+    {
+        DatabaseCertificationLevel.Certified => _localization.Get("Loc.OperationHistory.CertificationCertified"),
+        DatabaseCertificationLevel.Tested => _localization.Get("Loc.OperationHistory.CertificationTested"),
+        DatabaseCertificationLevel.Unsupported => _localization.Get("Loc.OperationHistory.CertificationUnsupported"),
+        _ => level.ToString(),
+    };
+
     private string VerificationDisplay(string? verification) => verification switch
     {
+        "backup-verified" => _localization.Get("Loc.OperationHistory.VerificationBackupVerified"),
+        "restore-target-verified" => _localization.Get("Loc.OperationHistory.VerificationRestoreVerified"),
+        "unsupported" => _localization.Get("Loc.OperationHistory.VerificationUnsupported"),
         "post-state-verified" => _localization.Get("Loc.OperationHistory.VerificationSucceeded"),
         "failed-known" => _localization.Get("Loc.OperationHistory.VerificationFailed"),
         "cancelled" => _localization.Get("Loc.OperationHistory.VerificationCancelled"),
@@ -307,12 +382,15 @@ public partial class OperationHistoryWindow : Window
     private sealed record ServerFilterOption(Guid? Id, string Text);
     private sealed record RiskFilterOption(OperationRisk? Value, string Text);
     private sealed record OutcomeFilterOption(OperationOutcome? Value, string Text);
+    private sealed record DatabaseEngineFilterOption(DatabaseEngineKind? Value, string Text);
 }
 
 public sealed record OperationHistoryRow(
     Guid Id,
     string OccurredAtLocal,
     string ServerName,
+    string DatabaseEngine,
+    string DatabaseName,
     string Category,
     string RiskDisplay,
     string OutcomeDisplay,
@@ -320,4 +398,5 @@ public sealed record OperationHistoryRow(
     string? Target,
     string VerificationDisplay,
     bool HasUnknownRemoteState,
-    OperationOutcome Outcome);
+    OperationOutcome Outcome,
+    DatabaseOperationAuditContext? DatabaseContext);

@@ -31,6 +31,20 @@ public sealed class OperationHistoryLocalizationTests
     }
 
     [Fact]
+    public void BothLanguagesPresentCertificationAndUnsupportedBoundaries()
+    {
+        var english = ReadResources("Strings.OperationHistory.en.xaml");
+        var vietnamese = ReadResources("Strings.OperationHistory.vi.xaml");
+
+        Assert.Contains("certification", english["Loc.OperationHistory.CertificationTitle"], StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("chứng nhận", vietnamese["Loc.OperationHistory.CertificationTitle"], StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Unsupported", english["Loc.OperationHistory.CertificationScope"], StringComparison.Ordinal);
+        Assert.Contains("Unsupported", vietnamese["Loc.OperationHistory.CertificationScope"], StringComparison.Ordinal);
+        Assert.Contains("Redis", english["Loc.OperationHistory.CertificationScope"], StringComparison.Ordinal);
+        Assert.Contains("Redis", vietnamese["Loc.OperationHistory.CertificationScope"], StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void LoadedStatusFormatsInBothLanguages()
     {
         var english = ReadResources("Strings.OperationHistory.en.xaml");

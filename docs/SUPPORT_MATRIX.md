@@ -2,7 +2,7 @@
 
 **English** | [Tiếng Việt](SUPPORT_MATRIX.vi.md)
 
-ServerDesk distinguishes **certified**, **experimental/best-effort**, and **unsupported/unknown** behavior. A distro is certified only after the required automated/manual compatibility gates pass for the listed release.
+ServerDesk distinguishes **certified**, **tested**, **experimental/best-effort**, and **unsupported/unknown** behavior. A distro or engine/version capability is certified only after the required automated/manual compatibility gates pass for the listed release.
 
 ## 1. Client platform
 
@@ -112,15 +112,25 @@ Each capability is detected independently.
 | Debian/Ubuntu | APT |
 | Rocky/Alma/RHEL family | DNF |
 
-### Databases
+### Databases — M6 certification matrix
 
-Initial server-oriented support:
+The rows below are tied to the exact container/client fixtures exercised by the M6 OpenSSH CI path. **Certified** means the real engine fixture is exercised for that capability. **Tested** is reserved for useful test evidence that does not include the full real-engine certification path; no unlisted version is silently promoted to Certified. **Unsupported** means ServerDesk fails closed for that capability.
 
-- PostgreSQL;
-- MySQL/MariaDB;
-- Redis.
+| Engine | Exact fixture version | Runtime / inventory | SSH tunneled connectivity | Diagnostics | Backup | Restore |
+|---|---:|---|---|---|---|---|
+| PostgreSQL | 18.6 | Certified | Certified | Certified | Certified | Certified |
+| MySQL | 8.4.11 | Certified | Certified | Certified | Certified | Certified |
+| MariaDB | 11.8.9 | Certified | Certified | Certified | Certified | Certified |
+| Redis | 8.10.0 | Certified | Certified | Certified | Unsupported | Unsupported |
 
-Exact major versions become certified only when M6 integration tests define and exercise them.
+Evidence and boundaries:
+
+- CI runs the PostgreSQL `18.6`, MySQL `8.4.11`, MariaDB `11.8.9`, and Redis `8.10.0` fixtures through the real OpenSSH integration job.
+- PostgreSQL/MySQL/MariaDB backup is marked usable only after deterministic artifact verification; restore requires the exact verified manifest/target identity, fresh preview/confirmation, destructive dispatch handling, and post-restore target verification.
+- Redis backup/restore is **Unsupported** because deterministic persistence-copy/recovery semantics have not been proven. The UI/application must fail closed before generating a certified backup/restore mutation.
+- Any engine version not explicitly listed above is **not Certified** by M6 merely because parsing or a client command happens to work. It remains unsupported/unknown for certification purposes until explicit evidence promotes it.
+- `Tested` is an available support level for future partial evidence, but M6 does not currently label an exact engine/version row Tested: the listed fixtures are either Certified for a capability or explicitly Unsupported.
+- Arbitrary/basic SQL query execution is outside certified M6 scope.
 
 ## 5. Capability state semantics
 
@@ -151,6 +161,8 @@ To promote a distro/release or capability to Certified:
 - manual core workflow checklist passes on representative system;
 - known limitations documented;
 - no required test is permanently skipped for that target.
+
+For a database engine/version capability, promotion additionally requires an explicit matrix row and a real-engine OpenSSH integration fixture for that exact version/capability.
 
 ## 7. Removal/deprecation
 

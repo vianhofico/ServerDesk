@@ -4,7 +4,7 @@
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.ActionTooltip">Tìm kiếm lịch sử thao tác chỉ đọc với giới hạn kết quả bắt buộc.</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.WindowTitle">Lịch sử thao tác</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.Title">Lịch sử thao tác</sys:String>
-    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.Subtitle">Màn hình audit chỉ đọc. Bộ lọc được thực thi ở tầng truy vấn persistence với giới hạn kết quả cứng; output lệnh, private key và nội dung backup không thuộc metadata audit M5.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.Subtitle">Màn hình audit chỉ đọc, có giới hạn. Lịch sử cơ sở dữ liệu chỉ lưu định danh ổn định của máy chủ/profile/engine/database/backup và trạng thái xác minh; không lưu credential, connection string, query text hay nội dung backup.</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.Search">Tìm kiếm</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.Server">Máy chủ</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.Category">Nhóm thao tác</sys:String>
@@ -22,7 +22,7 @@
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.Verification">Trạng thái xác minh</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.UnknownFacts">Điều gì vẫn chưa biết</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.TargetMetadata">Metadata đích không chứa bí mật</sys:String>
-    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.Footer">Trong M5.6, lịch sử chỉ được ghi nối tiếp và đọc. Màn hình này không thể sửa, xóa hoặc chạy lại bản ghi audit hay thao tác remote.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.Footer">Lịch sử chỉ được ghi nối tiếp và đọc. Màn hình này không thể sửa, xóa hay chạy lại thao tác từ bản ghi audit; restore luôn phải tạo preview live mới và xác nhận lại.</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.AllServers">Tất cả máy chủ</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.AllRisks">Tất cả mức rủi ro</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.RiskReadOnly">Chỉ đọc</sys:String>
@@ -48,4 +48,21 @@
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.VerificationCancelled">Thao tác đã bị hủy; không được suy diễn trạng thái remote cuối chỉ từ việc hủy.</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.VerificationUnknown">Trạng thái remote cuối đang mơ hồ / không xác định.</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.VerificationLegacy">Bản ghi audit cũ: chưa lưu metadata xác minh mở rộng.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.DatabaseEngine">DB engine</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.Database">Cơ sở dữ liệu</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.DatabaseOnly">Chỉ thao tác cơ sở dữ liệu</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.AllDatabaseEngines">Tất cả DB engine</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.NotDatabaseOperation">—</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.UnknownDatabaseEngine">Engine không xác định</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.NoBackupId">Không có backup id đã xác minh</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.DatabaseKnownFormat">DB profile: {0}&#10;Engine: {1}&#10;Database: {2}&#10;Backup id: {3}&#10;Thao tác DB: {4}</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.VerificationBackupVerified">Artifact backup và checksum đã được xác minh xác định trước khi được đánh dấu có thể sử dụng.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.VerificationRestoreVerified">Lệnh restore thành công và định danh chính xác của database đích đã được xác minh sau restore.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.VerificationUnsupported">Thao tác không được hỗ trợ và đã fail-closed trước đường mutation được chứng nhận.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.CertificationTitle">Chứng nhận cơ sở dữ liệu</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.CertificationScope">Chỉ áp dụng cho đúng version fixture M6. Version không được liệt kê không phải Certified; backup và restore Redis vẫn là Unsupported.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.CertificationRowFormat">{0} {1} — Runtime: {2}; tunnel SSH: {3}; Diagnostics: {4}; Backup: {5}; Restore: {6}</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.CertificationCertified">Đã chứng nhận</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.CertificationTested">Đã kiểm thử</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.CertificationUnsupported">Không hỗ trợ</sys:String>
 </ResourceDictionary>
