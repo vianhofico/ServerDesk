@@ -129,6 +129,7 @@ public partial class OperationHistoryWindow : Window
             .FirstOrDefault(option => option.Value == selectedEngine)
             ?? DatabaseEngineComboBox.Items[0];
 
+        CertificationText.Text = BuildCertificationSummary();
         if (string.IsNullOrWhiteSpace(StatusText.Text))
         {
             StatusText.Text = _localization.Get("Loc.OperationHistory.Ready");
@@ -307,6 +308,27 @@ public partial class OperationHistoryWindow : Window
         DatabaseEngineKind.MariaDb => "MariaDB",
         DatabaseEngineKind.Redis => "Redis",
         _ => engine.ToString(),
+    };
+
+    private string BuildCertificationSummary() =>
+        string.Join(
+            Environment.NewLine,
+            DatabaseCertificationMatrix.Entries.Select(entry => _localization.Format(
+                "Loc.OperationHistory.CertificationRowFormat",
+                EngineDisplay(entry.Engine),
+                entry.Version,
+                CertificationLevelDisplay(DatabaseCertificationMatrix.LevelFor(entry.Engine, entry.Version, DatabaseCapabilityKind.RuntimeInventory)),
+                CertificationLevelDisplay(DatabaseCertificationMatrix.LevelFor(entry.Engine, entry.Version, DatabaseCapabilityKind.SshTunneledConnectivity)),
+                CertificationLevelDisplay(DatabaseCertificationMatrix.LevelFor(entry.Engine, entry.Version, DatabaseCapabilityKind.Diagnostics)),
+                CertificationLevelDisplay(DatabaseCertificationMatrix.LevelFor(entry.Engine, entry.Version, DatabaseCapabilityKind.Backup)),
+                CertificationLevelDisplay(DatabaseCertificationMatrix.LevelFor(entry.Engine, entry.Version, DatabaseCapabilityKind.Restore))));
+
+    private string CertificationLevelDisplay(DatabaseCertificationLevel level) => level switch
+    {
+        DatabaseCertificationLevel.Certified => _localization.Get("Loc.OperationHistory.CertificationCertified"),
+        DatabaseCertificationLevel.Tested => _localization.Get("Loc.OperationHistory.CertificationTested"),
+        DatabaseCertificationLevel.Unsupported => _localization.Get("Loc.OperationHistory.CertificationUnsupported"),
+        _ => level.ToString(),
     };
 
     private string VerificationDisplay(string? verification) => verification switch
