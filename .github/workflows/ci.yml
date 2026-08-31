@@ -48,7 +48,7 @@ jobs:
   ssh-integration:
     name: OpenSSH integration
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 35
 
     env:
       SERVERDESK_SSH_HOST: 127.0.0.1
@@ -69,6 +69,8 @@ jobs:
       SERVERDESK_MYSQL_PORT: 13306
       SERVERDESK_MARIADB_PORT: 13307
       SERVERDESK_REDIS_PORT: 16379
+      SERVERDESK_SQLSERVER_PORT: 11433
+      SERVERDESK_SQLSERVER_VERSION: 17.0.4075.5
       SERVERDESK_DB_BACKUP_DIR: /tmp/serverdesk-db-backups
 
     steps:
@@ -148,6 +150,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          sudo install -d -m 0777 "$SERVERDESK_DB_BACKUP_DIR"
+
+          SQLSERVER_PASSWORD="Sd!9A$(openssl rand -hex 18)z#"
+          echo "::add-mask::$SQLSERVER_PASSWORD"
+          echo "SERVERDESK_SQLSERVER_PASSWORD=$SQLSERVER_PASSWORD" >> "$GITHUB_ENV"
+          export SERVERDESK_SQLSERVER_PASSWORD="$SQLSERVER_PASSWORD"
+
           docker run -d --name serverdesk-postgres \
             -e POSTGRES_USER=serverdesk \
             -e POSTGRES_PASSWORD="$SERVERDESK_DB_PASSWORD" \
@@ -171,24 +180,49 @@ jobs:
           docker run -d --name serverdesk-redis \
             -p 127.0.0.1:${SERVERDESK_REDIS_PORT}:6379 \
             redis:8.10.0 redis-server --requirepass "$SERVERDESK_DB_PASSWORD"
+          docker run -d --name serverdesk-sqlserver \
+            -e ACCEPT_EULA=Y \
+            -e MSSQL_PID=Developer \
+            -e MSSQL_SA_PASSWORD="$SERVERDESK_SQLSERVER_PASSWORD" \
+            -p 127.0.0.1:${SERVERDESK_SQLSERVER_PORT}:1433 \
+            -v "$SERVERDESK_DB_BACKUP_DIR:$SERVERDESK_DB_BACKUP_DIR" \
+            mcr.microsoft.com/mssql/server:2025-CU8-ubuntu-24.04
 
-          for attempt in {1..90}; do
+          for attempt in {1..120}; do
             postgres_ready=false
             mysql_ready=false
             mariadb_ready=false
             redis_ready=false
+            sqlserver_ready=false
             docker exec serverdesk-postgres pg_isready -U serverdesk -d serverdesk >/dev/null 2>&1 && postgres_ready=true
             docker exec serverdesk-mysql mysqladmin ping -h 127.0.0.1 -u serverdesk -p"$SERVERDESK_DB_PASSWORD" --silent >/dev/null 2>&1 && mysql_ready=true
             docker exec serverdesk-mariadb mariadb-admin ping -h 127.0.0.1 -u serverdesk -p"$SERVERDESK_DB_PASSWORD" --silent >/dev/null 2>&1 && mariadb_ready=true
             docker exec -e REDISCLI_AUTH="$SERVERDESK_DB_PASSWORD" serverdesk-redis redis-cli ping 2>/dev/null | grep -qx PONG && redis_ready=true
-            if $postgres_ready && $mysql_ready && $mariadb_ready && $redis_ready; then
-              exit 0
+            docker exec -e SQLCMDPASSWORD="$SERVERDESK_SQLSERVER_PASSWORD" serverdesk-sqlserver \
+              /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -C -b -Q 'SELECT 1' >/dev/null 2>&1 && sqlserver_ready=true
+            if $postgres_ready && $mysql_ready && $mariadb_ready && $redis_ready && $sqlserver_ready; then
+              break
+            fi
+            if [ "$attempt" -eq 120 ]; then
+              docker ps -a
+              docker logs serverdesk-sqlserver || true
+              exit 1
             fi
             sleep 1
           done
 
-          docker ps -a
-          exit 1
+          actual_sqlserver_version="$(docker exec -e SQLCMDPASSWORD="$SERVERDESK_SQLSERVER_PASSWORD" serverdesk-sqlserver \
+            /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -C -b -h -1 -W \
+            -Q "SET NOCOUNT ON; SELECT CAST(SERVERPROPERTY('ProductVersion') AS varchar(128));" \
+            | tr -d '\r' | xargs)"
+          if [ "$actual_sqlserver_version" != "$SERVERDESK_SQLSERVER_VERSION" ]; then
+            echo "SQL Server fixture version mismatch: expected $SERVERDESK_SQLSERVER_VERSION, observed $actual_sqlserver_version" >&2
+            exit 1
+          fi
+
+          docker exec -e SQLCMDPASSWORD="$SERVERDESK_SQLSERVER_PASSWORD" serverdesk-sqlserver \
+            /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -C -b \
+            -Q "IF DB_ID(N'serverdesk') IS NULL CREATE DATABASE [serverdesk]; IF DB_ID(N'serverdesk_restore') IS NULL CREATE DATABASE [serverdesk_restore];"
 
       - name: Configure certified database backup tool wrappers
         shell: bash
@@ -221,7 +255,14 @@ jobs:
             -v /tmp/serverdesk-db-backups:/tmp/serverdesk-db-backups \
             mariadb:11.8.9 mariadb-dump "$@"
           EOF
-          sudo chmod 0755 /usr/local/bin/pg_dump /usr/local/bin/pg_restore /usr/local/bin/mysqldump /usr/local/bin/mariadb-dump
+          cat <<'EOF' | sudo tee /usr/local/bin/sqlcmd >/dev/null
+          #!/usr/bin/env bash
+          exec docker run --rm -i --network host -e SQLCMDPASSWORD \
+            --entrypoint /opt/mssql-tools18/bin/sqlcmd \
+            mcr.microsoft.com/mssql/server:2025-CU8-ubuntu-24.04 "$@" \
+            2> >(tee -a /tmp/serverdesk-sqlserver-client.stderr >&2)
+          EOF
+          sudo chmod 0755 /usr/local/bin/pg_dump /usr/local/bin/pg_restore /usr/local/bin/mysqldump /usr/local/bin/mariadb-dump /usr/local/bin/sqlcmd
           sudo -u serverdesk_ci docker version >/dev/null
 
       - name: Configure certified database restore targets and tool wrappers
@@ -236,6 +277,9 @@ jobs:
             -e "DROP DATABASE IF EXISTS serverdesk_restore; CREATE DATABASE serverdesk_restore; GRANT ALL PRIVILEGES ON serverdesk_restore.* TO 'serverdesk'@'%'; FLUSH PRIVILEGES;"
           docker exec serverdesk-mariadb mariadb -uroot -pserverdesk-root-password \
             -e "DROP DATABASE IF EXISTS serverdesk_restore; CREATE DATABASE serverdesk_restore; GRANT ALL PRIVILEGES ON serverdesk_restore.* TO 'serverdesk'@'%'; FLUSH PRIVILEGES;"
+          docker exec -e SQLCMDPASSWORD="$SERVERDESK_SQLSERVER_PASSWORD" serverdesk-sqlserver \
+            /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -C -b \
+            -Q "IF DB_ID(N'serverdesk_restore') IS NULL CREATE DATABASE [serverdesk_restore];"
 
           cat <<'EOF' | sudo tee /usr/local/bin/pg_restore >/dev/null
           #!/usr/bin/env bash
@@ -257,7 +301,14 @@ jobs:
           exec docker run --rm -i --network host -e MYSQL_PWD mariadb:11.8.9 mariadb "$@" \
             2> >(tee -a /tmp/serverdesk-mariadb-client.stderr >&2)
           EOF
-          sudo chmod 0755 /usr/local/bin/pg_restore /usr/local/bin/psql /usr/local/bin/mysql /usr/local/bin/mariadb
+          cat <<'EOF' | sudo tee /usr/local/bin/sqlcmd >/dev/null
+          #!/usr/bin/env bash
+          exec docker run --rm -i --network host -e SQLCMDPASSWORD \
+            --entrypoint /opt/mssql-tools18/bin/sqlcmd \
+            mcr.microsoft.com/mssql/server:2025-CU8-ubuntu-24.04 "$@" \
+            2> >(tee -a /tmp/serverdesk-sqlserver-client.stderr >&2)
+          EOF
+          sudo chmod 0755 /usr/local/bin/pg_restore /usr/local/bin/psql /usr/local/bin/mysql /usr/local/bin/mariadb /usr/local/bin/sqlcmd
           sudo -u serverdesk_ci docker version >/dev/null
 
       - name: Restore integration tests
@@ -281,6 +332,7 @@ jobs:
           mkdir -p artifacts/test-results
           cp /tmp/serverdesk-mysql-client.stderr artifacts/test-results/mysql-client.stderr 2>/dev/null || true
           cp /tmp/serverdesk-mariadb-client.stderr artifacts/test-results/mariadb-client.stderr 2>/dev/null || true
+          cp /tmp/serverdesk-sqlserver-client.stderr artifacts/test-results/sqlserver-client.stderr 2>/dev/null || true
 
       - name: Upload SSH integration test results
         if: always()
@@ -301,9 +353,11 @@ jobs:
           cat /tmp/serverdesk-socks5-proxy.log || true
           cat /tmp/serverdesk-mysql-client.stderr || true
           cat /tmp/serverdesk-mariadb-client.stderr || true
+          cat /tmp/serverdesk-sqlserver-client.stderr || true
           docker ps -a || true
           docker logs serverdesk-postgres || true
           docker logs serverdesk-mysql || true
           docker logs serverdesk-mariadb || true
           docker logs serverdesk-redis || true
+          docker logs serverdesk-sqlserver || true
           ls -la /tmp/serverdesk-db-backups || true
