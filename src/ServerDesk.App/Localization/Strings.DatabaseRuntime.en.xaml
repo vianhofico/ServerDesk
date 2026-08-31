@@ -1,10 +1,10 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseRuntime.Action">Databases</sys:String>
-    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseRuntime.ActionTooltip">Inspect PostgreSQL, MySQL/MariaDB and Redis runtimes without database credentials.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseRuntime.ActionTooltip">Inspect PostgreSQL, MySQL/MariaDB, Redis and Microsoft SQL Server runtimes without database credentials.</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseRuntime.WindowTitle">Database runtimes</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseRuntime.Title">Database runtimes — {0}</sys:String>
-    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseRuntime.Subtitle">Read-only host discovery for PostgreSQL, MySQL/MariaDB and Redis. M6.1 does not connect to a database and does not request database credentials.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseRuntime.Subtitle">Read-only host discovery for PostgreSQL, MySQL/MariaDB, Redis and Microsoft SQL Server. SQL Server package/service discovery does not treat client tooling alone as a running server; exact live engine version is verified by authenticated diagnostics.</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseRuntime.Refresh">Refresh</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseRuntime.Cancel">Cancel</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseRuntime.Engine">Engine</sys:String>
@@ -24,16 +24,16 @@
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseRuntime.ExecutableFormat">Executable: {0}</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseRuntime.VersionFormat">Version: {0}</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseRuntime.ServiceFormat">Service: {0} — {1}/{2}</sys:String>
-    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseRuntime.JournalFormat">Journal source candidate: {0}. Read permission has not been verified in M6.1.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseRuntime.JournalFormat">Journal source candidate: {0}. Read permission has not been verified by runtime inventory.</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseRuntime.JournalUnavailable">No journal source candidate was established for this runtime.</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseRuntime.UnknownValue">unknown</sys:String>
-    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseRuntime.SafetyFooter">M6.1 is host-side read-only discovery only: no DB login, no SQL/Redis commands, no service changes, and no public database port exposure.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseRuntime.SafetyFooter">Host-side runtime discovery is read-only: it does not request database passwords, execute arbitrary SQL, change services or expose database ports publicly.</sys:String>
 
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.Action">DB profiles</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.ActionTooltip">Manage secret-safe database profiles and tunneled read-only diagnostics.</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.WindowTitle">Database profiles</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.Title">Database profiles — {0}</sys:String>
-    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.Subtitle">Store reusable PostgreSQL, MySQL/MariaDB and Redis endpoints. Passwords stay in the secure secret store; saved metadata contains only a secret reference.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.Subtitle">Store reusable PostgreSQL, MySQL/MariaDB, Redis and Microsoft SQL Server endpoints. Passwords stay in the secure secret store; saved metadata contains only a secret reference.</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.Refresh">Refresh</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.New">New</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.Delete">Delete</sys:String>
@@ -57,7 +57,7 @@
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.DeleteTitle">Delete database profile</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.DeleteConfirm">Delete database profile '{0}' and its secure stored password, if present?</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.TestingTunnel">Opening a temporary loopback SSH tunnel and checking database engine protocol reachability…</sys:String>
-    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.TunnelSucceeded">Temporary SSH tunnel reached the selected database engine through {0}:{1}. The tunnel is now closed. Database credentials were not tested in M6.2.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.TunnelSucceeded">Temporary SSH tunnel reached the selected database engine through {0}:{1}. The tunnel is now closed; authenticated diagnostics remain a separate action.</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.Disconnected">The server is disconnected. Saved profiles can still be edited, but tunnel tests and authenticated diagnostics are unavailable until the server reconnects.</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.LoadFailed">Database profiles could not be loaded: {0}</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.PasswordExistingHint">A password is already stored securely. Leave this empty to keep it; enter a value only to replace it.</sys:String>
@@ -87,5 +87,5 @@
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.DiagnosticsFailureTimeout">The bounded diagnostic operation timed out.</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.DiagnosticsFailureUnsupported">Authenticated diagnostics are not supported for this engine.</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.DiagnosticsFailureUnexpected">Database diagnostics failed unexpectedly. No credential details are shown.</sys:String>
-    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.SafetyFooter">M6.2/M6.3 always uses an ephemeral local forward bound to 127.0.0.1; there is no silent direct/public database fallback. Tunnel testing uses a minimal read-only protocol probe. Authenticated diagnostics are bounded read-only inventory only: no arbitrary query console, no mutation, and credentials are never displayed.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.SafetyFooter">All profile tunnel tests and authenticated diagnostics use an ephemeral local forward bound to 127.0.0.1; there is no silent direct/public fallback. SQL Server uses a minimal TDS pre-login probe and authenticated diagnostics through the same loopback tunnel. There is no arbitrary query console and credentials are never displayed.</sys:String>
 </ResourceDictionary>
