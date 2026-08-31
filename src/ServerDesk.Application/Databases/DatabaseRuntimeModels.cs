@@ -9,6 +9,7 @@ public enum DatabaseEngineKind
     MariaDb,
     Redis,
     SqlServer,
+    MongoDb,
 }
 
 public enum DatabaseEngineRuntimeStatus
