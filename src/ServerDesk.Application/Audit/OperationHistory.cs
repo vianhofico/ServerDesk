@@ -1,3 +1,4 @@
+using ServerDesk.Application.Databases;
 using ServerDesk.Domain.Audit;
 using ServerDesk.Domain.Operations;
 using ServerDesk.Domain.Servers;
@@ -12,7 +13,9 @@ public sealed record OperationAuditQuery(
     OperationRisk? Risk = null,
     OperationOutcome? Outcome = null,
     string? SearchText = null,
-    int Limit = 250);
+    int Limit = 250,
+    bool DatabaseOnly = false,
+    DatabaseEngineKind? DatabaseEngine = null);
 
 public interface IOperationAuditReader
 {
@@ -25,7 +28,8 @@ public sealed record OperationHistoryItem(
     OperationAuditEntry Entry,
     Guid? ServerProfileId,
     string? Verification,
-    bool HasUnknownRemoteState);
+    bool HasUnknownRemoteState,
+    DatabaseOperationAuditContext? DatabaseContext = null);
 
 public sealed record OperationHistoryResult(
     IReadOnlyList<OperationHistoryItem> Items,
@@ -54,14 +58,26 @@ public sealed class OperationHistoryService : IOperationHistoryService
     {
         ArgumentNullException.ThrowIfNull(query);
         var normalized = Normalize(query);
-        var entries = await _reader.QueryAsync(normalized, cancellationToken).ConfigureAwait(false);
+        var hasDatabaseFilter = normalized.DatabaseOnly || normalized.DatabaseEngine is not null;
+        var persistenceQuery = hasDatabaseFilter
+            ? normalized with
+            {
+                DatabaseOnly = false,
+                DatabaseEngine = null,
+                Limit = MaximumLimit,
+            }
+            : normalized;
+        var entries = await _reader.QueryAsync(persistenceQuery, cancellationToken).ConfigureAwait(false);
         var items = entries
-            .Take(normalized.Limit)
             .Select(entry => new OperationHistoryItem(
                 entry,
                 OperationAuditMetadata.TryGetServerProfileId(entry.Target) ?? normalized.ServerProfileId,
                 OperationAuditMetadata.TryGetVerification(entry.Target),
-                entry.Outcome == OperationOutcome.Unknown))
+                entry.Outcome == OperationOutcome.Unknown,
+                DatabaseOperationAuditMetadata.TryParse(entry.Target)))
+            .Where(item => !normalized.DatabaseOnly || item.DatabaseContext is not null)
+            .Where(item => normalized.DatabaseEngine is null || item.DatabaseContext?.Engine == normalized.DatabaseEngine)
+            .Take(normalized.Limit)
             .ToArray();
         return new OperationHistoryResult(items, normalized.Limit);
     }
@@ -97,6 +113,11 @@ public sealed class OperationHistoryService : IOperationHistoryService
         if (query.Outcome is { } outcome && !Enum.IsDefined(outcome))
         {
             throw new ArgumentOutOfRangeException(nameof(query), "History outcome filter is invalid.");
+        }
+
+        if (query.DatabaseEngine is { } databaseEngine && !Enum.IsDefined(databaseEngine))
+        {
+            throw new ArgumentOutOfRangeException(nameof(query), "Database engine filter is invalid.");
         }
 
         return query with
