@@ -26,7 +26,8 @@ public sealed class SqlServerBackupRestoreIntegrationTests
     private static readonly int SqlServerPort = ReadPort("SERVERDESK_SQLSERVER_PORT", 11433);
     private static readonly string Username = Environment.GetEnvironmentVariable("SERVERDESK_SSH_USER") ?? "serverdesk_ci";
     private static readonly string SshPassword = Environment.GetEnvironmentVariable("SERVERDESK_SSH_PASSWORD") ?? "serverdesk-password";
-    private static readonly string SqlServerPassword = Environment.GetEnvironmentVariable("SERVERDESK_SQLSERVER_PASSWORD") ?? "ServerDesk!SqlServer-Fixture-Only#110";
+    private static readonly string SqlServerPassword = Environment.GetEnvironmentVariable("SERVERDESK_SQLSERVER_PASSWORD")
+        ?? throw new InvalidOperationException("SERVERDESK_SQLSERVER_PASSWORD is required for the SQL Server backup/restore fixture.");
     private static readonly string BackupDirectory = Environment.GetEnvironmentVariable("SERVERDESK_DB_BACKUP_DIR") ?? "/tmp/serverdesk-db-backups";
 
     [Fact]
