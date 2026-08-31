@@ -123,18 +123,24 @@ The rows below are tied to exact real-engine fixtures exercised by the OpenSSH C
 | MariaDB | 11.8.9 | Certified | Certified | Certified | Certified | Certified |
 | Redis | 8.10.0 | Certified | Certified | Certified | Unsupported | Unsupported |
 | Microsoft SQL Server | 17.0.4075.5 (SQL Server 2025 CU8) | Certified | Certified | Certified | Certified | Certified |
+| MongoDB | 8.0.29 (standalone) | Certified | Certified | Certified | Certified | Certified |
 
 Evidence and boundaries:
 
-- CI runs PostgreSQL `18.6`, MySQL `8.4.11`, MariaDB `11.8.9`, Redis `8.10.0`, and Microsoft SQL Server `17.0.4075.5` through the real OpenSSH integration job.
+- CI runs PostgreSQL `18.6`, MySQL `8.4.11`, MariaDB `11.8.9`, Redis `8.10.0`, Microsoft SQL Server `17.0.4075.5`, and MongoDB `8.0.29` through the real OpenSSH integration job.
 - PostgreSQL/MySQL/MariaDB backup is marked usable only after deterministic artifact verification; restore requires the exact verified manifest/target identity, fresh preview/confirmation, destructive dispatch handling, and post-restore target verification.
 - SQL Server backup uses a native `.bak` artifact and is not marked usable until a bounded file check, SHA-256 verification, and `RESTORE VERIFYONLY ... WITH CHECKSUM` all succeed. Restore is tied to the exact verified manifest/database target, requires a fresh destructive preview/confirmation, preserves Ambiguous/Unknown after uncertain dispatch, and post-verifies the target identity.
 - SQL Server runtime inventory distinguishes server package/service discovery from client tooling; `sqlcmd` alone is not treated as a running SQL Server instance. Exact live server version is obtained through authenticated diagnostics before version-gated backup/restore certification.
 - SQL Server credentials remain in the secret abstraction. The CI fixture generates and masks its SA password at runtime; credential values are not persisted into profile metadata, history, rendered commands, or uploaded diagnostic artifacts.
+- MongoDB runtime discovery distinguishes `mongod`/`mongos` server packages and services from `mongosh`/Database Tools. Client tools alone are not treated as a running MongoDB server. Exact live version and topology are obtained through authenticated diagnostics.
+- MongoDB authenticated diagnostics use the official driver against the loopback SSH-forwarded endpoint with direct-connection mode so discovered topology hosts cannot silently bypass the tunnel. Diagnostics expose bounded database/collection counts, sizes and topology metadata; document contents are not read or displayed.
+- MongoDB `8.0.29` certification is limited to **standalone topology**. Replica-set and `mongos` topology may be detected, but backup/restore fail closed as Unsupported until a separate real-topology certification path is proven.
+- MongoDB backup uses pinned Database Tools `100.18.0`, a gzip archive, bounded file inspection, SHA-256 and `mongorestore --dryRun` before the artifact becomes usable. Restore requires the exact verified manifest/profile/database identity, a fresh destructive preview, `--nsInclude=<database>.*`, `--drop`, `--stopOnError`, and post-restore target verification; uncertain dispatch remains Ambiguous/Unknown and is never blindly retried.
+- MongoDB passwords remain in the secret abstraction and are supplied to Database Tools through sensitive input rather than persisted connection URIs or rendered command arguments. The CI database password is generated and masked at runtime.
 - Redis backup/restore is **Unsupported** because deterministic persistence-copy/recovery semantics have not been proven. The UI/application must fail closed before generating a certified backup/restore mutation.
 - Any engine version not explicitly listed above is **not Certified** merely because parsing or a client command happens to work. It remains unsupported/unknown for certification purposes until explicit evidence promotes it.
 - `Tested` is available for future partial evidence, but the currently listed exact engine/version rows are either Certified for a capability or explicitly Unsupported.
-- Arbitrary/basic SQL query execution remains outside the certified database scope; ServerDesk does not provide a SQL query console as part of this matrix.
+- Arbitrary SQL execution, Mongo shell execution and document query consoles remain outside the certified database scope.
 
 ## 5. Capability state semantics
 
@@ -166,7 +172,7 @@ To promote a distro/release or capability to Certified:
 - known limitations documented;
 - no required test is permanently skipped for that target.
 
-For a database engine/version capability, promotion additionally requires an explicit matrix row and a real-engine OpenSSH integration fixture for that exact version/capability.
+For a database engine/version capability, promotion additionally requires an explicit matrix row and a real-engine OpenSSH integration fixture for that exact version/capability. Topology-sensitive engines such as MongoDB must also have the exact topology named in the certification evidence.
 
 ## 7. Removal/deprecation
 
