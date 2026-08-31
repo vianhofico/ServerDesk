@@ -1265,7 +1265,7 @@ public sealed class SqlServerDatabaseRestoreService : IDatabaseRestoreService
 
         if (compactOutput)
         {
-            arguments.AddRange(["-h", "-1", "-W", "-y", "0"]);
+            arguments.AddRange(["-h", "-1", "-y", "0"]);
         }
 
         arguments.AddRange(["-Q", query]);
