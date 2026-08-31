@@ -1,10 +1,10 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseRuntime.Action">Databases</sys:String>
-    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseRuntime.ActionTooltip">Inspect PostgreSQL, MySQL/MariaDB, Redis and Microsoft SQL Server runtimes without database credentials.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseRuntime.ActionTooltip">Inspect PostgreSQL, MySQL/MariaDB, Redis, Microsoft SQL Server and MongoDB runtimes without database credentials.</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseRuntime.WindowTitle">Database runtimes</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseRuntime.Title">Database runtimes — {0}</sys:String>
-    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseRuntime.Subtitle">Read-only host discovery for PostgreSQL, MySQL/MariaDB, Redis and Microsoft SQL Server. SQL Server package/service discovery does not treat client tooling alone as a running server; exact live engine version is verified by authenticated diagnostics.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseRuntime.Subtitle">Read-only host discovery for PostgreSQL, MySQL/MariaDB, Redis, Microsoft SQL Server and MongoDB. SQL Server and MongoDB package/service discovery never treats client tooling alone as a running server; exact live engine version and MongoDB topology are verified by authenticated diagnostics.</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseRuntime.Refresh">Refresh</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseRuntime.Cancel">Cancel</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseRuntime.Engine">Engine</sys:String>
@@ -27,13 +27,13 @@
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseRuntime.JournalFormat">Journal source candidate: {0}. Read permission has not been verified by runtime inventory.</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseRuntime.JournalUnavailable">No journal source candidate was established for this runtime.</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseRuntime.UnknownValue">unknown</sys:String>
-    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseRuntime.SafetyFooter">Host-side runtime discovery is read-only: it does not request database passwords, does not execute arbitrary SQL, does not change services and does not expose database ports publicly.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseRuntime.SafetyFooter">Host-side runtime discovery is read-only: it does not request database passwords, does not execute arbitrary SQL or document queries, does not change services and does not expose database ports publicly.</sys:String>
 
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.Action">DB profiles</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.ActionTooltip">Manage secret-safe database profiles and tunneled read-only diagnostics.</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.WindowTitle">Database profiles</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.Title">Database profiles — {0}</sys:String>
-    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.Subtitle">Store reusable PostgreSQL, MySQL/MariaDB, Redis and Microsoft SQL Server endpoints. Passwords stay in the secure secret store; saved metadata contains only a secret reference.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.Subtitle">Store reusable PostgreSQL, MySQL/MariaDB, Redis, Microsoft SQL Server and MongoDB endpoints. Passwords stay in the secure secret store; saved metadata contains only a secret reference plus non-secret MongoDB authSource/TLS settings.</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.Refresh">Refresh</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.New">New</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.Delete">Delete</sys:String>
@@ -47,6 +47,10 @@
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.DatabaseName">Database / schema</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.Username">Username</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.Auth">Authentication</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.AuthenticationDatabase">Authentication database (authSource)</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.TlsRequired">Require MongoDB TLS</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.MongoOptionsHint">MongoDB only: authSource defaults to admin for password authentication. TLS keeps normal certificate validation; ServerDesk does not enable insecure certificate bypasses.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.MongoOptionsDisabledHint">authSource and this TLS setting apply only to MongoDB profiles.</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.Password">Password</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.Save">Save profile</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.NewReady">Enter a new database profile. Password authentication requires a password.</sys:String>
@@ -87,5 +91,5 @@
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.DiagnosticsFailureTimeout">The bounded diagnostic operation timed out.</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.DiagnosticsFailureUnsupported">Authenticated diagnostics are not supported for this engine.</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.DiagnosticsFailureUnexpected">Database diagnostics failed unexpectedly. No credential details are shown.</sys:String>
-    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.SafetyFooter">All profile tunnel tests and authenticated diagnostics use an ephemeral local forward bound to 127.0.0.1; there is no silent direct/public fallback. SQL Server uses a minimal TDS pre-login probe and authenticated diagnostics through the same loopback tunnel. There is no arbitrary query console and credentials are never displayed.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.DatabaseProfiles.SafetyFooter">All profile tunnel tests and authenticated diagnostics use an ephemeral local forward bound to 127.0.0.1; there is no silent direct/public fallback. SQL Server uses a minimal TDS pre-login probe and MongoDB uses a minimal OP_MSG hello probe before authenticated diagnostics through the same loopback tunnel. There is no arbitrary SQL/document query console and credentials are never displayed.</sys:String>
 </ResourceDictionary>
