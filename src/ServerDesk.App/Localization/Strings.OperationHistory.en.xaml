@@ -4,7 +4,7 @@
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.ActionTooltip">Search the bounded, read-only operation audit history.</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.WindowTitle">Operation history</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.Title">Operation history</sys:String>
-    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.Subtitle">Read-only audit view. Filters execute in the persistence query with a hard result limit; command output, private keys and backup contents are not part of M5 audit metadata.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.Subtitle">Read-only, bounded audit view. Database history records stable server/profile/engine/database/backup identities and verification state, never credentials, connection strings, query text or backup contents.</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.Search">Search</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.Server">Server</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.Category">Category</sys:String>
@@ -22,7 +22,7 @@
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.Verification">Verification state</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.UnknownFacts">What remains unknown</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.TargetMetadata">Secret-safe target metadata</sys:String>
-    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.Footer">History is append/read-only in M5.6. This screen cannot edit, delete or replay audit records or remote operations.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.Footer">History is append/read-only. This screen cannot edit, delete or replay audit records or remote operations; restore always requires a fresh live preview and confirmation.</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.AllServers">All servers</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.AllRisks">All risks</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.RiskReadOnly">Read only</sys:String>
@@ -48,4 +48,15 @@
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.VerificationCancelled">The operation was cancelled; final remote state must not be assumed from cancellation alone.</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.VerificationUnknown">Final remote state is ambiguous / unknown.</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.VerificationLegacy">Legacy audit entry: enriched verification metadata was not recorded.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.DatabaseEngine">DB engine</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.Database">Database</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.DatabaseOnly">Database operations only</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.AllDatabaseEngines">All DB engines</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.NotDatabaseOperation">—</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.UnknownDatabaseEngine">Unknown engine</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.NoBackupId">No verified backup id</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.DatabaseKnownFormat">DB profile: {0}&#10;Engine: {1}&#10;Database: {2}&#10;Backup id: {3}&#10;DB operation: {4}</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.VerificationBackupVerified">Backup artifact and checksum were deterministically verified before being marked usable.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.VerificationRestoreVerified">Restore command succeeded and the exact database target identity was post-verified.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.VerificationUnsupported">Operation is unsupported and failed closed before a certified mutation path.</sys:String>
 </ResourceDictionary>
