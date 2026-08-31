@@ -59,4 +59,10 @@
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.VerificationBackupVerified">Backup artifact and checksum were deterministically verified before being marked usable.</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.VerificationRestoreVerified">Restore command succeeded and the exact database target identity was post-verified.</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.VerificationUnsupported">Operation is unsupported and failed closed before a certified mutation path.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.CertificationTitle">Database certification</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.CertificationScope">Exact M6 fixture versions only. Unlisted versions are not Certified; Redis backup and restore remain Unsupported.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.CertificationRowFormat">{0} {1} — Runtime: {2}; SSH tunnel: {3}; Diagnostics: {4}; Backup: {5}; Restore: {6}</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.CertificationCertified">Certified</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.CertificationTested">Tested</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.OperationHistory.CertificationUnsupported">Unsupported</sys:String>
 </ResourceDictionary>
