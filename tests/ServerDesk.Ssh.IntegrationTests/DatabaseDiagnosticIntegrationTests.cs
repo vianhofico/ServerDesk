@@ -20,7 +20,8 @@ public sealed class DatabaseDiagnosticIntegrationTests
     private static readonly string Username = Environment.GetEnvironmentVariable("SERVERDESK_SSH_USER") ?? "serverdesk_ci";
     private static readonly string SshPassword = Environment.GetEnvironmentVariable("SERVERDESK_SSH_PASSWORD") ?? "serverdesk-password";
     private static readonly string DatabasePassword = Environment.GetEnvironmentVariable("SERVERDESK_DB_PASSWORD") ?? "serverdesk-db-password";
-    private static readonly string SqlServerPassword = Environment.GetEnvironmentVariable("SERVERDESK_SQLSERVER_PASSWORD") ?? "ServerDesk!SqlServer-Fixture-Only#110";
+    private static readonly string SqlServerPassword = Environment.GetEnvironmentVariable("SERVERDESK_SQLSERVER_PASSWORD")
+        ?? throw new InvalidOperationException("SERVERDESK_SQLSERVER_PASSWORD is required for the SQL Server integration fixture.");
 
     public static TheoryData<DatabaseEngineKind, string, int, string> CertifiedEngines => new()
     {
