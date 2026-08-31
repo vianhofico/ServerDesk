@@ -1,3 +1,4 @@
+using System.Buffers.Binary;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
@@ -31,6 +32,22 @@ public sealed class DatabaseEngineConnectivityProbe : IDatabaseEngineConnectivit
         0x01, 0x00, 0x11, 0x00, 0x01,
         0xFF,
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00,
+    ];
+    private static readonly byte[] MongoDbHello =
+    [
+        0x34, 0x00, 0x00, 0x00,
+        0x01, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00,
+        0xDD, 0x07, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00,
+        0x00,
+        0x1F, 0x00, 0x00, 0x00,
+        0x10, 0x68, 0x65, 0x6C, 0x6C, 0x6F, 0x00,
+        0x01, 0x00, 0x00, 0x00,
+        0x02, 0x24, 0x64, 0x62, 0x00,
+        0x06, 0x00, 0x00, 0x00,
+        0x61, 0x64, 0x6D, 0x69, 0x6E, 0x00,
         0x00,
     ];
 
@@ -80,6 +97,11 @@ public sealed class DatabaseEngineConnectivityProbe : IDatabaseEngineConnectivit
                         deadline.Token)
                     .ConfigureAwait(false),
                 DatabaseEngineKind.SqlServer => await ProbeSqlServerAsync(
+                        localAddress,
+                        localPort,
+                        deadline.Token)
+                    .ConfigureAwait(false),
+                DatabaseEngineKind.MongoDb => await ProbeMongoDbAsync(
                         localAddress,
                         localPort,
                         deadline.Token)
@@ -187,6 +209,29 @@ public sealed class DatabaseEngineConnectivityProbe : IDatabaseEngineConnectivit
             : Failure(
                 RemoteErrorCode.ParseFailed,
                 "The tunneled endpoint did not return a valid SQL Server TDS pre-login response.");
+    }
+
+    private static async Task<DatabaseEngineProbeResult> ProbeMongoDbAsync(
+        IPAddress address,
+        int port,
+        CancellationToken cancellationToken)
+    {
+        using var client = new TcpClient(AddressFamily.InterNetwork);
+        await client.ConnectAsync(address, port, cancellationToken).ConfigureAwait(false);
+        await using var stream = client.GetStream();
+        await stream.WriteAsync(MongoDbHello, cancellationToken).ConfigureAwait(false);
+        await stream.FlushAsync(cancellationToken).ConfigureAwait(false);
+
+        var header = new byte[16];
+        await ReadExactlyAsync(stream, header, cancellationToken).ConfigureAwait(false);
+        var messageLength = BinaryPrimitives.ReadInt32LittleEndian(header.AsSpan(0, 4));
+        var responseTo = BinaryPrimitives.ReadInt32LittleEndian(header.AsSpan(8, 4));
+        var operationCode = BinaryPrimitives.ReadInt32LittleEndian(header.AsSpan(12, 4));
+        return messageLength >= 21 && responseTo == 1 && operationCode == 2013
+            ? Success("MongoDB OP_MSG hello reachability succeeded through the SSH tunnel.")
+            : Failure(
+                RemoteErrorCode.ParseFailed,
+                "The tunneled endpoint did not return a valid MongoDB OP_MSG response.");
     }
 
     private static async Task ReadExactlyAsync(
