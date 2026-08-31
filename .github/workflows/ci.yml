@@ -48,7 +48,7 @@ jobs:
   ssh-integration:
     name: OpenSSH integration
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 40
 
     env:
       SERVERDESK_SSH_HOST: 127.0.0.1
@@ -64,13 +64,15 @@ jobs:
       SERVERDESK_HTTP_PROXY_PORT: 18081
       SERVERDESK_SOCKS4_PROXY_PORT: 18082
       SERVERDESK_SOCKS5_PROXY_PORT: 18083
-      SERVERDESK_DB_PASSWORD: serverdesk-db-password
       SERVERDESK_POSTGRES_PORT: 15432
       SERVERDESK_MYSQL_PORT: 13306
       SERVERDESK_MARIADB_PORT: 13307
       SERVERDESK_REDIS_PORT: 16379
       SERVERDESK_SQLSERVER_PORT: 11433
       SERVERDESK_SQLSERVER_VERSION: 17.0.4075.5
+      SERVERDESK_MONGODB_PORT: 17017
+      SERVERDESK_MONGODB_VERSION: 8.0.29
+      SERVERDESK_MONGODB_TOOLS_VERSION: 100.18.0
       SERVERDESK_DB_BACKUP_DIR: /tmp/serverdesk-db-backups
 
     steps:
@@ -154,6 +156,11 @@ jobs:
           sudo setfacl -m u:serverdesk_ci:rwx,m::rwx "$SERVERDESK_DB_BACKUP_DIR"
           sudo setfacl -m d:u:serverdesk_ci:rwx,d:m::rwx "$SERVERDESK_DB_BACKUP_DIR"
 
+          DATABASE_PASSWORD="SdDb!9A$(openssl rand -hex 18)z#"
+          echo "::add-mask::$DATABASE_PASSWORD"
+          echo "SERVERDESK_DB_PASSWORD=$DATABASE_PASSWORD" >> "$GITHUB_ENV"
+          export SERVERDESK_DB_PASSWORD="$DATABASE_PASSWORD"
+
           SQLSERVER_PASSWORD="Sd!9A$(openssl rand -hex 18)z#"
           echo "::add-mask::$SQLSERVER_PASSWORD"
           echo "SERVERDESK_SQLSERVER_PASSWORD=$SQLSERVER_PASSWORD" >> "$GITHUB_ENV"
@@ -189,6 +196,11 @@ jobs:
             -p 127.0.0.1:${SERVERDESK_SQLSERVER_PORT}:1433 \
             -v "$SERVERDESK_DB_BACKUP_DIR:$SERVERDESK_DB_BACKUP_DIR" \
             mcr.microsoft.com/mssql/server:2025-CU8-ubuntu-24.04
+          docker run -d --name serverdesk-mongodb \
+            -e MONGO_INITDB_ROOT_USERNAME=serverdesk \
+            -e MONGO_INITDB_ROOT_PASSWORD="$SERVERDESK_DB_PASSWORD" \
+            -p 127.0.0.1:${SERVERDESK_MONGODB_PORT}:27017 \
+            mongo:${SERVERDESK_MONGODB_VERSION}
 
           for attempt in {1..120}; do
             postgres_ready=false
@@ -196,18 +208,23 @@ jobs:
             mariadb_ready=false
             redis_ready=false
             sqlserver_ready=false
+            mongodb_ready=false
             docker exec serverdesk-postgres pg_isready -U serverdesk -d serverdesk >/dev/null 2>&1 && postgres_ready=true
             docker exec serverdesk-mysql mysqladmin ping -h 127.0.0.1 -u serverdesk -p"$SERVERDESK_DB_PASSWORD" --silent >/dev/null 2>&1 && mysql_ready=true
             docker exec serverdesk-mariadb mariadb-admin ping -h 127.0.0.1 -u serverdesk -p"$SERVERDESK_DB_PASSWORD" --silent >/dev/null 2>&1 && mariadb_ready=true
             docker exec -e REDISCLI_AUTH="$SERVERDESK_DB_PASSWORD" serverdesk-redis redis-cli ping 2>/dev/null | grep -qx PONG && redis_ready=true
             docker exec -e SQLCMDPASSWORD="$SERVERDESK_SQLSERVER_PASSWORD" serverdesk-sqlserver \
               /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -C -b -Q 'SELECT 1' >/dev/null 2>&1 && sqlserver_ready=true
-            if $postgres_ready && $mysql_ready && $mariadb_ready && $redis_ready && $sqlserver_ready; then
+            docker exec serverdesk-mongodb mongosh --quiet \
+              --username serverdesk --password "$SERVERDESK_DB_PASSWORD" --authenticationDatabase admin \
+              --eval 'db.runCommand({ ping: 1 }).ok' admin 2>/dev/null | grep -qx 1 && mongodb_ready=true
+            if $postgres_ready && $mysql_ready && $mariadb_ready && $redis_ready && $sqlserver_ready && $mongodb_ready; then
               break
             fi
             if [ "$attempt" -eq 120 ]; then
               docker ps -a
               docker logs serverdesk-sqlserver || true
+              docker logs serverdesk-mongodb || true
               exit 1
             fi
             sleep 1
@@ -222,9 +239,21 @@ jobs:
             exit 1
           fi
 
+          actual_mongodb_version="$(docker exec serverdesk-mongodb mongosh --quiet \
+            --username serverdesk --password "$SERVERDESK_DB_PASSWORD" --authenticationDatabase admin \
+            --eval 'db.version()' admin | tr -d '\r' | xargs)"
+          if [ "$actual_mongodb_version" != "$SERVERDESK_MONGODB_VERSION" ]; then
+            echo "MongoDB fixture version mismatch: expected $SERVERDESK_MONGODB_VERSION, observed $actual_mongodb_version" >&2
+            exit 1
+          fi
+
           docker exec -e SQLCMDPASSWORD="$SERVERDESK_SQLSERVER_PASSWORD" serverdesk-sqlserver \
             /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -C -b \
             -Q "IF DB_ID(N'serverdesk') IS NULL CREATE DATABASE [serverdesk]; IF DB_ID(N'serverdesk_restore') IS NULL CREATE DATABASE [serverdesk_restore];"
+
+          docker exec serverdesk-mongodb mongosh --quiet \
+            --username serverdesk --password "$SERVERDESK_DB_PASSWORD" --authenticationDatabase admin \
+            --eval 'db.getSiblingDB("serverdesk").serverdesk_fixture.updateOne({_id:1},{$set:{ready:true}},{upsert:true}); db.getSiblingDB("serverdesk_restore").serverdesk_fixture.updateOne({_id:1},{$set:{ready:true}},{upsert:true});' admin >/dev/null
 
       - name: Configure certified database backup tool wrappers
         shell: bash
@@ -232,6 +261,21 @@ jobs:
           set -euo pipefail
           sudo usermod -aG docker serverdesk_ci
           sudo install -d -m 0777 "$SERVERDESK_DB_BACKUP_DIR"
+
+          curl -fsSL \
+            "https://fastdl.mongodb.org/tools/db/mongodb-database-tools-ubuntu2404-x86_64-${SERVERDESK_MONGODB_TOOLS_VERSION}.tgz" \
+            -o /tmp/mongodb-database-tools.tgz
+          tools_root="$(tar -tzf /tmp/mongodb-database-tools.tgz | head -n 1 | cut -d/ -f1)"
+          tar -xzf /tmp/mongodb-database-tools.tgz -C /tmp
+          sudo install -m 0755 "/tmp/${tools_root}/bin/mongodump" /usr/local/bin/mongodump
+          sudo install -m 0755 "/tmp/${tools_root}/bin/mongorestore" /usr/local/bin/mongorestore
+          actual_mongodump_version="$(mongodump --version | awk -F': ' '/mongodump version:/ {print $2; exit}')"
+          actual_mongorestore_version="$(mongorestore --version | awk -F': ' '/mongorestore version:/ {print $2; exit}')"
+          if [ "$actual_mongodump_version" != "$SERVERDESK_MONGODB_TOOLS_VERSION" ] || \
+             [ "$actual_mongorestore_version" != "$SERVERDESK_MONGODB_TOOLS_VERSION" ]; then
+            echo "MongoDB Database Tools version mismatch" >&2
+            exit 1
+          fi
 
           cat <<'EOF' | sudo tee /usr/local/bin/pg_dump >/dev/null
           #!/usr/bin/env bash
@@ -266,6 +310,8 @@ jobs:
           EOF
           sudo chmod 0755 /usr/local/bin/pg_dump /usr/local/bin/pg_restore /usr/local/bin/mysqldump /usr/local/bin/mariadb-dump /usr/local/bin/sqlcmd
           sudo -u serverdesk_ci docker version >/dev/null
+          sudo -u serverdesk_ci mongodump --version >/dev/null
+          sudo -u serverdesk_ci mongorestore --version >/dev/null
 
       - name: Configure certified database restore targets and tool wrappers
         shell: bash
@@ -335,6 +381,8 @@ jobs:
           cp /tmp/serverdesk-mysql-client.stderr artifacts/test-results/mysql-client.stderr 2>/dev/null || true
           cp /tmp/serverdesk-mariadb-client.stderr artifacts/test-results/mariadb-client.stderr 2>/dev/null || true
           cp /tmp/serverdesk-sqlserver-client.stderr artifacts/test-results/sqlserver-client.stderr 2>/dev/null || true
+          mongodump --version > artifacts/test-results/mongodb-tools-version.txt 2>&1 || true
+          mongorestore --version >> artifacts/test-results/mongodb-tools-version.txt 2>&1 || true
 
       - name: Upload SSH integration test results
         if: always()
@@ -362,4 +410,5 @@ jobs:
           docker logs serverdesk-mariadb || true
           docker logs serverdesk-redis || true
           docker logs serverdesk-sqlserver || true
+          docker logs serverdesk-mongodb || true
           ls -la /tmp/serverdesk-db-backups || true
