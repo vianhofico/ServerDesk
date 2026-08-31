@@ -30,6 +30,7 @@ public sealed class DatabaseTunnelIntegrationTests
     [InlineData(DatabaseEngineKind.MariaDb)]
     [InlineData(DatabaseEngineKind.Redis)]
     [InlineData(DatabaseEngineKind.SqlServer)]
+    [InlineData(DatabaseEngineKind.MongoDb)]
     public async Task DatabaseTunnelCarriesEngineProbeAndClosesAutomaticLoopbackPort(DatabaseEngineKind engine)
     {
         var cancellationToken = TestContext.Current.CancellationToken;
@@ -143,6 +144,25 @@ public sealed class DatabaseTunnelIntegrationTests
                     Assert.Equal(26, (request[2] << 8) | request[3]);
                     await stream.WriteAsync(
                         new byte[] { 0x04, 0x01, 0x00, 0x08, 0x00, 0x00, 0x01, 0x00 },
+                        cancellationToken);
+                    break;
+                }
+
+            case DatabaseEngineKind.MongoDb:
+                {
+                    var request = new byte[52];
+                    await ReadExactlyAsync(stream, request, cancellationToken);
+                    Assert.Equal(52, BitConverter.ToInt32(request, 0));
+                    Assert.Equal(1, BitConverter.ToInt32(request, 4));
+                    Assert.Equal(2013, BitConverter.ToInt32(request, 12));
+                    await stream.WriteAsync(
+                        new byte[]
+                        {
+                            0x15, 0x00, 0x00, 0x00,
+                            0x02, 0x00, 0x00, 0x00,
+                            0x01, 0x00, 0x00, 0x00,
+                            0xDD, 0x07, 0x00, 0x00,
+                        },
                         cancellationToken);
                     break;
                 }
