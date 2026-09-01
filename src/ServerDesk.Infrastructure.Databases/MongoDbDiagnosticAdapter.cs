@@ -6,6 +6,10 @@ namespace ServerDesk.Infrastructure.Databases;
 
 public sealed class MongoDbDiagnosticAdapter : IDatabaseEngineDiagnosticAdapter
 {
+    private static readonly TimeSpan MaximumConnectTimeout = TimeSpan.FromSeconds(2);
+    private static readonly TimeSpan MaximumServerSelectionTimeout = TimeSpan.FromSeconds(4);
+    private static readonly TimeSpan DiagnosticHeartbeatInterval = TimeSpan.FromMilliseconds(500);
+
     public DatabaseEngineKind Engine => DatabaseEngineKind.MongoDb;
 
     public async Task<DatabaseDiagnosticResult> InspectAsync(
@@ -27,14 +31,18 @@ public sealed class MongoDbDiagnosticAdapter : IDatabaseEngineDiagnosticAdapter
         deadline.CancelAfter(request.Options.CommandTimeout);
         try
         {
+            var connectTimeout = Minimum(request.Options.CommandTimeout, MaximumConnectTimeout);
+            var serverSelectionTimeout = Minimum(request.Options.CommandTimeout, MaximumServerSelectionTimeout);
             var settings = new MongoClientSettings
             {
                 Server = new MongoServerAddress(request.LocalAddress.ToString(), request.LocalPort),
                 DirectConnection = true,
                 ApplicationName = "ServerDesk",
-                ConnectTimeout = request.Options.CommandTimeout,
-                ServerSelectionTimeout = request.Options.CommandTimeout,
+                ConnectTimeout = connectTimeout,
+                ServerSelectionTimeout = serverSelectionTimeout,
                 SocketTimeout = request.Options.CommandTimeout,
+                HeartbeatInterval = DiagnosticHeartbeatInterval,
+                HeartbeatTimeout = connectTimeout,
                 UseTls = request.TlsMode == DatabaseTlsMode.Required,
                 RetryReads = false,
                 RetryWrites = false,
@@ -277,6 +285,8 @@ public sealed class MongoDbDiagnosticAdapter : IDatabaseEngineDiagnosticAdapter
             name,
             DatabaseDiagnosticAdapterUtilities.BoundText(value, maximumTextLength)));
     }
+
+    private static TimeSpan Minimum(TimeSpan left, TimeSpan right) => left <= right ? left : right;
 
     private sealed record DatabaseRead(
         IReadOnlyList<DatabaseCatalogItem> Items,
