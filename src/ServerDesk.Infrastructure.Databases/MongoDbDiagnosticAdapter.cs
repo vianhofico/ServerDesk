@@ -47,7 +47,7 @@ public sealed class MongoDbDiagnosticAdapter : IDatabaseEngineDiagnosticAdapter
                     request.Secret!);
             }
 
-            var client = new MongoClient(settings);
+            using var client = new MongoClient(settings);
             var admin = client.GetDatabase("admin");
             var hello = await RunAsync(admin, new BsonDocument("hello", 1), deadline.Token).ConfigureAwait(false);
             var buildInfo = await RunAsync(admin, new BsonDocument("buildInfo", 1), deadline.Token).ConfigureAwait(false);
@@ -60,7 +60,13 @@ public sealed class MongoDbDiagnosticAdapter : IDatabaseEngineDiagnosticAdapter
             }
 
             var topology = Topology(hello);
-            var databases = await ReadDatabasesAsync(client, admin, request.Options, deadline.Token).ConfigureAwait(false);
+            var databases = await ReadDatabasesAsync(
+                    client,
+                    admin,
+                    request.DatabaseName,
+                    request.Options,
+                    deadline.Token)
+                .ConfigureAwait(false);
             var identity = request.AuthenticationKind == DatabaseAuthenticationKind.Password
                 ? $"{request.Username}@{request.AuthenticationDatabase ?? "admin"}"
                 : "unauthenticated";
@@ -143,6 +149,7 @@ public sealed class MongoDbDiagnosticAdapter : IDatabaseEngineDiagnosticAdapter
     private static async Task<DatabaseRead> ReadDatabasesAsync(
         MongoClient client,
         IMongoDatabase admin,
+        string? requestedDatabase,
         DatabaseDiagnosticOptions options,
         CancellationToken cancellationToken)
     {
@@ -161,10 +168,7 @@ public sealed class MongoDbDiagnosticAdapter : IDatabaseEngineDiagnosticAdapter
             throw new FormatException("MongoDB listDatabases response did not contain a databases array.");
         }
 
-        var rows = new List<DatabaseCatalogItem>(options.MaxCatalogs);
-        long collections = 0;
-        long documents = 0;
-        var truncated = false;
+        var names = new List<string>(databasesValue.AsBsonArray.Count);
         foreach (var value in databasesValue.AsBsonArray)
         {
             if (!value.IsBsonDocument || !value.AsBsonDocument.TryGetValue("name", out var nameValue) || !nameValue.IsString)
@@ -172,13 +176,25 @@ public sealed class MongoDbDiagnosticAdapter : IDatabaseEngineDiagnosticAdapter
                 throw new FormatException("MongoDB listDatabases returned an invalid database row.");
             }
 
-            if (rows.Count == options.MaxCatalogs)
-            {
-                truncated = true;
-                break;
-            }
+            names.Add(nameValue.AsString);
+        }
 
-            var name = nameValue.AsString;
+        if (!string.IsNullOrWhiteSpace(requestedDatabase))
+        {
+            var requestedIndex = names.FindIndex(name => string.Equals(name, requestedDatabase, StringComparison.Ordinal));
+            if (requestedIndex > 0)
+            {
+                var target = names[requestedIndex];
+                names.RemoveAt(requestedIndex);
+                names.Insert(0, target);
+            }
+        }
+
+        var rows = new List<DatabaseCatalogItem>(Math.Min(options.MaxCatalogs, names.Count));
+        long collections = 0;
+        long documents = 0;
+        foreach (var name in names.Take(options.MaxCatalogs))
+        {
             var stats = await RunAsync(
                     client.GetDatabase(name),
                     new BsonDocument
@@ -198,7 +214,7 @@ public sealed class MongoDbDiagnosticAdapter : IDatabaseEngineDiagnosticAdapter
                 Math.Max(0, collectionCount)));
         }
 
-        return new DatabaseRead(rows, collections, documents, truncated);
+        return new DatabaseRead(rows, collections, documents, names.Count > rows.Count);
     }
 
     private static Task<BsonDocument> RunAsync(
