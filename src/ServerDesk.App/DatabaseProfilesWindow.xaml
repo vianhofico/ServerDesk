@@ -183,6 +183,16 @@
                         <TextBlock Text="{DynamicResource Loc.DatabaseProfiles.Auth}" Margin="0,12,0,4" />
                         <ComboBox x:Name="AuthenticationBox" SelectionChanged="AuthenticationSelectionChanged" />
 
+                        <TextBlock Text="{DynamicResource Loc.DatabaseProfiles.AuthenticationDatabase}" Margin="0,12,0,4" />
+                        <TextBox x:Name="AuthenticationDatabaseBox" MaxLength="128" />
+                        <CheckBox x:Name="TlsRequiredBox"
+                                  Content="{DynamicResource Loc.DatabaseProfiles.TlsRequired}"
+                                  Margin="0,12,0,0" />
+                        <TextBlock x:Name="MongoOptionsHintText"
+                                   Margin="0,4,0,0"
+                                   Opacity="0.68"
+                                   TextWrapping="Wrap" />
+
                         <TextBlock Text="{DynamicResource Loc.DatabaseProfiles.Password}" Margin="0,12,0,4" />
                         <PasswordBox x:Name="PasswordBox" />
                         <TextBlock x:Name="PasswordHintText"

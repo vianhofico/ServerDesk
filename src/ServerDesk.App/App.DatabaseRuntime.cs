@@ -14,9 +14,14 @@ public partial class App
         ArgumentNullException.ThrowIfNull(profile);
         ArgumentNullException.ThrowIfNull(owner);
         var provider = _serviceProvider ?? throw new InvalidOperationException("ServerDesk services are not initialized.");
-        var runtimeService = new SqlServerAwareDatabaseRuntimeService(
+        var remoteCommands = provider.GetRequiredService<IRemoteCommandExecutorFactory>();
+        var sqlServerRuntime = new SqlServerAwareDatabaseRuntimeService(
             provider.GetRequiredService<IDatabaseRuntimeService>(),
-            provider.GetRequiredService<IRemoteCommandExecutorFactory>(),
+            remoteCommands,
+            DatabaseRuntimeOptions.Default);
+        var runtimeService = new MongoDbAwareDatabaseRuntimeService(
+            sqlServerRuntime,
+            remoteCommands,
             DatabaseRuntimeOptions.Default);
         var window = new DatabaseRuntimeWindow(
             runtimeService,

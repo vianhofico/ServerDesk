@@ -27,7 +27,7 @@ public sealed class SqliteConnectionFactory
 
 public sealed class SqliteDatabaseInitializer
 {
-    public const int CurrentSchemaVersion = 7;
+    public const int CurrentSchemaVersion = 8;
 
     private readonly SqliteConnectionFactory _connectionFactory;
 
@@ -304,6 +304,124 @@ public sealed class SqliteDatabaseInitializer
 
             await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
             transaction.Commit();
+            version = 7;
+        }
+
+        if (version < 8)
+        {
+            var hasBackupManifestTable = await TableExistsAsync(
+                    connection,
+                    "database_backup_manifests",
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+            using var transaction = connection.BeginTransaction();
+            await using (var command = connection.CreateCommand())
+            {
+                command.Transaction = transaction;
+                command.CommandText =
+                    """
+                    CREATE TABLE database_profiles_v8 (
+                        id TEXT NOT NULL PRIMARY KEY,
+                        server_profile_id TEXT NOT NULL,
+                        name TEXT NOT NULL,
+                        engine INTEGER NOT NULL CHECK (engine BETWEEN 0 AND 5),
+                        remote_host TEXT NOT NULL,
+                        remote_port INTEGER NOT NULL CHECK (remote_port BETWEEN 1 AND 65535),
+                        database_name TEXT NULL,
+                        username TEXT NULL,
+                        authentication_kind INTEGER NOT NULL CHECK (authentication_kind BETWEEN 0 AND 1),
+                        credential_reference TEXT NULL,
+                        authentication_database TEXT NULL,
+                        tls_mode INTEGER NOT NULL DEFAULT 0 CHECK (tls_mode BETWEEN 0 AND 1),
+                        created_utc TEXT NOT NULL,
+                        updated_utc TEXT NOT NULL,
+                        CHECK (
+                            (authentication_kind = 0 AND credential_reference IS NULL) OR
+                            (authentication_kind = 1 AND credential_reference IS NOT NULL)
+                        ),
+                        CHECK (authentication_database IS NULL OR length(authentication_database) BETWEEN 1 AND 128),
+                        FOREIGN KEY(server_profile_id) REFERENCES server_profiles(id) ON DELETE RESTRICT
+                    );
+
+                    INSERT INTO database_profiles_v8 (
+                        id, server_profile_id, name, engine, remote_host, remote_port,
+                        database_name, username, authentication_kind, credential_reference,
+                        authentication_database, tls_mode, created_utc, updated_utc)
+                    SELECT id, server_profile_id, name, engine, remote_host, remote_port,
+                           database_name, username, authentication_kind, credential_reference,
+                           NULL, 0, created_utc, updated_utc
+                    FROM database_profiles;
+
+                    DROP INDEX IF EXISTS ix_database_profiles_server;
+                    DROP INDEX IF EXISTS ix_database_profiles_engine;
+                    DROP TABLE database_profiles;
+                    ALTER TABLE database_profiles_v8 RENAME TO database_profiles;
+
+                    CREATE INDEX ix_database_profiles_server
+                        ON database_profiles(server_profile_id, name COLLATE NOCASE);
+                    CREATE INDEX ix_database_profiles_engine
+                        ON database_profiles(engine, server_profile_id);
+                    """;
+                await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+            }
+
+            if (hasBackupManifestTable)
+            {
+                await using var manifestCommand = connection.CreateCommand();
+                manifestCommand.Transaction = transaction;
+                manifestCommand.CommandText =
+                    """
+                    CREATE TABLE database_backup_manifests_v8 (
+                        backup_id TEXT NOT NULL PRIMARY KEY,
+                        server_profile_id TEXT NOT NULL,
+                        database_profile_id TEXT NOT NULL,
+                        engine INTEGER NOT NULL CHECK (engine BETWEEN 0 AND 5),
+                        database_name TEXT NOT NULL,
+                        username TEXT NULL,
+                        backup_path TEXT NOT NULL,
+                        format INTEGER NOT NULL CHECK (format BETWEEN 0 AND 4),
+                        tool_name TEXT NOT NULL,
+                        tool_version TEXT NOT NULL,
+                        size_bytes INTEGER NOT NULL CHECK (size_bytes > 0),
+                        sha256 TEXT NOT NULL CHECK (length(sha256) = 64),
+                        structural_check TEXT NOT NULL,
+                        created_utc TEXT NOT NULL,
+                        verified_utc TEXT NOT NULL,
+                        is_verified INTEGER NOT NULL CHECK (is_verified = 1),
+                        FOREIGN KEY(server_profile_id) REFERENCES server_profiles(id) ON DELETE CASCADE
+                    );
+
+                    INSERT INTO database_backup_manifests_v8 (
+                        backup_id, server_profile_id, database_profile_id, engine, database_name,
+                        username, backup_path, format, tool_name, tool_version, size_bytes, sha256,
+                        structural_check, created_utc, verified_utc, is_verified)
+                    SELECT backup_id, server_profile_id, database_profile_id, engine, database_name,
+                           username, backup_path, format, tool_name, tool_version, size_bytes, sha256,
+                           structural_check, created_utc, verified_utc, is_verified
+                    FROM database_backup_manifests;
+
+                    DROP INDEX IF EXISTS ix_database_backup_manifests_server;
+                    DROP INDEX IF EXISTS ix_database_backup_manifests_profile;
+                    DROP TABLE database_backup_manifests;
+                    ALTER TABLE database_backup_manifests_v8 RENAME TO database_backup_manifests;
+
+                    CREATE INDEX ix_database_backup_manifests_server
+                        ON database_backup_manifests(server_profile_id, created_utc DESC);
+                    CREATE INDEX ix_database_backup_manifests_profile
+                        ON database_backup_manifests(database_profile_id, created_utc DESC);
+                    """;
+                await manifestCommand.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+            }
+
+            await using (var versionCommand = connection.CreateCommand())
+            {
+                versionCommand.Transaction = transaction;
+                versionCommand.CommandText = "UPDATE schema_info SET version = 8 WHERE singleton_id = 1;";
+                await versionCommand.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+            }
+
+            transaction.Commit();
         }
     }
 
@@ -322,6 +440,18 @@ public sealed class SqliteDatabaseInitializer
         command.CommandText = "SELECT version FROM schema_info WHERE singleton_id = 1;";
         var value = await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false);
         return Convert.ToInt32(value, System.Globalization.CultureInfo.InvariantCulture);
+    }
+
+    private static async ValueTask<bool> TableExistsAsync(
+        SqliteConnection connection,
+        string tableName,
+        CancellationToken cancellationToken)
+    {
+        await using var command = connection.CreateCommand();
+        command.CommandText =
+            "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = @name LIMIT 1;";
+        command.Parameters.AddWithValue("@name", tableName);
+        return await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false) is not null;
     }
 
     private static async ValueTask ExecuteNonQueryAsync(

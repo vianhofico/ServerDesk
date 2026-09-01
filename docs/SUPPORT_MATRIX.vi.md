@@ -125,18 +125,24 @@ Các dòng dưới đây gắn với đúng fixture engine thật được thự
 | MariaDB | 11.8.9 | Certified | Certified | Certified | Certified | Certified |
 | Redis | 8.10.0 | Certified | Certified | Certified | Unsupported | Unsupported |
 | Microsoft SQL Server | 17.0.4075.5 (SQL Server 2025 CU8) | Certified | Certified | Certified | Certified | Certified |
+| MongoDB | 8.0.29 (standalone) | Certified | Certified | Certified | Certified | Certified |
 
 Bằng chứng và ranh giới:
 
-- CI chạy fixture PostgreSQL `18.6`, MySQL `8.4.11`, MariaDB `11.8.9`, Redis `8.10.0` và Microsoft SQL Server `17.0.4075.5` qua job OpenSSH integration thật.
+- CI chạy fixture PostgreSQL `18.6`, MySQL `8.4.11`, MariaDB `11.8.9`, Redis `8.10.0`, Microsoft SQL Server `17.0.4075.5` và MongoDB `8.0.29` qua job OpenSSH integration thật.
 - Backup PostgreSQL/MySQL/MariaDB chỉ được đánh dấu có thể sử dụng sau xác minh artifact xác định; restore yêu cầu đúng verified manifest/định danh target, preview/xác nhận mới, xử lý destructive dispatch và xác minh target sau restore.
 - Backup SQL Server dùng artifact `.bak` native và chỉ được đánh dấu usable sau khi kiểm tra file có giới hạn, xác minh SHA-256 và `RESTORE VERIFYONLY ... WITH CHECKSUM` đều thành công. Restore được khóa vào đúng manifest/database target đã verify, yêu cầu preview/xác nhận destructive mới, giữ trạng thái Ambiguous/Unknown khi dispatch không chắc chắn và post-verify danh tính target.
 - Runtime inventory SQL Server phân biệt việc phát hiện package/service của server với client tooling; chỉ có `sqlcmd` không được coi là SQL Server đang chạy. Exact live server version được lấy qua authenticated diagnostics trước khi áp dụng version gate cho backup/restore.
 - Credential SQL Server tiếp tục nằm trong secret abstraction. CI tạo và mask mật khẩu SA tại runtime; giá trị credential không được persist vào profile metadata, history, rendered command hay diagnostic artifact tải lên.
+- Runtime MongoDB phân biệt package/service server `mongod`/`mongos` với `mongosh`/Database Tools; chỉ có client tool không được coi là MongoDB server đang chạy. Exact live version và topology được xác định qua authenticated diagnostics.
+- Authenticated diagnostics MongoDB dùng official driver tới endpoint loopback đã forward qua SSH và bật direct-connection mode để host topology được discovery không thể âm thầm bypass tunnel. Diagnostics chỉ trả summary có giới hạn về database/collection, kích thước và topology; không đọc hoặc hiển thị nội dung document.
+- Certification MongoDB `8.0.29` chỉ áp dụng cho **standalone topology**. Replica set và `mongos` có thể được nhận diện nhưng Backup/Restore phải fail-closed ở mức Unsupported cho tới khi có đường certification riêng bằng fixture topology thật.
+- Backup MongoDB dùng Database Tools `100.18.0` được pin chính xác, gzip archive, kiểm tra file có giới hạn, SHA-256 và `mongorestore --dryRun` trước khi artifact được coi là usable. Restore yêu cầu đúng verified manifest/profile/database, preview destructive mới, `--nsInclude=<database>.*`, `--drop`, `--stopOnError` và post-verify target; dispatch không chắc chắn phải giữ Ambiguous/Unknown và không blind retry.
+- Mật khẩu MongoDB tiếp tục nằm trong secret abstraction và được truyền cho Database Tools qua sensitive input thay vì persist Mongo URI hoặc đưa vào rendered command arguments. Password database fixture trong CI được tạo và mask tại runtime.
 - Backup/restore Redis là **Unsupported** vì chưa chứng minh được semantics sao chép/khôi phục persistence một cách xác định. UI/application phải fail-closed trước khi tạo mutation backup/restore được chứng nhận.
 - Mọi engine version không được liệt kê rõ ở trên đều **không được Certified** chỉ vì parser hay client command tình cờ hoạt động. Chúng vẫn là unsupported/unknown cho mục đích certification cho đến khi có bằng chứng rõ ràng để promote.
 - `Tested` dành cho bằng chứng từng phần trong tương lai; các exact engine/version row hiện tại hoặc Certified cho capability, hoặc được ghi rõ Unsupported.
-- Thực thi SQL query tùy ý/basic query console vẫn nằm ngoài phạm vi database được certified; ServerDesk không cung cấp SQL query console như một phần của matrix này.
+- Thực thi SQL tùy ý, Mongo shell và document query console đều nằm ngoài phạm vi database được certified.
 
 ## 5. Ý nghĩa trạng thái capability
 
@@ -168,7 +174,7 @@ Ví dụ:
 - known limitation được ghi tài liệu;
 - không có required test nào bị skip vĩnh viễn cho target đó.
 
-Với capability theo database engine/version, promotion còn yêu cầu một dòng matrix rõ ràng và fixture OpenSSH integration với engine thật cho đúng version/capability đó.
+Với capability theo database engine/version, promotion còn yêu cầu một dòng matrix rõ ràng và fixture OpenSSH integration với engine thật cho đúng version/capability đó. Với engine phụ thuộc topology như MongoDB, exact topology cũng phải được ghi rõ trong bằng chứng certification.
 
 ## 7. Removal / deprecation
 

@@ -60,8 +60,12 @@ public sealed class DatabaseRuntimeIntegrationTests
                 fixture.CommandFactory,
                 paths.ToDictionary(pair => pair.Key, pair => pair.Value.Value, StringComparer.Ordinal));
             var baseline = new DatabaseRuntimeService(tracking, DatabaseRuntimeOptions.Default);
-            var service = new SqlServerAwareDatabaseRuntimeService(
+            var sqlServerRuntime = new SqlServerAwareDatabaseRuntimeService(
                 baseline,
+                tracking,
+                DatabaseRuntimeOptions.Default);
+            var service = new MongoDbAwareDatabaseRuntimeService(
+                sqlServerRuntime,
                 tracking,
                 DatabaseRuntimeOptions.Default);
 
@@ -69,8 +73,8 @@ public sealed class DatabaseRuntimeIntegrationTests
 
             Assert.True(result.IsSuccess, result.Error?.Message);
             Assert.NotNull(result.Snapshot);
-            Assert.Equal(5, result.Snapshot.Engines.Count);
-            Assert.Equal(5, result.Snapshot.ActiveEngineCount);
+            Assert.Equal(6, result.Snapshot.Engines.Count);
+            Assert.Equal(6, result.Snapshot.ActiveEngineCount);
             Assert.All(result.Snapshot.Engines, engine => Assert.Equal(DatabaseEngineRuntimeStatus.Active, engine.Status));
             Assert.Contains(result.Snapshot.Engines, engine =>
                 engine.Engine == DatabaseEngineKind.PostgreSql && engine.Version!.Contains("17.4", StringComparison.Ordinal));
@@ -82,8 +86,10 @@ public sealed class DatabaseRuntimeIntegrationTests
                 engine.Engine == DatabaseEngineKind.Redis && engine.Version!.Contains("8.0.2", StringComparison.Ordinal));
             Assert.Contains(result.Snapshot.Engines, engine =>
                 engine.Engine == DatabaseEngineKind.SqlServer && engine.Version == "17.0.4075.5" && engine.ServiceUnit == "mssql-server.service");
+            Assert.Contains(result.Snapshot.Engines, engine =>
+                engine.Engine == DatabaseEngineKind.MongoDb && engine.Version == "8.0.29" && engine.ServiceUnit == "mongod.service");
 
-            Assert.Equal(10, tracking.Commands.Count);
+            Assert.Equal(13, tracking.Commands.Count);
             Assert.All(tracking.Commands, command =>
             {
                 Assert.Equal(OperationRisk.ReadOnly, command.Risk);
@@ -91,7 +97,7 @@ public sealed class DatabaseRuntimeIntegrationTests
                 Assert.Equal("C", command.Environment["LC_ALL"]);
             });
             Assert.DoesNotContain(tracking.Commands, command =>
-                command.Executable is "psql" or "mysql" or "redis-cli" or "sqlcmd" or "/opt/mssql/bin/sqlservr");
+                command.Executable is "psql" or "mysql" or "redis-cli" or "sqlcmd" or "mongosh" or "mongod" or "mongos" or "/opt/mssql/bin/sqlservr");
         }
         finally
         {

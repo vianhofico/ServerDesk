@@ -6,7 +6,7 @@ if [ "${1:-}" != "show" ]; then
 fi
 unit="${2:-}"
 case "$unit" in
-  postgresql.service|mysql.service|mariadb.service|redis-server.service|mssql-server.service)
+  postgresql.service|mysql.service|mariadb.service|redis-server.service|mssql-server.service|mongod.service)
     printf '%s\n' 'LoadState=loaded' 'ActiveState=active' 'SubState=running'
     exit 0
     ;;

@@ -10,6 +10,12 @@ public enum DatabaseAuthenticationKind
     Password,
 }
 
+public enum DatabaseTlsMode
+{
+    Disabled,
+    Required,
+}
+
 public sealed class DatabaseConnectionProfile
 {
     private DatabaseConnectionProfile(
@@ -22,7 +28,9 @@ public sealed class DatabaseConnectionProfile
         string? databaseName,
         string? username,
         DatabaseAuthenticationKind authenticationKind,
-        SecretReference? credentialReference)
+        SecretReference? credentialReference,
+        string? authenticationDatabase,
+        DatabaseTlsMode tlsMode)
     {
         Id = id;
         ServerProfileId = serverProfileId;
@@ -34,6 +42,8 @@ public sealed class DatabaseConnectionProfile
         Username = username;
         AuthenticationKind = authenticationKind;
         CredentialReference = credentialReference;
+        AuthenticationDatabase = authenticationDatabase;
+        TlsMode = tlsMode;
     }
 
     public Guid Id { get; }
@@ -56,6 +66,10 @@ public sealed class DatabaseConnectionProfile
 
     public SecretReference? CredentialReference { get; }
 
+    public string? AuthenticationDatabase { get; }
+
+    public DatabaseTlsMode TlsMode { get; }
+
     public static DatabaseConnectionProfile Create(
         Guid id,
         Guid serverProfileId,
@@ -66,7 +80,9 @@ public sealed class DatabaseConnectionProfile
         string? databaseName,
         string? username,
         DatabaseAuthenticationKind authenticationKind,
-        SecretReference? credentialReference)
+        SecretReference? credentialReference,
+        string? authenticationDatabase = null,
+        DatabaseTlsMode tlsMode = DatabaseTlsMode.Disabled)
     {
         if (id == Guid.Empty)
         {
@@ -88,6 +104,11 @@ public sealed class DatabaseConnectionProfile
             throw new ArgumentOutOfRangeException(nameof(authenticationKind));
         }
 
+        if (!Enum.IsDefined(tlsMode))
+        {
+            throw new ArgumentOutOfRangeException(nameof(tlsMode));
+        }
+
         name = NormalizeRequired(name, nameof(name), 100);
         remoteHost = NormalizeRequired(remoteHost, nameof(remoteHost), 255);
         if (remoteHost.Any(char.IsWhiteSpace))
@@ -104,6 +125,8 @@ public sealed class DatabaseConnectionProfile
 
         databaseName = NormalizeOptional(databaseName, nameof(databaseName), 128);
         username = NormalizeOptional(username, nameof(username), 128);
+        authenticationDatabase = NormalizeOptional(authenticationDatabase, nameof(authenticationDatabase), 128);
+
         if (authenticationKind == DatabaseAuthenticationKind.None && credentialReference is not null)
         {
             throw new ArgumentException(
@@ -118,6 +141,26 @@ public sealed class DatabaseConnectionProfile
                 nameof(credentialReference));
         }
 
+        if (engine == DatabaseEngineKind.MongoDb)
+        {
+            if (authenticationKind == DatabaseAuthenticationKind.Password)
+            {
+                authenticationDatabase ??= "admin";
+            }
+            else if (authenticationDatabase is not null)
+            {
+                throw new ArgumentException(
+                    "A MongoDB profile without authentication cannot retain an authentication database.",
+                    nameof(authenticationDatabase));
+            }
+        }
+        else if (authenticationDatabase is not null || tlsMode != DatabaseTlsMode.Disabled)
+        {
+            throw new ArgumentException(
+                "Authentication database and TLS profile metadata are currently supported only for MongoDB profiles.",
+                nameof(authenticationDatabase));
+        }
+
         return new DatabaseConnectionProfile(
             id,
             serverProfileId,
@@ -128,7 +171,9 @@ public sealed class DatabaseConnectionProfile
             databaseName,
             username,
             authenticationKind,
-            credentialReference);
+            credentialReference,
+            authenticationDatabase,
+            tlsMode);
     }
 
     public static DatabaseConnectionProfile Rehydrate(
@@ -141,7 +186,9 @@ public sealed class DatabaseConnectionProfile
         string? databaseName,
         string? username,
         DatabaseAuthenticationKind authenticationKind,
-        SecretReference? credentialReference) =>
+        SecretReference? credentialReference,
+        string? authenticationDatabase = null,
+        DatabaseTlsMode tlsMode = DatabaseTlsMode.Disabled) =>
         Create(
             id,
             serverProfileId,
@@ -152,7 +199,9 @@ public sealed class DatabaseConnectionProfile
             databaseName,
             username,
             authenticationKind,
-            credentialReference);
+            credentialReference,
+            authenticationDatabase,
+            tlsMode);
 
     public static int DefaultPortFor(DatabaseEngineKind engine) => engine switch
     {
@@ -160,6 +209,7 @@ public sealed class DatabaseConnectionProfile
         DatabaseEngineKind.MySql or DatabaseEngineKind.MariaDb => 3306,
         DatabaseEngineKind.Redis => 6379,
         DatabaseEngineKind.SqlServer => 1433,
+        DatabaseEngineKind.MongoDb => 27017,
         _ => throw new ArgumentOutOfRangeException(nameof(engine)),
     };
 
@@ -210,7 +260,9 @@ public sealed record DatabaseProfileSpec(
     int RemotePort,
     string? DatabaseName,
     string? Username,
-    DatabaseAuthenticationKind AuthenticationKind);
+    DatabaseAuthenticationKind AuthenticationKind,
+    string? AuthenticationDatabase = null,
+    DatabaseTlsMode TlsMode = DatabaseTlsMode.Disabled);
 
 public interface IDatabaseProfileRepository
 {
@@ -462,7 +514,9 @@ public sealed class DatabaseProfileService : IDatabaseProfileService
             spec.DatabaseName,
             spec.Username,
             spec.AuthenticationKind,
-            credentialReference);
+            credentialReference,
+            spec.AuthenticationDatabase,
+            spec.TlsMode);
 
     private static void ValidateSecret(
         DatabaseAuthenticationKind authenticationKind,

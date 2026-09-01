@@ -105,7 +105,9 @@ public sealed record DatabaseEngineDiagnosticRequest(
     string? Username,
     DatabaseAuthenticationKind AuthenticationKind,
     string? Secret,
-    DatabaseDiagnosticOptions Options);
+    DatabaseDiagnosticOptions Options,
+    string? AuthenticationDatabase = null,
+    DatabaseTlsMode TlsMode = DatabaseTlsMode.Disabled);
 
 public interface IDatabaseEngineDiagnosticAdapter
 {
@@ -225,7 +227,9 @@ public sealed class DatabaseDiagnosticService : IDatabaseDiagnosticService
                 profile.Username,
                 profile.AuthenticationKind,
                 secret,
-                _options);
+                _options,
+                profile.AuthenticationDatabase,
+                profile.TlsMode);
             try
             {
                 return await adapter.InspectAsync(request, cancellationToken).ConfigureAwait(false);
