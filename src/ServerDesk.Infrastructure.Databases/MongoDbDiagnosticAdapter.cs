@@ -43,6 +43,7 @@ public sealed class MongoDbDiagnosticAdapter : IDatabaseEngineDiagnosticAdapter
                 SocketTimeout = request.Options.CommandTimeout,
                 HeartbeatInterval = DiagnosticHeartbeatInterval,
                 HeartbeatTimeout = connectTimeout,
+                ServerMonitoringMode = MongoDB.Driver.Core.Servers.ServerMonitoringMode.Poll,
                 UseTls = request.TlsMode == DatabaseTlsMode.Required,
                 RetryReads = false,
                 RetryWrites = false,
