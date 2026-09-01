@@ -31,6 +31,7 @@ public sealed class MongoDbBackupRestoreIntegrationTests
     private static readonly string SshPassword = Environment.GetEnvironmentVariable("SERVERDESK_SSH_PASSWORD") ?? "serverdesk-password";
     private static readonly string DatabasePassword = Environment.GetEnvironmentVariable("SERVERDESK_DB_PASSWORD") ?? "serverdesk-db-password";
     private static readonly string BackupDirectory = Environment.GetEnvironmentVariable("SERVERDESK_DB_BACKUP_DIR") ?? "/tmp/serverdesk-db-backups";
+    private static readonly MongoClient ProbeClient = CreateProbeClient();
 
     [Fact]
     public async Task VerifiedArchiveRestoresExactMongoDbDatabaseAndKeepsSecretOutOfPreview()
@@ -213,7 +214,7 @@ public sealed class MongoDbBackupRestoreIntegrationTests
 
     private static async Task ResetProbeAsync(CancellationToken cancellationToken)
     {
-        var database = Client().GetDatabase(DatabaseName);
+        var database = ProbeClient.GetDatabase(DatabaseName);
         await database.DropCollectionAsync(CollectionName, cancellationToken);
         var collection = database.GetCollection<BsonDocument>(CollectionName);
         await collection.InsertOneAsync(
@@ -223,7 +224,7 @@ public sealed class MongoDbBackupRestoreIntegrationTests
 
     private static async Task MutateProbeAsync(CancellationToken cancellationToken)
     {
-        var collection = Client().GetDatabase(DatabaseName).GetCollection<BsonDocument>(CollectionName);
+        var collection = ProbeClient.GetDatabase(DatabaseName).GetCollection<BsonDocument>(CollectionName);
         await collection.UpdateOneAsync(
             Builders<BsonDocument>.Filter.Eq("_id", 1),
             Builders<BsonDocument>.Update.Set("marker", MutatedMarker),
@@ -235,14 +236,14 @@ public sealed class MongoDbBackupRestoreIntegrationTests
 
     private static async Task<ProbeState> ReadProbeAsync(CancellationToken cancellationToken)
     {
-        var collection = Client().GetDatabase(DatabaseName).GetCollection<BsonDocument>(CollectionName);
+        var collection = ProbeClient.GetDatabase(DatabaseName).GetCollection<BsonDocument>(CollectionName);
         var document = await collection.Find(Builders<BsonDocument>.Filter.Eq("_id", 1))
             .FirstAsync(cancellationToken);
         var count = await collection.CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty, cancellationToken: cancellationToken);
         return new ProbeState(document["marker"].AsString, count);
     }
 
-    private static MongoClient Client()
+    private static MongoClient CreateProbeClient()
     {
         var settings = new MongoClientSettings
         {
