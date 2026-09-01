@@ -6,6 +6,8 @@ namespace ServerDesk.Infrastructure.Databases;
 
 public sealed class MongoDbDiagnosticAdapter : IDatabaseEngineDiagnosticAdapter
 {
+    private const int MaxConcurrentDatabaseStats = 4;
+
     public DatabaseEngineKind Engine => DatabaseEngineKind.MongoDb;
 
     public async Task<DatabaseDiagnosticResult> InspectAsync(
@@ -190,32 +192,50 @@ public sealed class MongoDbDiagnosticAdapter : IDatabaseEngineDiagnosticAdapter
             }
         }
 
-        var rows = new List<DatabaseCatalogItem>(Math.Min(options.MaxCatalogs, names.Count));
+        var selectedNames = names.Take(options.MaxCatalogs).ToArray();
+        var rows = new List<DatabaseCatalogItem>(selectedNames.Length);
         long collections = 0;
         long documents = 0;
-        foreach (var name in names.Take(options.MaxCatalogs))
+        for (var offset = 0; offset < selectedNames.Length; offset += MaxConcurrentDatabaseStats)
         {
-            var stats = await RunAsync(
-                    client.GetDatabase(name),
-                    new BsonDocument
-                    {
-                        ["dbStats"] = 1,
-                        ["scale"] = 1,
-                    },
-                    cancellationToken)
+            var batchNames = selectedNames
+                .Skip(offset)
+                .Take(MaxConcurrentDatabaseStats)
+                .ToArray();
+            var batchStats = await Task.WhenAll(
+                    batchNames.Select(name => ReadDatabaseStatsAsync(client, name, cancellationToken)))
                 .ConfigureAwait(false);
-            var collectionCount = Int64(stats, "collections") ?? 0;
-            var documentCount = Int64(stats, "objects") ?? 0;
-            collections = checked(collections + Math.Max(0, collectionCount));
-            documents = checked(documents + Math.Max(0, documentCount));
-            rows.Add(new DatabaseCatalogItem(
-                DatabaseDiagnosticAdapterUtilities.BoundText(name, options.MaxTextLength),
-                Int64(stats, "storageSize"),
-                Math.Max(0, collectionCount)));
+
+            for (var index = 0; index < batchNames.Length; index++)
+            {
+                var name = batchNames[index];
+                var stats = batchStats[index];
+                var collectionCount = Int64(stats, "collections") ?? 0;
+                var documentCount = Int64(stats, "objects") ?? 0;
+                collections = checked(collections + Math.Max(0, collectionCount));
+                documents = checked(documents + Math.Max(0, documentCount));
+                rows.Add(new DatabaseCatalogItem(
+                    DatabaseDiagnosticAdapterUtilities.BoundText(name, options.MaxTextLength),
+                    Int64(stats, "storageSize"),
+                    Math.Max(0, collectionCount)));
+            }
         }
 
         return new DatabaseRead(rows, collections, documents, names.Count > rows.Count);
     }
+
+    private static Task<BsonDocument> ReadDatabaseStatsAsync(
+        MongoClient client,
+        string name,
+        CancellationToken cancellationToken) =>
+        RunAsync(
+            client.GetDatabase(name),
+            new BsonDocument
+            {
+                ["dbStats"] = 1,
+                ["scale"] = 1,
+            },
+            cancellationToken);
 
     private static Task<BsonDocument> RunAsync(
         IMongoDatabase database,
