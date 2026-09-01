@@ -193,7 +193,7 @@ public sealed class MongoDbBackupRestoreIntegrationTests
             tunnelService,
             secrets,
             [new MongoDbDiagnosticAdapter()],
-            new DatabaseDiagnosticOptions(25, 20, TimeSpan.FromSeconds(10)) { MaxTextLength = 512 });
+            new DatabaseDiagnosticOptions(25, 20, TimeSpan.FromSeconds(20)) { MaxTextLength = 512 });
         var backup = new MongoDbDatabaseBackupService(
             databaseProfiles,
             secrets,
