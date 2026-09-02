@@ -101,8 +101,8 @@ public sealed class MultiServerDashboardRefreshTests
             },
             TestContext.Current.CancellationToken);
 
-        await slowStarted.Task.WaitAsync(TimeSpan.FromSeconds(2));
-        await fastPublished.Task.WaitAsync(TimeSpan.FromSeconds(2));
+        await slowStarted.Task.WaitAsync(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
+        await fastPublished.Task.WaitAsync(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
         Assert.False(refreshTask.IsCompleted);
         releaseSlow.TrySetResult();
         await refreshTask;
@@ -138,7 +138,7 @@ public sealed class MultiServerDashboardRefreshTests
             },
             cancellation.Token);
 
-        await refreshing.Task.WaitAsync(TimeSpan.FromSeconds(2));
+        await refreshing.Task.WaitAsync(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
         cancellation.Cancel();
         await refreshTask;
 
