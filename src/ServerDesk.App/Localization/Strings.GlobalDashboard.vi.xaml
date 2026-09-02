@@ -13,6 +13,7 @@
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.GlobalDashboard.Apply">Áp dụng</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.GlobalDashboard.Clear">Xóa lọc</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.GlobalDashboard.Refresh">Làm mới máy chủ đang hiển thị</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.GlobalDashboard.CompareSelected">So sánh đã chọn</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.GlobalDashboard.Cancel">Hủy</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.GlobalDashboard.Close">Đóng</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.GlobalDashboard.ColumnFavorite">Yêu thích</sys:String>
@@ -36,6 +37,9 @@
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.GlobalDashboard.RefreshComplete">Làm mới xong: có {0} ảnh chụp, {1} lỗi, tổng {2} dòng đang hiển thị.</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.GlobalDashboard.Cancelling">Đang hủy các tác vụ làm mới chỉ đọc còn chờ…</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.GlobalDashboard.RefreshCancelled">Đã hủy làm mới bảng tổng quan.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.GlobalDashboard.CompareRequiresTwo">Hãy chọn ít nhất hai máy chủ đang hiển thị để so sánh.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.GlobalDashboard.CompareBusy">Không thể so sánh khi hồ sơ hoặc ảnh chụp sức khỏe đang được cập nhật.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.GlobalDashboard.CompareOpened">Đã mở so sánh chỉ đọc cho {0} máy chủ. Không có yêu cầu từ xa nào được chạy.</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.GlobalDashboard.Unlabeled">Chưa gắn nhãn</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.GlobalDashboard.Ungrouped">Chưa vào nhóm</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.GlobalDashboard.NoTags">Không có thẻ</sys:String>
@@ -58,4 +62,28 @@
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.GlobalDashboard.Captured">Ảnh chụp sức khỏe chỉ đọc được ghi nhận lúc {0}.</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.GlobalDashboard.WarningSummary">{0} ({1} nghiêm trọng)</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.GlobalDashboard.GenericFailure">Làm mới bảng tổng quan thất bại.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.GlobalDashboard.ComparisonWindowTitle">So sánh máy chủ</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.GlobalDashboard.ComparisonTitle">So sánh các máy chủ đã chọn</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.GlobalDashboard.ComparisonSubtitle">So sánh thông tin hồ sơ đã chuẩn hóa và các dữ kiện sức khỏe đã được ghi nhận. Màn hình này không tạo yêu cầu từ xa mới.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.GlobalDashboard.ComparisonTargets">Đang so sánh {0} máy chủ đã chọn. Mỗi cột ghi rõ chính xác đích SSH.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.GlobalDashboard.ComparisonColumnFact">Dữ kiện</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.GlobalDashboard.ComparisonColumnStatus">Kết quả</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.GlobalDashboard.ComparisonStatusEqual">Giống nhau</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.GlobalDashboard.ComparisonStatusDifferent">Khác nhau</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.GlobalDashboard.ComparisonStatusIncomplete">Chưa đủ dữ liệu</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.GlobalDashboard.ComparisonValueUnknown">Không xác định</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.GlobalDashboard.ComparisonValueUnsupported">Không hỗ trợ</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.GlobalDashboard.ComparisonValueYes">Có</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.GlobalDashboard.ComparisonValueNo">Không</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.GlobalDashboard.ComparisonClose">Đóng</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.GlobalDashboard.ComparisonFactEnvironment">Môi trường</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.GlobalDashboard.ComparisonFactSshPort">Cổng SSH</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.GlobalDashboard.ComparisonFactLogicalProcessors">Bộ xử lý logic</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.GlobalDashboard.ComparisonFactTotalMemory">Tổng bộ nhớ</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.GlobalDashboard.ComparisonFactSwapTotal">Tổng swap</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.GlobalDashboard.ComparisonFactCpuUtilization">Mức dùng CPU</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.GlobalDashboard.ComparisonFactMemoryUtilization">Mức dùng bộ nhớ</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.GlobalDashboard.ComparisonFactDiskUtilization">Mức dùng đĩa cao nhất</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.GlobalDashboard.ComparisonFactWarningCount">Số cảnh báo</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.GlobalDashboard.ComparisonFactCriticalWarning">Có cảnh báo nghiêm trọng</sys:String>
 </ResourceDictionary>

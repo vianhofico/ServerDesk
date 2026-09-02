@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using ServerDesk.Domain.Errors;
 using ServerDesk.Domain.Servers;
 
@@ -41,12 +42,15 @@ public interface IMultiServerDashboardRefreshService
         IReadOnlyCollection<MultiServerDashboardTarget> targets,
         Func<MultiServerDashboardUpdate, ValueTask> publishAsync,
         CancellationToken cancellationToken = default);
+
+    bool TryGetCachedSnapshot(Guid serverProfileId, out ServerDashboardSnapshot snapshot);
 }
 
 public sealed class MultiServerDashboardRefreshService : IMultiServerDashboardRefreshService
 {
     private readonly IServerDashboardService _dashboardService;
     private readonly MultiServerDashboardRefreshOptions _options;
+    private readonly ConcurrentDictionary<Guid, ServerDashboardSnapshot> _snapshots = new();
 
     public MultiServerDashboardRefreshService(
         IServerDashboardService dashboardService,
@@ -56,6 +60,9 @@ public sealed class MultiServerDashboardRefreshService : IMultiServerDashboardRe
         _options = options ?? throw new ArgumentNullException(nameof(options));
         _options.Validate();
     }
+
+    public bool TryGetCachedSnapshot(Guid serverProfileId, out ServerDashboardSnapshot snapshot) =>
+        _snapshots.TryGetValue(serverProfileId, out snapshot!);
 
     public async Task RefreshAsync(
         IReadOnlyCollection<MultiServerDashboardTarget> targets,
@@ -91,6 +98,7 @@ public sealed class MultiServerDashboardRefreshService : IMultiServerDashboardRe
     {
         if (!target.IsConnected)
         {
+            _snapshots.TryRemove(target.Profile.Id, out _);
             await publishAsync(new MultiServerDashboardUpdate(
                 target.Profile.Id,
                 MultiServerDashboardUpdateState.Disconnected)).ConfigureAwait(false);
@@ -103,6 +111,7 @@ public sealed class MultiServerDashboardRefreshService : IMultiServerDashboardRe
             await gate.WaitAsync(cancellationToken).ConfigureAwait(false);
             enteredGate = true;
             cancellationToken.ThrowIfCancellationRequested();
+            _snapshots.TryRemove(target.Profile.Id, out _);
 
             await publishAsync(new MultiServerDashboardUpdate(
                 target.Profile.Id,
@@ -111,6 +120,7 @@ public sealed class MultiServerDashboardRefreshService : IMultiServerDashboardRe
             var snapshot = await _dashboardService
                 .GetAsync(target.Profile, cancellationToken)
                 .ConfigureAwait(false);
+            _snapshots[target.Profile.Id] = snapshot;
 
             await publishAsync(new MultiServerDashboardUpdate(
                 target.Profile.Id,
@@ -119,6 +129,7 @@ public sealed class MultiServerDashboardRefreshService : IMultiServerDashboardRe
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
+            _snapshots.TryRemove(target.Profile.Id, out _);
             await publishAsync(new MultiServerDashboardUpdate(
                 target.Profile.Id,
                 MultiServerDashboardUpdateState.Cancelled,
@@ -128,6 +139,7 @@ public sealed class MultiServerDashboardRefreshService : IMultiServerDashboardRe
         }
         catch (ServerDashboardException exception)
         {
+            _snapshots.TryRemove(target.Profile.Id, out _);
             await publishAsync(new MultiServerDashboardUpdate(
                 target.Profile.Id,
                 MultiServerDashboardUpdateState.Failed,
@@ -135,6 +147,7 @@ public sealed class MultiServerDashboardRefreshService : IMultiServerDashboardRe
         }
         catch (Exception exception)
         {
+            _snapshots.TryRemove(target.Profile.Id, out _);
             await publishAsync(new MultiServerDashboardUpdate(
                 target.Profile.Id,
                 MultiServerDashboardUpdateState.Failed,

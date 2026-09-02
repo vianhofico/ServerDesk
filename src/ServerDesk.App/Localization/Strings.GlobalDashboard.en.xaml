@@ -13,6 +13,7 @@
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.GlobalDashboard.Apply">Apply</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.GlobalDashboard.Clear">Clear</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.GlobalDashboard.Refresh">Refresh visible servers</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.GlobalDashboard.CompareSelected">Compare selected</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.GlobalDashboard.Cancel">Cancel</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.GlobalDashboard.Close">Close</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.GlobalDashboard.ColumnFavorite">Fav.</sys:String>
@@ -36,6 +37,9 @@
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.GlobalDashboard.RefreshComplete">Refresh complete: {0} snapshot(s) available, {1} failed, {2} visible row(s).</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.GlobalDashboard.Cancelling">Cancelling pending read-only refresh work…</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.GlobalDashboard.RefreshCancelled">Global dashboard refresh was cancelled.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.GlobalDashboard.CompareRequiresTwo">Select at least two visible servers to compare.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.GlobalDashboard.CompareBusy">Comparison is unavailable while profiles or health snapshots are updating.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.GlobalDashboard.CompareOpened">Opened a read-only comparison for {0} server(s). No remote request was started.</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.GlobalDashboard.Unlabeled">Unlabeled</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.GlobalDashboard.Ungrouped">Ungrouped</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.GlobalDashboard.NoTags">No tags</sys:String>
@@ -58,4 +62,28 @@
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.GlobalDashboard.Captured">Read-only health snapshot captured {0}.</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.GlobalDashboard.WarningSummary">{0} ({1} critical)</sys:String>
     <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.GlobalDashboard.GenericFailure">Dashboard refresh failed.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.GlobalDashboard.ComparisonWindowTitle">Server comparison</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.GlobalDashboard.ComparisonTitle">Selected-server comparison</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.GlobalDashboard.ComparisonSubtitle">Compare normalized saved metadata and already-captured health facts. This view never starts a new remote request.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.GlobalDashboard.ComparisonTargets">Comparing {0} selected server(s). Each column names the exact SSH target.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.GlobalDashboard.ComparisonColumnFact">Fact</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.GlobalDashboard.ComparisonColumnStatus">Result</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.GlobalDashboard.ComparisonStatusEqual">Equal</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.GlobalDashboard.ComparisonStatusDifferent">Different</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.GlobalDashboard.ComparisonStatusIncomplete">Incomplete</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.GlobalDashboard.ComparisonValueUnknown">Unknown</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.GlobalDashboard.ComparisonValueUnsupported">Unsupported</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.GlobalDashboard.ComparisonValueYes">Yes</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.GlobalDashboard.ComparisonValueNo">No</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.GlobalDashboard.ComparisonClose">Close</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.GlobalDashboard.ComparisonFactEnvironment">Environment</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.GlobalDashboard.ComparisonFactSshPort">SSH port</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.GlobalDashboard.ComparisonFactLogicalProcessors">Logical processors</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.GlobalDashboard.ComparisonFactTotalMemory">Total memory</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.GlobalDashboard.ComparisonFactSwapTotal">Total swap</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.GlobalDashboard.ComparisonFactCpuUtilization">CPU utilization</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.GlobalDashboard.ComparisonFactMemoryUtilization">Memory utilization</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.GlobalDashboard.ComparisonFactDiskUtilization">Highest disk utilization</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.GlobalDashboard.ComparisonFactWarningCount">Warning count</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.GlobalDashboard.ComparisonFactCriticalWarning">Critical warning present</sys:String>
 </ResourceDictionary>
