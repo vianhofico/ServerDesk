@@ -1,0 +1,43 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Transfer.ExportSelected">Xuất đã chọn</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Transfer.ImportMetadata">Nhập metadata</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Transfer.Busy">Không thể chuyển hồ sơ khi hồ sơ hoặc ảnh chụp sức khỏe đang được cập nhật.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Transfer.SelectExportTarget">Hãy chọn ít nhất một hồ sơ đang hiển thị để xuất.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Transfer.ExportDialogTitle">Xuất metadata hồ sơ ServerDesk không chứa bí mật</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Transfer.ImportDialogTitle">Nhập metadata hồ sơ ServerDesk</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Transfer.JsonFilter">Metadata JSON (*.json)|*.json</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Transfer.ExportComplete">Đã xuất {0} hồ sơ được chọn. Credential, tham chiếu bí mật và đường dẫn khóa riêng không được đưa vào.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Transfer.ExportFailed">Xuất metadata hồ sơ thất bại. Không có dữ liệu bí mật nào được thêm vào bản xuất.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Transfer.ImportInvalid">Tệp đã chọn không phải tài liệu metadata hồ sơ ServerDesk không chứa bí mật được hỗ trợ.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Transfer.ImportWindowTitle">Nhập metadata hồ sơ</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Transfer.ImportTitle">Kiểm tra metadata hồ sơ trước khi nhập</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Transfer.ImportSubtitle">Kiểm tra từng định danh máy chủ trước khi tạo hồ sơ cục bộ. Định danh host + cổng + username đã tồn tại sẽ được bỏ qua, không ghi đè.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Transfer.ImportCredentialWarning">Credential, tham chiếu credential và đường dẫn khóa riêng được chủ động loại bỏ. Hồ sơ nhập vào phải được cấu hình credential cần thiết trước khi kết nối.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Transfer.ReviewAcknowledgement">Tôi đã kiểm tra mọi đích nhập vào và hiểu rằng credential/đường dẫn khóa riêng bị loại bỏ.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Transfer.ImportTargetSummary">Kiểm tra {0} hồ sơ nhập vào. Mỗi dòng ghi rõ định danh SSH chính xác sẽ được tạo hoặc bỏ qua.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Transfer.ColumnServer">Máy chủ</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Transfer.ColumnEndpoint">Điểm cuối SSH</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Transfer.ColumnEnvironment">Môi trường</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Transfer.ColumnAuthentication">Xác thực</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Transfer.ColumnResult">Kết quả</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Transfer.AuthPassword">Mật khẩu</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Transfer.AuthPrivateKey">Khóa riêng</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Transfer.AuthSshAgent">SSH agent</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Transfer.AuthKeyboardInteractive">Tương tác bàn phím</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Transfer.Unlabeled">Chưa gắn nhãn</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Transfer.StatePending">Đang chờ</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Transfer.StateImported">Đã nhập</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Transfer.StateDuplicate">Trùng — đã bỏ qua</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Transfer.StateFailed">Thất bại</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Transfer.StateCancelled">Đã hủy / chưa bắt đầu</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Transfer.ImportReviewed">Nhập metadata đã kiểm tra</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Transfer.Cancel">Hủy các hồ sơ còn chờ</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Transfer.Close">Đóng</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Transfer.ImportReady">Kiểm tra chính xác danh sách đích và cảnh báo loại bỏ credential, sau đó xác nhận đã kiểm tra.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Transfer.ReviewRequired">Phải xác nhận danh sách đích chính xác và cảnh báo loại bỏ credential trước khi nhập.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Transfer.ImportRunning">Đang nhập {0} hồ sơ đã kiểm tra, lần lượt từng mục.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Transfer.ImportCancelling">Đã yêu cầu hủy. Sẽ không bắt đầu nhập hồ sơ mới.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Transfer.ImportComplete">Nhập xong: {0} đã nhập, {1} trùng/bỏ qua, {2} lỗi, {3} đã hủy/chưa bắt đầu, tổng {4}.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Transfer.ImportUnexpectedFailure">Bộ điều phối nhập gặp lỗi trước khi có thể hoàn tất mọi kết quả theo từng mục.</sys:String>
+</ResourceDictionary>

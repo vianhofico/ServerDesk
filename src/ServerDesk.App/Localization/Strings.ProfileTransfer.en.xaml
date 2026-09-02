@@ -1,0 +1,43 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Transfer.ExportSelected">Export selected</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Transfer.ImportMetadata">Import metadata</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Transfer.Busy">Profile transfer is unavailable while profiles or health snapshots are updating.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Transfer.SelectExportTarget">Select at least one visible profile to export.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Transfer.ExportDialogTitle">Export non-secret ServerDesk profile metadata</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Transfer.ImportDialogTitle">Import ServerDesk profile metadata</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Transfer.JsonFilter">JSON metadata (*.json)|*.json</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Transfer.ExportComplete">Exported {0} selected profile(s). Credentials, secret references and private-key paths were not included.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Transfer.ExportFailed">Profile metadata export failed. No secret data was added to the export.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Transfer.ImportInvalid">The selected file is not a supported ServerDesk non-secret profile metadata document.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Transfer.ImportWindowTitle">Import profile metadata</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Transfer.ImportTitle">Review profile metadata import</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Transfer.ImportSubtitle">Review every incoming server identity before creating local profiles. Existing host + port + username identities are skipped, never overwritten.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Transfer.ImportCredentialWarning">Credentials, credential references and private-key paths are intentionally absent. Imported profiles must be configured with required credentials before connecting.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Transfer.ReviewAcknowledgement">I reviewed every incoming target and understand that credentials/private-key paths are omitted.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Transfer.ImportTargetSummary">Review {0} incoming profile(s). Every row names the exact SSH identity to be created or skipped.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Transfer.ColumnServer">Server</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Transfer.ColumnEndpoint">SSH endpoint</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Transfer.ColumnEnvironment">Environment</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Transfer.ColumnAuthentication">Authentication</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Transfer.ColumnResult">Result</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Transfer.AuthPassword">Password</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Transfer.AuthPrivateKey">Private key</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Transfer.AuthSshAgent">SSH agent</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Transfer.AuthKeyboardInteractive">Keyboard interactive</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Transfer.Unlabeled">Unlabeled</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Transfer.StatePending">Pending</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Transfer.StateImported">Imported</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Transfer.StateDuplicate">Duplicate — skipped</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Transfer.StateFailed">Failed</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Transfer.StateCancelled">Cancelled / not started</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Transfer.ImportReviewed">Import reviewed metadata</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Transfer.Cancel">Cancel pending profiles</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Transfer.Close">Close</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Transfer.ImportReady">Review the exact target list and credential-omission warning, then acknowledge the review.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Transfer.ReviewRequired">Acknowledge the exact target list and credential-omission warning before importing.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Transfer.ImportRunning">Importing {0} reviewed profile(s), one entry at a time.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Transfer.ImportCancelling">Cancellation requested. No new profile import will be started.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Transfer.ImportComplete">Import complete: {0} imported, {1} duplicate/skipped, {2} failed, {3} cancelled/not started, {4} total.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Transfer.ImportUnexpectedFailure">The import coordinator failed before all per-entry results could be completed.</sys:String>
+</ResourceDictionary>
