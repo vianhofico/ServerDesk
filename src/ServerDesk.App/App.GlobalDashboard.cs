@@ -19,6 +19,9 @@ public partial class App
         var refreshService = new MultiServerDashboardRefreshService(
             provider.GetRequiredService<IServerDashboardService>(),
             MultiServerDashboardRefreshOptions.Default);
+        var transferService = new ProfileMetadataTransferService(
+            provider.GetRequiredService<IProfileRepository>(),
+            provider.GetRequiredService<IServerProfileOrganizationRepository>());
         var window = new GlobalDashboardWindow(
             refreshService,
             provider.GetRequiredService<IServerProfileOrganizationService>(),
@@ -27,6 +30,7 @@ public partial class App
         {
             Owner = owner,
         };
+        window.InitializeProfileTransfer(transferService);
         window.Show();
     }
 }

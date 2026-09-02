@@ -13,6 +13,7 @@ public partial class GlobalDashboardWindow
         RefreshSelectedButton.IsEnabled = available && selectedCount >= 1;
         BulkMetadataButton.IsEnabled = available && selectedCount >= 1;
         CompareButton.IsEnabled = available && selectedCount >= 2;
+        UpdateTransferButtons();
     }
 
     private async void RefreshSelectedOnClick(object sender, RoutedEventArgs e)

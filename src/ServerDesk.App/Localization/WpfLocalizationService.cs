@@ -41,6 +41,7 @@ public sealed class WpfLocalizationService : ILocalizationService
         "DatabaseRestores",
         "GlobalDashboard",
         "BulkOperations",
+        "ProfileTransfer",
     ];
     private readonly ISystemCultureDetector _systemCultureDetector;
 
