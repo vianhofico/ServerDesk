@@ -64,8 +64,10 @@ public sealed class BulkProfileMetadataMutationTests
             },
             TestContext.Current.CancellationToken);
 
-        var failure = Assert.Single(updates.Where(update =>
-            update.ServerProfileId == failedId && update.State == BulkProfileMetadataUpdateState.Failed));
+        var failure = Assert.Single(
+            updates,
+            update => update.ServerProfileId == failedId &&
+                update.State == BulkProfileMetadataUpdateState.Failed);
         Assert.Equal(nameof(InvalidOperationException), failure.FailureKind);
         Assert.DoesNotContain("sensitive", failure.FailureKind, StringComparison.OrdinalIgnoreCase);
         var succeeded = await fake.GetAsync(succeedingId, TestContext.Current.CancellationToken);
