@@ -34,7 +34,10 @@ public partial class GlobalDashboardWindow
         var inputs = selectedRows
             .Select(row => new MultiServerComparisonInput(
                 row.Profile,
-                _refreshService.TryGetCachedSnapshot(row.Profile.Id, out var snapshot) ? snapshot : null))
+                row.HasAvailableSnapshot &&
+                _refreshService.TryGetCachedSnapshot(row.Profile.Id, out var snapshot)
+                    ? snapshot
+                    : null))
             .ToArray();
         var comparison = _comparisonService.Compare(inputs);
         var window = new ServerComparisonWindow(comparison, _localization)
