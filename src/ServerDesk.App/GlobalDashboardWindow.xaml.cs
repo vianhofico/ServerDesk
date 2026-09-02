@@ -60,8 +60,6 @@ public partial class GlobalDashboardWindow : Window
         _localization.LanguageChanged -= LocalizationOnLanguageChanged;
         _profileLoadCancellation?.Cancel();
         _refreshCancellation?.Cancel();
-        _profileLoadCancellation?.Dispose();
-        _refreshCancellation?.Dispose();
         _profileLoadCancellation = null;
         _refreshCancellation = null;
     }
@@ -105,7 +103,6 @@ public partial class GlobalDashboardWindow : Window
         }
 
         _profileLoadCancellation?.Cancel();
-        _profileLoadCancellation?.Dispose();
         var cancellation = new CancellationTokenSource();
         _profileLoadCancellation = cancellation;
         _isLoading = true;
@@ -187,7 +184,6 @@ public partial class GlobalDashboardWindow : Window
         }
 
         _refreshCancellation?.Cancel();
-        _refreshCancellation?.Dispose();
         var cancellation = new CancellationTokenSource();
         _refreshCancellation = cancellation;
         _isRefreshing = true;
@@ -206,7 +202,7 @@ public partial class GlobalDashboardWindow : Window
         {
             await _refreshService.RefreshAsync(
                 targets,
-                update => PublishUpdateAsync(update, cancellation),
+                update => PublishUpdateAsync(update, cancellation.Token),
                 cancellation.Token).ConfigureAwait(true);
 
             if (!cancellation.IsCancellationRequested && ReferenceEquals(_refreshCancellation, cancellation))
