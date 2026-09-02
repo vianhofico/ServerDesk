@@ -1,0 +1,41 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Bulk.RefreshSelected">Refresh selected</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Bulk.MetadataAction">Bulk metadata</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Bulk.Busy">Bulk actions are unavailable while profiles or health snapshots are updating.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Bulk.SelectTarget">Select at least one visible server first.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Bulk.RefreshingSelected">Refreshing {0} connected server(s) out of {1} selected target(s). Disconnected targets are not probed.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Bulk.RefreshSelectedComplete">Selected refresh complete: {0} snapshot(s), {1} failed, {2} disconnected, {3} target(s).</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Bulk.WindowTitle">Reviewed bulk metadata</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Bulk.Title">Reviewed bulk metadata mutation</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Bulk.Subtitle">Only local tags and favorite state can be changed here. No SSH command or remote destructive API is reachable from this surface.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Bulk.TargetSummary">Review all {0} exact target(s) below before applying the mutation.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Bulk.Operation">Operation</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Bulk.Tag">Tag</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Bulk.OperationAddTag">Add tag</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Bulk.OperationRemoveTag">Remove tag</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Bulk.OperationMarkFavorite">Mark favorite</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Bulk.OperationUnmarkFavorite">Unmark favorite</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Bulk.OperationSummary">Exact operation: {0}. This changes local profile metadata only.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Bulk.OperationSummaryTag">Exact operation: {0} “{1}”. This changes local profile metadata only.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Bulk.ReviewAcknowledgement">I reviewed the exact target list and operation above.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Bulk.ColumnServer">Server</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Bulk.ColumnEndpoint">SSH endpoint</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Bulk.ColumnResult">Result</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Bulk.StatePending">Pending</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Bulk.StateApplying">Applying…</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Bulk.StateSucceeded">Succeeded</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Bulk.StateFailed">Failed</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Bulk.StateCancelled">Cancelled / not started</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Bulk.Apply">Apply reviewed mutation</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Bulk.Cancel">Cancel pending targets</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Bulk.Close">Close</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Bulk.Ready">Choose the exact local metadata operation, review all targets, then acknowledge the review.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Bulk.Running">Applying reviewed local metadata mutation to {0} target(s), one target at a time.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Bulk.Cancelling">Cancellation requested. No new target mutation will be started.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Bulk.Complete">Bulk metadata complete: {0} succeeded, {1} failed, {2} cancelled/not started, {3} target(s).</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Bulk.InvalidDefinition">Enter a tag of 1–32 characters without commas for this operation.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Bulk.ReviewRequired">Acknowledge that you reviewed the exact target list and operation before applying.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Bulk.UnexpectedFailure">The bulk metadata coordinator failed before all per-target results could be completed.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Bulk.Unknown">Unknown</sys:String>
+</ResourceDictionary>
