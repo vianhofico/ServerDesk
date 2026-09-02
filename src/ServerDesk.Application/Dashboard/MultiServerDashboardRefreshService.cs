@@ -120,12 +120,14 @@ public sealed class MultiServerDashboardRefreshService : IMultiServerDashboardRe
             var snapshot = await _dashboardService
                 .GetAsync(target.Profile, cancellationToken)
                 .ConfigureAwait(false);
-            _snapshots[target.Profile.Id] = snapshot;
+            cancellationToken.ThrowIfCancellationRequested();
 
             await publishAsync(new MultiServerDashboardUpdate(
                 target.Profile.Id,
                 MultiServerDashboardUpdateState.Available,
                 snapshot)).ConfigureAwait(false);
+            cancellationToken.ThrowIfCancellationRequested();
+            _snapshots[target.Profile.Id] = snapshot;
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
