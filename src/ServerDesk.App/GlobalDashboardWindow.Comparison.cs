@@ -8,10 +8,8 @@ public partial class GlobalDashboardWindow
 {
     private readonly IMultiServerComparisonService _comparisonService = new MultiServerComparisonService();
 
-    private void ServerGridOnSelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-        CompareButton.IsEnabled = !_isRefreshing && !_isLoading && ServerGrid.SelectedItems.Count >= 2;
-    }
+    private void ServerGridOnSelectionChanged(object sender, SelectionChangedEventArgs e) =>
+        UpdateSelectionButtons();
 
     private void CompareSelectedOnClick(object sender, RoutedEventArgs e)
     {
@@ -26,8 +24,8 @@ public partial class GlobalDashboardWindow
             .ToArray();
         if (selectedRows.Length < 2)
         {
-            CompareButton.IsEnabled = false;
             SetStatus("Loc.GlobalDashboard.CompareRequiresTwo");
+            UpdateSelectionButtons();
             return;
         }
 

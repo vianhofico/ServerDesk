@@ -31,26 +31,38 @@
                            TextWrapping="Wrap"
                            Foreground="{DynamicResource MutedTextBrush}" />
             </StackPanel>
-            <StackPanel Grid.Column="1"
-                        Margin="18,0,0,0"
-                        Orientation="Horizontal"
-                        VerticalAlignment="Top">
+            <WrapPanel Grid.Column="1"
+                       Margin="18,0,0,0"
+                       Orientation="Horizontal"
+                       VerticalAlignment="Top">
                 <Button x:Name="RefreshButton"
                         Padding="14,7"
                         Content="{DynamicResource Loc.GlobalDashboard.Refresh}"
                         Click="RefreshOnClick" />
+                <Button x:Name="RefreshSelectedButton"
+                        Margin="8,0,0,0"
+                        Padding="14,7"
+                        Content="{DynamicResource Loc.Bulk.RefreshSelected}"
+                        IsEnabled="False"
+                        Click="RefreshSelectedOnClick" />
                 <Button x:Name="CompareButton"
                         Margin="8,0,0,0"
                         Padding="14,7"
                         Content="{DynamicResource Loc.GlobalDashboard.CompareSelected}"
                         IsEnabled="False"
                         Click="CompareSelectedOnClick" />
+                <Button x:Name="BulkMetadataButton"
+                        Margin="8,0,0,0"
+                        Padding="14,7"
+                        Content="{DynamicResource Loc.Bulk.MetadataAction}"
+                        IsEnabled="False"
+                        Click="BulkMetadataOnClick" />
                 <Button x:Name="CancelButton"
                         Margin="8,0,0,0"
                         Padding="14,7"
                         Content="{DynamicResource Loc.GlobalDashboard.Cancel}"
                         Click="CancelOnClick" />
-            </StackPanel>
+            </WrapPanel>
         </Grid>
 
         <Border Grid.Row="1"

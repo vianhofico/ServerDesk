@@ -1,0 +1,41 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Bulk.RefreshSelected">Làm mới đã chọn</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Bulk.MetadataAction">Metadata hàng loạt</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Bulk.Busy">Không thể thao tác hàng loạt khi hồ sơ hoặc ảnh chụp sức khỏe đang được cập nhật.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Bulk.SelectTarget">Hãy chọn ít nhất một máy chủ đang hiển thị.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Bulk.RefreshingSelected">Đang làm mới {0} máy chủ đã kết nối trong {1} đích đã chọn. Các đích mất kết nối không bị thăm dò.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Bulk.RefreshSelectedComplete">Làm mới đã chọn xong: {0} ảnh chụp, {1} lỗi, {2} mất kết nối, tổng {3} đích.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Bulk.WindowTitle">Metadata hàng loạt đã duyệt</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Bulk.Title">Thay đổi metadata hàng loạt có bước duyệt</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Bulk.Subtitle">Màn hình này chỉ thay đổi thẻ và trạng thái yêu thích cục bộ. Không thể gọi lệnh SSH hoặc API phá hủy từ xa từ đây.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Bulk.TargetSummary">Hãy kiểm tra chính xác toàn bộ {0} đích bên dưới trước khi áp dụng thay đổi.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Bulk.Operation">Thao tác</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Bulk.Tag">Thẻ</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Bulk.OperationAddTag">Thêm thẻ</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Bulk.OperationRemoveTag">Xóa thẻ</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Bulk.OperationMarkFavorite">Đánh dấu yêu thích</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Bulk.OperationUnmarkFavorite">Bỏ yêu thích</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Bulk.OperationSummary">Thao tác chính xác: {0}. Chỉ metadata hồ sơ cục bộ bị thay đổi.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Bulk.OperationSummaryTag">Thao tác chính xác: {0} “{1}”. Chỉ metadata hồ sơ cục bộ bị thay đổi.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Bulk.ReviewAcknowledgement">Tôi đã kiểm tra chính xác danh sách đích và thao tác ở trên.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Bulk.ColumnServer">Máy chủ</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Bulk.ColumnEndpoint">Điểm cuối SSH</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Bulk.ColumnResult">Kết quả</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Bulk.StatePending">Đang chờ</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Bulk.StateApplying">Đang áp dụng…</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Bulk.StateSucceeded">Thành công</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Bulk.StateFailed">Thất bại</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Bulk.StateCancelled">Đã hủy / chưa bắt đầu</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Bulk.Apply">Áp dụng thay đổi đã duyệt</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Bulk.Cancel">Hủy các đích còn chờ</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Bulk.Close">Đóng</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Bulk.Ready">Chọn chính xác thay đổi metadata cục bộ, kiểm tra mọi đích rồi xác nhận đã duyệt.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Bulk.Running">Đang áp dụng thay đổi metadata cục bộ đã duyệt cho {0} đích, lần lượt từng đích.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Bulk.Cancelling">Đã yêu cầu hủy. Sẽ không bắt đầu thay đổi trên đích mới.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Bulk.Complete">Metadata hàng loạt hoàn tất: {0} thành công, {1} thất bại, {2} đã hủy/chưa bắt đầu, tổng {3} đích.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Bulk.InvalidDefinition">Với thao tác này, hãy nhập thẻ dài 1–32 ký tự và không chứa dấu phẩy.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Bulk.ReviewRequired">Phải xác nhận rằng bạn đã kiểm tra chính xác danh sách đích và thao tác trước khi áp dụng.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Bulk.UnexpectedFailure">Bộ điều phối metadata hàng loạt gặp lỗi trước khi có thể hoàn tất toàn bộ kết quả theo từng đích.</sys:String>
+    <sys:String xmlns:sys="clr-namespace:System;assembly=System.Runtime" x:Key="Loc.Bulk.Unknown">Không xác định</sys:String>
+</ResourceDictionary>
