@@ -31,6 +31,37 @@ public sealed class MultiServerDashboardSnapshotCacheTests
         Assert.False(service.TryGetCachedSnapshot(profile.Id, out _));
     }
 
+    [Fact]
+    public async Task CancellationAfterAvailablePublishDoesNotLeaveSnapshotCached()
+    {
+        var profile = ServerProfile.Create("server", "host.test", 22, "ops");
+        var snapshot = CreateSnapshot(profile);
+        var service = new MultiServerDashboardRefreshService(
+            new StubDashboardService(snapshot),
+            MultiServerDashboardRefreshOptions.Default);
+        using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(
+            TestContext.Current.CancellationToken);
+        var updates = new List<MultiServerDashboardUpdateState>();
+
+        await service.RefreshAsync(
+            [new MultiServerDashboardTarget(profile, true)],
+            update =>
+            {
+                updates.Add(update.State);
+                if (update.State == MultiServerDashboardUpdateState.Available)
+                {
+                    cancellation.Cancel();
+                }
+
+                return ValueTask.CompletedTask;
+            },
+            cancellation.Token);
+
+        Assert.Contains(MultiServerDashboardUpdateState.Available, updates);
+        Assert.Contains(MultiServerDashboardUpdateState.Cancelled, updates);
+        Assert.False(service.TryGetCachedSnapshot(profile.Id, out _));
+    }
+
     private static ServerDashboardSnapshot CreateSnapshot(ServerProfile profile) =>
         new(
             profile.Id,
