@@ -67,9 +67,10 @@ src/
   ServerDesk.App/                       # WPF client
   ServerDesk.Domain/                    # domain contracts/models
   ServerDesk.Application/               # use cases and transport-neutral ports
-  ServerDesk.Infrastructure/            # local persistence/administration infrastructure
+  ServerDesk.Infrastructure.Persistence/# SQLite/local persistence
   ServerDesk.Infrastructure.Ssh/        # SSH/SFTP/PTY/routing/agent transport
   ServerDesk.Infrastructure.Databases/  # certified database adapters
+  ServerDesk.Platform.Windows/          # Windows-specific platform/secrets integration
   ServerDesk.Agent.Contracts/           # Protobuf contracts
   ServerDesk.Agent/                     # optional Linux agent host
 
