@@ -77,7 +77,7 @@ public static class AgentLifecycleRemoteLayout
 {
     public const int AgentPort = 41371;
     public const string StagingRoot = AgentLifecyclePlanner.CacheDirectory + "/staging";
-    public const string RollbackBinaryPath = AgentLifecyclePlanner.BinaryPath + ".previous";
+    public const string RollbackBinaryPath = AgentLifecyclePlanner.CacheDirectory + "/serverdesk-agent.previous";
 
     public static RemotePath GetStagingDirectory(Guid planId)
     {
@@ -110,7 +110,6 @@ public static class AgentSystemdUnitDefinition
         "WorkingDirectory=/var/lib/serverdesk-agent\n" +
         "DynamicUser=yes\n" +
         "StateDirectory=serverdesk-agent\n" +
-        "CacheDirectory=serverdesk-agent\n" +
         "UMask=0077\n" +
         "NoNewPrivileges=true\n" +
         "PrivateTmp=true\n" +
