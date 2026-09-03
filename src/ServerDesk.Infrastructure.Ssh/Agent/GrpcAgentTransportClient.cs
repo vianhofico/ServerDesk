@@ -4,10 +4,11 @@ using ServerDesk.Agent.Contracts.V1;
 using ServerDesk.Application.Agent;
 using ApplicationCapability = ServerDesk.Application.Agent.AgentCapability;
 using WireCapability = ServerDesk.Agent.Contracts.V1.AgentCapability;
+using WireMetricsSample = ServerDesk.Agent.Contracts.V1.MetricsSample;
 
 namespace ServerDesk.Infrastructure.Ssh.Agent;
 
-public sealed class GrpcAgentTransportClient : IAgentTransportClient
+public sealed class GrpcAgentTransportClient : IAgentTransportClient, IAgentMetricsStreamClient
 {
     private readonly GrpcChannel _channel;
     private readonly AgentControl.AgentControlClient _client;
@@ -107,6 +108,18 @@ public sealed class GrpcAgentTransportClient : IAgentTransportClient
         }
     }
 
+    public IAsyncEnumerable<AgentMetricSample> StreamMetricsAsync(
+        AgentMetricsStreamOptions options,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+        options.Validate();
+        return new GrpcMetricsEnumerable(
+            _client,
+            checked((uint)options.SamplingInterval.TotalMilliseconds),
+            cancellationToken);
+    }
+
     public ValueTask DisposeAsync()
     {
         _channel.Dispose();
@@ -141,6 +154,48 @@ public sealed class GrpcAgentTransportClient : IAgentTransportClient
             capabilities,
             NullIfWhiteSpace(response.Platform),
             NullIfWhiteSpace(response.Architecture));
+    }
+
+    internal static AgentMetricSample MapMetric(WireMetricsSample sample)
+    {
+        ArgumentNullException.ThrowIfNull(sample);
+        try
+        {
+            ValidatePercent(sample.CpuUtilizationPercent, "CPU utilization");
+            ValidatePercent(sample.MemoryUsedPercent, "memory utilization");
+            if (sample.MemoryTotalBytes == 0 ||
+                sample.MemoryAvailableBytes > sample.MemoryTotalBytes ||
+                sample.MemoryUsedBytes != sample.MemoryTotalBytes - sample.MemoryAvailableBytes)
+            {
+                throw new InvalidOperationException("Agent memory metrics are inconsistent.");
+            }
+
+            ValidateLoad(sample.LoadOneMinute);
+            ValidateLoad(sample.LoadFiveMinutes);
+            ValidateLoad(sample.LoadFifteenMinutes);
+            return new AgentMetricSample(
+                AgentDataSource.Agent,
+                DateTimeOffset.FromUnixTimeMilliseconds(sample.CapturedUnixMs),
+                sample.CpuUtilizationPercent,
+                checked((long)sample.MemoryTotalBytes),
+                checked((long)sample.MemoryAvailableBytes),
+                checked((long)sample.MemoryUsedBytes),
+                sample.MemoryUsedPercent,
+                sample.LoadOneMinute,
+                sample.LoadFiveMinutes,
+                sample.LoadFifteenMinutes);
+        }
+        catch (AgentTransportException)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            throw new AgentTransportException(
+                AgentConnectionState.Failed,
+                "Agent metrics sample is invalid.",
+                exception);
+        }
     }
 
     internal static AgentTransportException MapRpcException(RpcException exception)
@@ -179,4 +234,95 @@ public sealed class GrpcAgentTransportClient : IAgentTransportClient
 
     private static string? NullIfWhiteSpace(string? value) =>
         string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private static void ValidatePercent(double value, string name)
+    {
+        if (!double.IsFinite(value) || value is < 0d or > 100d)
+        {
+            throw new InvalidOperationException($"Agent {name} is outside the valid range.");
+        }
+    }
+
+    private static void ValidateLoad(double value)
+    {
+        if (!double.IsFinite(value) || value < 0d)
+        {
+            throw new InvalidOperationException("Agent load metric is invalid.");
+        }
+    }
+
+    private sealed class GrpcMetricsEnumerable : IAsyncEnumerable<AgentMetricSample>
+    {
+        private readonly AgentControl.AgentControlClient _client;
+        private readonly uint _intervalMs;
+        private readonly CancellationToken _requestCancellation;
+
+        public GrpcMetricsEnumerable(
+            AgentControl.AgentControlClient client,
+            uint intervalMs,
+            CancellationToken requestCancellation)
+        {
+            _client = client;
+            _intervalMs = intervalMs;
+            _requestCancellation = requestCancellation;
+        }
+
+        public IAsyncEnumerator<AgentMetricSample> GetAsyncEnumerator(
+            CancellationToken cancellationToken = default) =>
+            new GrpcMetricsEnumerator(_client, _intervalMs, _requestCancellation, cancellationToken);
+    }
+
+    private sealed class GrpcMetricsEnumerator : IAsyncEnumerator<AgentMetricSample>
+    {
+        private readonly CancellationTokenSource _cancellation;
+        private readonly AsyncServerStreamingCall<WireMetricsSample> _call;
+
+        public GrpcMetricsEnumerator(
+            AgentControl.AgentControlClient client,
+            uint intervalMs,
+            CancellationToken requestCancellation,
+            CancellationToken enumerationCancellation)
+        {
+            _cancellation = CancellationTokenSource.CreateLinkedTokenSource(
+                requestCancellation,
+                enumerationCancellation);
+            _call = client.StreamMetrics(
+                new StreamMetricsRequest { IntervalMs = intervalMs },
+                cancellationToken: _cancellation.Token);
+        }
+
+        public AgentMetricSample Current { get; private set; } = default!;
+
+        public async ValueTask<bool> MoveNextAsync()
+        {
+            try
+            {
+                if (!await _call.ResponseStream.MoveNext(_cancellation.Token).ConfigureAwait(false))
+                {
+                    return false;
+                }
+
+                Current = MapMetric(_call.ResponseStream.Current);
+                return true;
+            }
+            catch (RpcException exception) when (_cancellation.IsCancellationRequested)
+            {
+                throw new OperationCanceledException(
+                    "Agent metrics stream was cancelled.",
+                    exception,
+                    _cancellation.Token);
+            }
+            catch (RpcException exception)
+            {
+                throw MapRpcException(exception);
+            }
+        }
+
+        public ValueTask DisposeAsync()
+        {
+            _call.Dispose();
+            _cancellation.Dispose();
+            return ValueTask.CompletedTask;
+        }
+    }
 }

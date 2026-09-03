@@ -5,11 +5,19 @@ namespace ServerDesk.Agent;
 
 public sealed class AgentControlService : AgentControl.AgentControlBase
 {
-    private readonly AgentRuntimeInfo _runtimeInfo;
+    internal static TimeSpan MinimumMetricsInterval { get; } = TimeSpan.FromMilliseconds(250);
+    internal static TimeSpan MaximumMetricsInterval { get; } = TimeSpan.FromSeconds(10);
+    internal static TimeSpan DefaultMetricsInterval { get; } = TimeSpan.FromSeconds(1);
 
-    public AgentControlService(AgentRuntimeInfo runtimeInfo)
+    private readonly AgentRuntimeInfo _runtimeInfo;
+    private readonly IAgentMetricsSampler _metricsSampler;
+
+    public AgentControlService(
+        AgentRuntimeInfo runtimeInfo,
+        IAgentMetricsSampler metricsSampler)
     {
         _runtimeInfo = runtimeInfo ?? throw new ArgumentNullException(nameof(runtimeInfo));
+        _metricsSampler = metricsSampler ?? throw new ArgumentNullException(nameof(metricsSampler));
     }
 
     public override Task<NegotiateResponse> Negotiate(
@@ -29,7 +37,11 @@ public sealed class AgentControlService : AgentControl.AgentControlBase
             Architecture = _runtimeInfo.Architecture,
         };
 
-        // Streaming capabilities are introduced by later M8 slices only after their bounded APIs exist.
+        if (request.RequestedCapabilities.Contains((AgentCapability)1))
+        {
+            response.Capabilities.Add((AgentCapability)1);
+        }
+
         return Task.FromResult(response);
     }
 
@@ -45,4 +57,70 @@ public sealed class AgentControlService : AgentControl.AgentControlBase
             StartedUnixMs = _runtimeInfo.StartedAtUtc.ToUnixTimeMilliseconds(),
         });
     }
+
+    public override Task StreamMetrics(
+        StreamMetricsRequest request,
+        IServerStreamWriter<MetricsSample> responseStream,
+        ServerCallContext context) =>
+        StreamMetricsCoreAsync(request, responseStream, context.CancellationToken);
+
+    internal async Task StreamMetricsCoreAsync(
+        StreamMetricsRequest request,
+        IServerStreamWriter<MetricsSample> responseStream,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentNullException.ThrowIfNull(responseStream);
+        var interval = ResolveMetricsInterval(request.IntervalMs);
+        while (!cancellationToken.IsCancellationRequested)
+        {
+            AgentMetricsReading reading;
+            try
+            {
+                reading = await _metricsSampler.CaptureAsync(interval, cancellationToken).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                return;
+            }
+            catch
+            {
+                throw new RpcException(new Status(StatusCode.Internal, "Metrics sampling failed."));
+            }
+
+            await responseStream.WriteAsync(MapMetrics(reading)).ConfigureAwait(false);
+        }
+    }
+
+    internal static TimeSpan ResolveMetricsInterval(uint intervalMs)
+    {
+        if (intervalMs == 0)
+        {
+            return DefaultMetricsInterval;
+        }
+
+        var interval = TimeSpan.FromMilliseconds(intervalMs);
+        if (interval < MinimumMetricsInterval || interval > MaximumMetricsInterval)
+        {
+            throw new RpcException(new Status(
+                StatusCode.InvalidArgument,
+                "Metrics interval must be between 250 and 10000 milliseconds."));
+        }
+
+        return interval;
+    }
+
+    private static MetricsSample MapMetrics(AgentMetricsReading reading) =>
+        new()
+        {
+            CapturedUnixMs = reading.CapturedAtUtc.ToUnixTimeMilliseconds(),
+            CpuUtilizationPercent = reading.CpuUtilizationPercent,
+            MemoryTotalBytes = checked((ulong)reading.MemoryTotalBytes),
+            MemoryAvailableBytes = checked((ulong)reading.MemoryAvailableBytes),
+            MemoryUsedBytes = checked((ulong)reading.MemoryUsedBytes),
+            MemoryUsedPercent = reading.MemoryUsedPercent,
+            LoadOneMinute = reading.LoadOneMinute,
+            LoadFiveMinutes = reading.LoadFiveMinutes,
+            LoadFifteenMinutes = reading.LoadFifteenMinutes,
+        };
 }
