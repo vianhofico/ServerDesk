@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: write
+  actions: read
 
 jobs:
   release:
@@ -16,17 +17,13 @@ jobs:
       (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
       (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main')
     runs-on: windows-latest
+    timeout-minutes: 15
 
     steps:
       - name: Checkout certified main commit
         uses: actions/checkout@v6
         with:
           ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
-
-      - name: Setup .NET 10
-        uses: actions/setup-dotnet@v5
-        with:
-          dotnet-version: 10.0.x
 
       - name: Resolve release version
         shell: pwsh
@@ -62,12 +59,23 @@ jobs:
                 throw "Release $version already exists but is incomplete; refusing to silently treat it as published."
               }
 
+              $commitUri = "https://api.github.com/repos/$env:GITHUB_REPOSITORY/commits/$version"
+              $commitResponse = Invoke-WebRequest -Uri $commitUri -Headers $headers -Method Get -SkipHttpErrorCheck
+              if ([int]$commitResponse.StatusCode -ne 200) {
+                throw "Existing release tag cannot be resolved. HTTP $($commitResponse.StatusCode)."
+              }
+
+              $tagCommit = ($commitResponse.Content | ConvertFrom-Json).sha
+              if ($tagCommit -ne $releaseSha) {
+                throw "Existing release tag resolves to $tagCommit instead of certified main $releaseSha."
+              }
+
               "SKIP_RELEASE=true" >> $env:GITHUB_ENV
-              Write-Host "Release $version already exists with required assets; publication is idempotently skipped."
+              Write-Host "Release $version already exists with required assets on certified SHA; publication is idempotently skipped."
             }
             404 {
               "SKIP_RELEASE=false" >> $env:GITHUB_ENV
-              Write-Host "Release $version does not exist yet; continuing with publication."
+              Write-Host "Release $version does not exist yet; resolving smoke-tested artifact."
             }
             default {
               throw "Unable to determine release state for $version. GitHub API returned HTTP $($response.StatusCode)."
@@ -76,33 +84,121 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
 
-      - name: Publish ServerDesk win-x64
+      - name: Resolve exact successful release smoke run
         if: env.SKIP_RELEASE != 'true'
         shell: pwsh
         run: |
-          $publishDir = Join-Path $env:RUNNER_TEMP 'serverdesk-publish'
-          ./scripts/publish-windows-release.ps1 -OutputDirectory $publishDir
-
-      - name: Package and checksum
-        if: env.SKIP_RELEASE != 'true'
-        shell: pwsh
-        run: |
-          $publishDir = Join-Path $env:RUNNER_TEMP 'serverdesk-publish'
-          $assetName = "ServerDesk-$env:VERSION-win-x64.zip"
-          $assetPath = Join-Path $env:RUNNER_TEMP $assetName
-          $checksumPath = Join-Path $env:RUNNER_TEMP 'SHA256SUMS.txt'
-
-          Compress-Archive -Path (Join-Path $publishDir '*') -DestinationPath $assetPath -Force
-          if (-not (Test-Path $assetPath)) {
-            throw "Release ZIP was not created."
+          $headers = @{
+            Authorization = "Bearer $env:GH_TOKEN"
+            Accept = "application/vnd.github+json"
+            "X-GitHub-Api-Version" = "2022-11-28"
           }
 
-          $hash = (Get-FileHash -Algorithm SHA256 $assetPath).Hash.ToLowerInvariant()
-          "$hash  $assetName" | Set-Content -Encoding ascii $checksumPath
+          $runsUri = "https://api.github.com/repos/$env:GITHUB_REPOSITORY/actions/workflows/release-smoke.yml/runs?branch=main&event=push&head_sha=$env:RELEASE_SHA&per_page=20"
+          $selectedRun = $null
 
-          "ASSET_NAME=$assetName" >> $env:GITHUB_ENV
+          for ($attempt = 1; $attempt -le 12; $attempt++) {
+            $response = Invoke-WebRequest -Uri $runsUri -Headers $headers -Method Get -SkipHttpErrorCheck
+            if ([int]$response.StatusCode -ne 200) {
+              throw "Unable to query Release Publish Smoke runs. HTTP $($response.StatusCode)."
+            }
+
+            $runs = @((($response.Content | ConvertFrom-Json).workflow_runs) | Where-Object {
+              $_.head_sha -eq $env:RELEASE_SHA -and $_.event -eq 'push'
+            })
+
+            $selectedRun = $runs | Where-Object {
+              $_.status -eq 'completed' -and $_.conclusion -eq 'success'
+            } | Sort-Object run_number -Descending | Select-Object -First 1
+
+            if ($null -ne $selectedRun) {
+              break
+            }
+
+            $failedRun = $runs | Where-Object {
+              $_.status -eq 'completed' -and $_.conclusion -notin @('success', 'skipped')
+            } | Sort-Object run_number -Descending | Select-Object -First 1
+            if ($null -ne $failedRun) {
+              throw "Release Publish Smoke run $($failedRun.id) failed for certified SHA $env:RELEASE_SHA."
+            }
+
+            if ($attempt -eq 12) {
+              throw "No successful Release Publish Smoke run found for certified SHA $env:RELEASE_SHA."
+            }
+
+            Write-Host "Waiting for Release Publish Smoke on $env:RELEASE_SHA (attempt $attempt/12)..."
+            Start-Sleep -Seconds 10
+          }
+
+          "SMOKE_RUN_ID=$($selectedRun.id)" >> $env:GITHUB_ENV
+          Write-Host "Using Release Publish Smoke run $($selectedRun.id) for $env:RELEASE_SHA"
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Download verified release candidate
+        if: env.SKIP_RELEASE != 'true'
+        shell: pwsh
+        run: |
+          $candidateDir = Join-Path $env:RUNNER_TEMP 'serverdesk-release-candidate'
+          New-Item -ItemType Directory -Force -Path $candidateDir | Out-Null
+
+          gh run download $env:SMOKE_RUN_ID `
+            --repo $env:GITHUB_REPOSITORY `
+            --name serverdesk-release-candidate `
+            --dir $candidateDir
+          if ($LASTEXITCODE -ne 0) {
+            throw "Unable to download verified release candidate from smoke run $env:SMOKE_RUN_ID."
+          }
+
+          "CANDIDATE_DIR=$candidateDir" >> $env:GITHUB_ENV
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Verify release candidate provenance and checksum
+        if: env.SKIP_RELEASE != 'true'
+        shell: pwsh
+        run: |
+          $candidateDir = $env:CANDIDATE_DIR
+          $expectedAssetName = "ServerDesk-$env:VERSION-win-x64.zip"
+          $assetPath = Join-Path $candidateDir $expectedAssetName
+          $checksumPath = Join-Path $candidateDir 'SHA256SUMS.txt'
+          $shaPath = Join-Path $candidateDir 'RELEASE_SHA.txt'
+          $versionPath = Join-Path $candidateDir 'RELEASE_VERSION.txt'
+
+          foreach ($requiredPath in @($assetPath, $checksumPath, $shaPath, $versionPath)) {
+            if (-not (Test-Path $requiredPath)) {
+              throw "Verified release candidate is missing $requiredPath."
+            }
+          }
+
+          $candidateSha = (Get-Content $shaPath -Raw).Trim()
+          $candidateVersion = (Get-Content $versionPath -Raw).Trim()
+          if ($candidateSha -ne $env:RELEASE_SHA) {
+            throw "Release candidate SHA $candidateSha does not match certified main $env:RELEASE_SHA."
+          }
+          if ($candidateVersion -ne $env:VERSION) {
+            throw "Release candidate version $candidateVersion does not match expected $env:VERSION."
+          }
+
+          $checksumLine = (Get-Content $checksumPath -Raw).Trim()
+          if ($checksumLine -notmatch '^([0-9a-fA-F]{64})\s{2}(.+)$') {
+            throw "SHA256SUMS.txt has an invalid format."
+          }
+
+          $expectedHash = $Matches[1].ToLowerInvariant()
+          $checksumAssetName = $Matches[2]
+          if ($checksumAssetName -ne $expectedAssetName) {
+            throw "Checksum references $checksumAssetName instead of $expectedAssetName."
+          }
+
+          $actualHash = (Get-FileHash -Algorithm SHA256 $assetPath).Hash.ToLowerInvariant()
+          if ($actualHash -ne $expectedHash) {
+            throw "Release candidate checksum mismatch: expected $expectedHash, observed $actualHash."
+          }
+
           "ASSET_PATH=$assetPath" >> $env:GITHUB_ENV
           "CHECKSUM_PATH=$checksumPath" >> $env:GITHUB_ENV
+          Write-Host "Verified release candidate provenance and SHA-256 for $expectedAssetName"
 
       - name: Create GitHub release
         if: env.SKIP_RELEASE != 'true'
@@ -120,6 +216,9 @@ jobs:
             --notes-file $notes `
             $env:ASSET_PATH `
             $env:CHECKSUM_PATH
+          if ($LASTEXITCODE -ne 0) {
+            throw "GitHub release creation failed with exit code $LASTEXITCODE."
+          }
         env:
           GH_TOKEN: ${{ github.token }}
 
@@ -167,12 +266,3 @@ jobs:
           Write-Host "Verified $env:VERSION at $env:RELEASE_SHA with assets: $($assetNames -join ', ')"
         env:
           GH_TOKEN: ${{ github.token }}
-
-      - name: Upload release diagnostics on failure
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: release-publish-diagnostics
-          path: artifacts/release-publish/*.binlog
-          if-no-files-found: ignore
-          retention-days: 7
