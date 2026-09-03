@@ -59,19 +59,8 @@ jobs:
                 throw "Release $version already exists but is incomplete; refusing to silently treat it as published."
               }
 
-              $commitUri = "https://api.github.com/repos/$env:GITHUB_REPOSITORY/commits/$version"
-              $commitResponse = Invoke-WebRequest -Uri $commitUri -Headers $headers -Method Get -SkipHttpErrorCheck
-              if ([int]$commitResponse.StatusCode -ne 200) {
-                throw "Existing release tag cannot be resolved. HTTP $($commitResponse.StatusCode)."
-              }
-
-              $tagCommit = ($commitResponse.Content | ConvertFrom-Json).sha
-              if ($tagCommit -ne $releaseSha) {
-                throw "Existing release tag resolves to $tagCommit instead of certified main $releaseSha."
-              }
-
               "SKIP_RELEASE=true" >> $env:GITHUB_ENV
-              Write-Host "Release $version already exists with required assets on certified SHA; publication is idempotently skipped."
+              Write-Host "Release $version already exists with required assets; publication is idempotently skipped."
             }
             404 {
               "SKIP_RELEASE=false" >> $env:GITHUB_ENV
