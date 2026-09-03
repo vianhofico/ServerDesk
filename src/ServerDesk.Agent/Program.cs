@@ -27,6 +27,7 @@ builder.Services.AddSingleton(AgentRuntimeInfo.Create());
 builder.Services.AddSingleton<IAgentMetricsSampler, LinuxMetricsSampler>();
 builder.Services.AddSingleton<IAgentProcessSnapshotReader, LinuxProcessSnapshotReader>();
 builder.Services.AddSingleton<IAgentServiceSnapshotReader, SystemdServiceSnapshotReader>();
+builder.Services.AddSingleton<IAgentDockerEventReader, DockerCliEventReader>();
 
 var app = builder.Build();
 app.MapGrpcService<AgentControlService>();

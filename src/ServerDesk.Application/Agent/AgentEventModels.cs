@@ -35,6 +35,50 @@ public enum AgentServiceState
     Failed,
 }
 
+public enum AgentDockerObjectType
+{
+    Unknown,
+    Container,
+    Image,
+    Volume,
+    Network,
+    Daemon,
+}
+
+public enum AgentDockerEventKind
+{
+    Unknown,
+    Create,
+    Start,
+    Stop,
+    Die,
+    Destroy,
+    Pause,
+    Unpause,
+    Restart,
+    Rename,
+    HealthStatus,
+    Attach,
+    Detach,
+    Kill,
+    Oom,
+    Update,
+    Connect,
+    Disconnect,
+    Pull,
+    Push,
+    Tag,
+    Untag,
+    Delete,
+    Mount,
+    Unmount,
+    Reload,
+    Prune,
+    ExecCreated,
+    ExecStarted,
+    ExecDied,
+}
+
 public sealed record AgentProcessEvent(
     AgentProcessEventKind Kind,
     int ProcessId,
@@ -45,6 +89,12 @@ public sealed record AgentServiceEvent(
     string Unit,
     AgentServiceState PreviousState,
     AgentServiceState CurrentState,
+    DateTimeOffset CapturedAtUtc);
+
+public sealed record AgentDockerEvent(
+    AgentDockerObjectType ObjectType,
+    AgentDockerEventKind Kind,
+    string? ObjectId,
     DateTimeOffset CapturedAtUtc);
 
 public interface IAgentProcessEventStreamClient
@@ -61,6 +111,12 @@ public interface IAgentServiceEventStreamClient
         CancellationToken cancellationToken = default);
 }
 
+public interface IAgentDockerEventStreamClient
+{
+    IAsyncEnumerable<AgentDockerEvent> StreamDockerEventsAsync(
+        CancellationToken cancellationToken = default);
+}
+
 public sealed record AgentProcessEventSourceSelection(
     AgentConnectionState State,
     string? Detail,
@@ -70,6 +126,11 @@ public sealed record AgentServiceEventSourceSelection(
     AgentConnectionState State,
     string? Detail,
     IAsyncEnumerable<AgentServiceEvent>? Stream);
+
+public sealed record AgentDockerEventSourceSelection(
+    AgentConnectionState State,
+    string? Detail,
+    IAsyncEnumerable<AgentDockerEvent>? Stream);
 
 public sealed class AgentEventSourceService
 {
@@ -112,6 +173,20 @@ public sealed class AgentEventSourceService
         return state == AgentConnectionState.Available
             ? new AgentServiceEventSourceSelection(state, null, eventClient.StreamServiceEventsAsync(options, cancellationToken))
             : new AgentServiceEventSourceSelection(state, Detail("service", state), null);
+    }
+
+    public async ValueTask<AgentDockerEventSourceSelection> SelectDockerEventsAsync(
+        IAgentTransportClient transportClient,
+        IAgentDockerEventStreamClient eventClient,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(transportClient);
+        ArgumentNullException.ThrowIfNull(eventClient);
+        var negotiation = await _probeService.NegotiateAsync(transportClient, cancellationToken).ConfigureAwait(false);
+        var state = negotiation.GetCapabilityState(AgentCapability.DockerEvents);
+        return state == AgentConnectionState.Available
+            ? new AgentDockerEventSourceSelection(state, null, eventClient.StreamDockerEventsAsync(cancellationToken))
+            : new AgentDockerEventSourceSelection(state, Detail("Docker", state), null);
     }
 
     private static string Detail(string stream, AgentConnectionState state) =>
