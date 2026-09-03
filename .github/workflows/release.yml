@@ -1,6 +1,7 @@
 name: Release
 
 on:
+  pull_request:
   workflow_run:
     workflows: ["CI"]
     types: [completed]
@@ -10,21 +11,71 @@ permissions:
   contents: write
 
 jobs:
+  package-smoke:
+    name: Package smoke (win-x64)
+    if: github.event_name == 'pull_request'
+    runs-on: windows-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore win-x64 publish graph
+        shell: pwsh
+        run: |
+          dotnet restore src/ServerDesk.App/ServerDesk.App.csproj `
+            --runtime win-x64 `
+            --disable-parallel `
+            --verbosity normal
+          if ($LASTEXITCODE -ne 0) {
+            throw "RID-specific restore failed with exit code $LASTEXITCODE."
+          }
+
+      - name: Publish ServerDesk win-x64
+        shell: pwsh
+        run: |
+          $publishDir = Join-Path $env:RUNNER_TEMP 'serverdesk-publish-smoke'
+          dotnet publish src/ServerDesk.App/ServerDesk.App.csproj `
+            -c Release `
+            -r win-x64 `
+            --self-contained true `
+            --no-restore `
+            -p:PublishSingleFile=false `
+            -p:DebugType=None `
+            -o $publishDir
+          if ($LASTEXITCODE -ne 0) {
+            throw "win-x64 publish failed with exit code $LASTEXITCODE."
+          }
+
+          $exe = Join-Path $publishDir 'ServerDesk.App.exe'
+          if (-not (Test-Path $exe)) {
+            throw "Published ServerDesk.App.exe was not produced."
+          }
+
+          Write-Host "Release package smoke succeeded: $exe"
+
   release:
     name: Publish Windows release
     if: >-
       (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
       (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main')
     runs-on: windows-latest
+    timeout-minutes: 25
 
     steps:
       - name: Checkout certified main commit
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
 
       - name: Setup .NET 10
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: 10.0.x
 
@@ -76,6 +127,18 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
 
+      - name: Restore win-x64 publish graph
+        if: env.SKIP_RELEASE != 'true'
+        shell: pwsh
+        run: |
+          dotnet restore src/ServerDesk.App/ServerDesk.App.csproj `
+            --runtime win-x64 `
+            --disable-parallel `
+            --verbosity normal
+          if ($LASTEXITCODE -ne 0) {
+            throw "RID-specific restore failed with exit code $LASTEXITCODE."
+          }
+
       - name: Publish ServerDesk win-x64
         if: env.SKIP_RELEASE != 'true'
         shell: pwsh
@@ -85,9 +148,13 @@ jobs:
             -c Release `
             -r win-x64 `
             --self-contained true `
+            --no-restore `
             -p:PublishSingleFile=false `
             -p:DebugType=None `
             -o $publishDir
+          if ($LASTEXITCODE -ne 0) {
+            throw "win-x64 publish failed with exit code $LASTEXITCODE."
+          }
 
           if (-not (Test-Path (Join-Path $publishDir 'ServerDesk.App.exe'))) {
             throw "Published ServerDesk.App.exe was not produced."
@@ -130,6 +197,9 @@ jobs:
             --notes-file $notes `
             $env:ASSET_PATH `
             $env:CHECKSUM_PATH
+          if ($LASTEXITCODE -ne 0) {
+            throw "GitHub release creation failed with exit code $LASTEXITCODE."
+          }
         env:
           GH_TOKEN: ${{ github.token }}
 
