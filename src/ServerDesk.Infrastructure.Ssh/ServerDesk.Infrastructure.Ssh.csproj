@@ -3,10 +3,12 @@
     <TargetFramework>net10.0</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
+    <ProjectReference Include="..\ServerDesk.Agent.Contracts\ServerDesk.Agent.Contracts.csproj" />
     <ProjectReference Include="..\ServerDesk.Application\ServerDesk.Application.csproj" />
     <ProjectReference Include="..\ServerDesk.Domain\ServerDesk.Domain.csproj" />
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="Grpc.Net.Client" Version="2.83.0" />
     <PackageReference Include="SSH.NET" Version="2026.0.0" />
   </ItemGroup>
 </Project>

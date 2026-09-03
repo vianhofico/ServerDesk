@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using ServerDesk.Application.Agent;
 using ServerDesk.Application.HostTrust;
 using ServerDesk.Application.PortForwarding;
 using ServerDesk.Application.RemoteFiles;
@@ -12,6 +13,7 @@ using ServerDesk.Domain.Secrets;
 using ServerDesk.Domain.Security;
 using ServerDesk.Domain.Servers;
 using ServerDesk.Infrastructure.Ssh;
+using ServerDesk.Infrastructure.Ssh.Agent;
 using Xunit;
 
 namespace ServerDesk.Ssh.IntegrationTests;
@@ -59,6 +61,31 @@ public sealed class PortForwardIntegrationTests
         await forward.StopAsync(cancellationToken);
         Assert.Equal(PortForwardSessionState.Stopped, forward.State);
         Assert.Equal(0, forward.BoundPort);
+    }
+
+    [Fact]
+    public async Task EphemeralAgentTunnelReachesRemoteLoopbackWithoutBlockingSftp()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var fixture = CreateFixture();
+        var tunnelFactory = new SshAgentTunnelSessionFactory(fixture.ForwardFactory);
+        await using var tunnel = tunnelFactory.Create(fixture.Profile, HttpPort);
+
+        await tunnel.StartAsync(cancellationToken);
+        var response = await GetHttpAsync(tunnel.LocalPort, cancellationToken);
+
+        await using var fileSystem = fixture.FileSystemFactory.Create(fixture.Profile);
+        await fileSystem.ConnectAsync(cancellationToken);
+        var home = await fileSystem.StatAsync(RemotePath.Parse(Home), cancellationToken);
+
+        Assert.Equal(AgentTunnelState.Active, tunnel.State);
+        Assert.InRange(tunnel.LocalPort, 1, 65535);
+        Assert.Contains("serverdesk-forward-ok", response, StringComparison.Ordinal);
+        Assert.Equal(RemoteFileKind.Directory, home.Kind);
+
+        await tunnel.StopAsync(cancellationToken);
+        Assert.Equal(AgentTunnelState.Stopped, tunnel.State);
+        Assert.Equal(0, tunnel.LocalPort);
     }
 
     [Fact]
