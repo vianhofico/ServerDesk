@@ -19,12 +19,12 @@ jobs:
 
     steps:
       - name: Checkout certified main commit
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
 
       - name: Setup .NET 10
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: 10.0.x
 
@@ -81,17 +81,7 @@ jobs:
         shell: pwsh
         run: |
           $publishDir = Join-Path $env:RUNNER_TEMP 'serverdesk-publish'
-          dotnet publish src/ServerDesk.App/ServerDesk.App.csproj `
-            -c Release `
-            -r win-x64 `
-            --self-contained true `
-            -p:PublishSingleFile=false `
-            -p:DebugType=None `
-            -o $publishDir
-
-          if (-not (Test-Path (Join-Path $publishDir 'ServerDesk.App.exe'))) {
-            throw "Published ServerDesk.App.exe was not produced."
-          }
+          ./scripts/publish-windows-release.ps1 -OutputDirectory $publishDir
 
       - name: Package and checksum
         if: env.SKIP_RELEASE != 'true'
@@ -177,3 +167,12 @@ jobs:
           Write-Host "Verified $env:VERSION at $env:RELEASE_SHA with assets: $($assetNames -join ', ')"
         env:
           GH_TOKEN: ${{ github.token }}
+
+      - name: Upload release diagnostics on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-publish-diagnostics
+          path: artifacts/release-publish/*.binlog
+          if-no-files-found: ignore
+          retention-days: 7
