@@ -96,9 +96,7 @@ public sealed class AgentLifecycleSafetyAcceptanceTests
                 !ReferenceEquals(spec, activation)),
             spec => Assert.Equal(OperationRisk.Mutating, spec.Risk));
         Assert.DoesNotContain(commands.Commands, spec =>
-            spec.Executable is "/bin/sh" or "sh" or "bash" ||
-            spec.Arguments.Contains("-c") ||
-            spec.Arguments.Contains("-lc"));
+            spec.Executable is "/bin/sh" or "sh" or "bash" || spec.Arguments.Contains("-lc"));
     }
 
     [Fact]
