@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using ServerDesk.App.Localization;
 using ServerDesk.App.Presentation;
 using ServerDesk.Application.Abstractions;
+using ServerDesk.Application.Agent;
 using ServerDesk.Application.Audit;
 using ServerDesk.Application.Capabilities;
 using ServerDesk.Application.Dashboard;
@@ -33,6 +34,7 @@ using ServerDesk.Application.Terminal;
 using ServerDesk.Application.Tls;
 using ServerDesk.Infrastructure.Persistence.Sqlite;
 using ServerDesk.Infrastructure.Ssh;
+using ServerDesk.Infrastructure.Ssh.Agent;
 using ServerDesk.Platform.Windows;
 
 namespace ServerDesk.App;
@@ -158,6 +160,9 @@ public partial class App : System.Windows.Application
         services.AddSingleton<IRemoteFileEditorService, GuardedRemoteFileEditorService>();
         services.AddSingleton<IRemoteTerminalSessionFactory, RouteAwareRemoteTerminalSessionFactory>();
         services.AddSingleton<IPortForwardSessionFactory, RouteAwarePortForwardSessionFactory>();
+        services.AddSingleton<IAgentTunnelSessionFactory, SshAgentTunnelSessionFactory>();
+        services.AddSingleton<IAgentTransportClientFactory, GrpcAgentTransportClientFactory>();
+        services.AddSingleton<IAgentLifecycleService, AgentLifecycleService>();
         services.AddSingleton<PortForwardManager>();
         services.AddSingleton(ServerCapabilityOptions.Default);
         services.AddSingleton<IServerCapabilityService, ServerCapabilityService>();
