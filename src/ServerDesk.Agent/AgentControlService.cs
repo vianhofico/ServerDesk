@@ -16,7 +16,9 @@ public sealed class AgentControlService : AgentControl.AgentControlBase
     private readonly IAgentMetricsSampler _metricsSampler;
     private readonly IAgentProcessSnapshotReader _processSnapshotReader;
     private readonly IAgentServiceSnapshotReader _serviceSnapshotReader;
+    private readonly IAgentDockerEventReader? _dockerEventReader;
     private readonly bool _advertiseEventCapabilities;
+    private readonly bool _advertiseDockerCapability;
 
     internal AgentControlService(AgentRuntimeInfo runtimeInfo, IAgentMetricsSampler metricsSampler)
         : this(
@@ -24,7 +26,9 @@ public sealed class AgentControlService : AgentControl.AgentControlBase
             metricsSampler,
             new LinuxProcessSnapshotReader(),
             new SystemdServiceSnapshotReader(),
-            advertiseEventCapabilities: false)
+            dockerEventReader: null,
+            advertiseEventCapabilities: false,
+            advertiseDockerCapability: false)
     {
     }
 
@@ -33,7 +37,31 @@ public sealed class AgentControlService : AgentControl.AgentControlBase
         IAgentMetricsSampler metricsSampler,
         IAgentProcessSnapshotReader processSnapshotReader,
         IAgentServiceSnapshotReader serviceSnapshotReader)
-        : this(runtimeInfo, metricsSampler, processSnapshotReader, serviceSnapshotReader, advertiseEventCapabilities: true)
+        : this(
+            runtimeInfo,
+            metricsSampler,
+            processSnapshotReader,
+            serviceSnapshotReader,
+            dockerEventReader: null,
+            advertiseEventCapabilities: true,
+            advertiseDockerCapability: false)
+    {
+    }
+
+    public AgentControlService(
+        AgentRuntimeInfo runtimeInfo,
+        IAgentMetricsSampler metricsSampler,
+        IAgentProcessSnapshotReader processSnapshotReader,
+        IAgentServiceSnapshotReader serviceSnapshotReader,
+        IAgentDockerEventReader dockerEventReader)
+        : this(
+            runtimeInfo,
+            metricsSampler,
+            processSnapshotReader,
+            serviceSnapshotReader,
+            dockerEventReader,
+            advertiseEventCapabilities: true,
+            advertiseDockerCapability: true)
     {
     }
 
@@ -42,13 +70,22 @@ public sealed class AgentControlService : AgentControl.AgentControlBase
         IAgentMetricsSampler metricsSampler,
         IAgentProcessSnapshotReader processSnapshotReader,
         IAgentServiceSnapshotReader serviceSnapshotReader,
-        bool advertiseEventCapabilities)
+        IAgentDockerEventReader? dockerEventReader,
+        bool advertiseEventCapabilities,
+        bool advertiseDockerCapability)
     {
         _runtimeInfo = runtimeInfo ?? throw new ArgumentNullException(nameof(runtimeInfo));
         _metricsSampler = metricsSampler ?? throw new ArgumentNullException(nameof(metricsSampler));
         _processSnapshotReader = processSnapshotReader ?? throw new ArgumentNullException(nameof(processSnapshotReader));
         _serviceSnapshotReader = serviceSnapshotReader ?? throw new ArgumentNullException(nameof(serviceSnapshotReader));
+        if (advertiseDockerCapability && dockerEventReader is null)
+        {
+            throw new ArgumentNullException(nameof(dockerEventReader));
+        }
+
+        _dockerEventReader = dockerEventReader;
         _advertiseEventCapabilities = advertiseEventCapabilities;
+        _advertiseDockerCapability = advertiseDockerCapability;
     }
 
     public override Task<NegotiateResponse> Negotiate(NegotiateRequest request, ServerCallContext context)
@@ -78,6 +115,11 @@ public sealed class AgentControlService : AgentControl.AgentControlBase
             }
         }
 
+        if (_advertiseDockerCapability && request.RequestedCapabilities.Contains((AgentCapability)4))
+        {
+            response.Capabilities.Add((AgentCapability)4);
+        }
+
         return Task.FromResult(response);
     }
 
@@ -100,6 +142,9 @@ public sealed class AgentControlService : AgentControl.AgentControlBase
 
     public override Task StreamServiceEvents(EventStreamRequest request, IServerStreamWriter<ServiceEvent> responseStream, ServerCallContext context) =>
         StreamServiceEventsCoreAsync(request, responseStream, context.CancellationToken);
+
+    public override Task StreamDockerEvents(DockerEventsRequest request, IServerStreamWriter<DockerEvent> responseStream, ServerCallContext context) =>
+        StreamDockerEventsCoreAsync(request, responseStream, context.CancellationToken);
 
     internal async Task StreamMetricsCoreAsync(StreamMetricsRequest request, IServerStreamWriter<MetricsSample> responseStream, CancellationToken cancellationToken)
     {
@@ -229,6 +274,45 @@ public sealed class AgentControlService : AgentControl.AgentControlBase
             {
                 throw new RpcException(new Status(StatusCode.Internal, "Service observation failed."));
             }
+        }
+    }
+
+    internal async Task StreamDockerEventsCoreAsync(
+        DockerEventsRequest request,
+        IServerStreamWriter<DockerEvent> responseStream,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentNullException.ThrowIfNull(responseStream);
+        if (_dockerEventReader is null)
+        {
+            throw new RpcException(new Status(StatusCode.Unimplemented, "Docker event streaming is unavailable."));
+        }
+
+        try
+        {
+            await foreach (var reading in _dockerEventReader.StreamAsync(cancellationToken).WithCancellation(cancellationToken).ConfigureAwait(false))
+            {
+                await responseStream.WriteAsync(new DockerEvent
+                {
+                    ObjectType = (DockerObjectType)(int)reading.ObjectType,
+                    Kind = (DockerEventKind)(int)reading.Kind,
+                    ObjectId = reading.ObjectId ?? string.Empty,
+                    CapturedUnixMs = reading.CapturedAtUtc.ToUnixTimeMilliseconds(),
+                }).ConfigureAwait(false);
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            return;
+        }
+        catch (RpcException)
+        {
+            throw;
+        }
+        catch
+        {
+            throw new RpcException(new Status(StatusCode.Internal, "Docker observation failed."));
         }
     }
 

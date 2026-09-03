@@ -69,6 +69,7 @@ public sealed class AgentTransportContractTests
         Assert.Contains("rpc StreamMetrics", schema, StringComparison.Ordinal);
         Assert.Contains("rpc StreamProcessEvents", schema, StringComparison.Ordinal);
         Assert.Contains("rpc StreamServiceEvents", schema, StringComparison.Ordinal);
+        Assert.Contains("rpc StreamDockerEvents", schema, StringComparison.Ordinal);
         Assert.DoesNotContain("rpc Execute", schema, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("rpc Run", schema, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("credential", schema, StringComparison.OrdinalIgnoreCase);
@@ -80,6 +81,9 @@ public sealed class AgentTransportContractTests
         Assert.DoesNotContain("command", schema, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("argument", schema, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("environment", schema, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("attribute", schema, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("label", schema, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("raw_action", schema, StringComparison.OrdinalIgnoreCase);
     }
 
     private static AgentPeerInfo Peer(AgentProtocolVersion protocol, params AgentCapability[] capabilities) =>

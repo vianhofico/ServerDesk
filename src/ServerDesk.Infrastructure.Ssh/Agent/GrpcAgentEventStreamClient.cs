@@ -3,12 +3,13 @@ using Grpc.Core;
 using Grpc.Net.Client;
 using ServerDesk.Agent.Contracts.V1;
 using ServerDesk.Application.Agent;
+using WireDockerEvent = ServerDesk.Agent.Contracts.V1.DockerEvent;
 using WireProcessEvent = ServerDesk.Agent.Contracts.V1.ProcessEvent;
 using WireServiceEvent = ServerDesk.Agent.Contracts.V1.ServiceEvent;
 
 namespace ServerDesk.Infrastructure.Ssh.Agent;
 
-public sealed class GrpcAgentEventStreamClient : IAgentProcessEventStreamClient, IAgentServiceEventStreamClient, IAsyncDisposable
+public sealed class GrpcAgentEventStreamClient : IAgentProcessEventStreamClient, IAgentServiceEventStreamClient, IAgentDockerEventStreamClient, IAsyncDisposable
 {
     private readonly GrpcChannel _channel;
     private readonly AgentControl.AgentControlClient _client;
@@ -92,6 +93,35 @@ public sealed class GrpcAgentEventStreamClient : IAgentProcessEventStreamClient,
         }
     }
 
+    public async IAsyncEnumerable<AgentDockerEvent> StreamDockerEventsAsync(
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        using var call = _client.StreamDockerEvents(new DockerEventsRequest(), cancellationToken: cancellationToken);
+        while (true)
+        {
+            bool hasNext;
+            try
+            {
+                hasNext = await call.ResponseStream.MoveNext(cancellationToken).ConfigureAwait(false);
+            }
+            catch (RpcException exception) when (cancellationToken.IsCancellationRequested)
+            {
+                throw new OperationCanceledException("Agent Docker event stream was cancelled.", exception, cancellationToken);
+            }
+            catch (RpcException exception)
+            {
+                throw GrpcAgentTransportClient.MapRpcException(exception);
+            }
+
+            if (!hasNext)
+            {
+                yield break;
+            }
+
+            yield return MapDockerEvent(call.ResponseStream.Current);
+        }
+    }
+
     public ValueTask DisposeAsync()
     {
         _channel.Dispose();
@@ -147,6 +177,33 @@ public sealed class GrpcAgentEventStreamClient : IAgentProcessEventStreamClient,
         }
     }
 
+    internal static AgentDockerEvent MapDockerEvent(WireDockerEvent value)
+    {
+        ArgumentNullException.ThrowIfNull(value);
+        try
+        {
+            string? objectId = null;
+            if (!string.IsNullOrWhiteSpace(value.ObjectId))
+            {
+                objectId = value.ObjectId.Trim();
+                if (objectId.Length > 256 || objectId.Any(char.IsControl))
+                {
+                    throw new InvalidOperationException();
+                }
+            }
+
+            return new AgentDockerEvent(
+                MapDockerObjectType(value.ObjectType),
+                MapDockerEventKind(value.Kind),
+                objectId,
+                DateTimeOffset.FromUnixTimeMilliseconds(value.CapturedUnixMs));
+        }
+        catch (Exception exception) when (exception is not AgentTransportException)
+        {
+            throw new AgentTransportException(AgentConnectionState.Failed, "Agent Docker event is invalid.", exception);
+        }
+    }
+
     private static AgentServiceState MapServiceState(ServiceState value) =>
         (int)value switch
         {
@@ -156,6 +213,54 @@ public sealed class GrpcAgentEventStreamClient : IAgentProcessEventStreamClient,
             3 => AgentServiceState.Activating,
             4 => AgentServiceState.Deactivating,
             5 => AgentServiceState.Failed,
+            _ => throw new InvalidOperationException(),
+        };
+
+    private static AgentDockerObjectType MapDockerObjectType(DockerObjectType value) =>
+        (int)value switch
+        {
+            0 => AgentDockerObjectType.Unknown,
+            1 => AgentDockerObjectType.Container,
+            2 => AgentDockerObjectType.Image,
+            3 => AgentDockerObjectType.Volume,
+            4 => AgentDockerObjectType.Network,
+            5 => AgentDockerObjectType.Daemon,
+            _ => throw new InvalidOperationException(),
+        };
+
+    private static AgentDockerEventKind MapDockerEventKind(DockerEventKind value) =>
+        (int)value switch
+        {
+            0 => AgentDockerEventKind.Unknown,
+            1 => AgentDockerEventKind.Create,
+            2 => AgentDockerEventKind.Start,
+            3 => AgentDockerEventKind.Stop,
+            4 => AgentDockerEventKind.Die,
+            5 => AgentDockerEventKind.Destroy,
+            6 => AgentDockerEventKind.Pause,
+            7 => AgentDockerEventKind.Unpause,
+            8 => AgentDockerEventKind.Restart,
+            9 => AgentDockerEventKind.Rename,
+            10 => AgentDockerEventKind.HealthStatus,
+            11 => AgentDockerEventKind.Attach,
+            12 => AgentDockerEventKind.Detach,
+            13 => AgentDockerEventKind.Kill,
+            14 => AgentDockerEventKind.Oom,
+            15 => AgentDockerEventKind.Update,
+            16 => AgentDockerEventKind.Connect,
+            17 => AgentDockerEventKind.Disconnect,
+            18 => AgentDockerEventKind.Pull,
+            19 => AgentDockerEventKind.Push,
+            20 => AgentDockerEventKind.Tag,
+            21 => AgentDockerEventKind.Untag,
+            22 => AgentDockerEventKind.Delete,
+            23 => AgentDockerEventKind.Mount,
+            24 => AgentDockerEventKind.Unmount,
+            25 => AgentDockerEventKind.Reload,
+            26 => AgentDockerEventKind.Prune,
+            27 => AgentDockerEventKind.ExecCreated,
+            28 => AgentDockerEventKind.ExecStarted,
+            29 => AgentDockerEventKind.ExecDied,
             _ => throw new InvalidOperationException(),
         };
 }
