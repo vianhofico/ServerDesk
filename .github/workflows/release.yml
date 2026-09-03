@@ -55,8 +55,15 @@ jobs:
 
           switch ([int]$response.StatusCode) {
             200 {
+              $existingRelease = $response.Content | ConvertFrom-Json
+              $expectedAssetName = "ServerDesk-$version-win-x64.zip"
+              $assetNames = @($existingRelease.assets | ForEach-Object { $_.name })
+              if ($assetNames -notcontains $expectedAssetName -or $assetNames -notcontains 'SHA256SUMS.txt') {
+                throw "Release $version already exists but is incomplete; refusing to silently treat it as published."
+              }
+
               "SKIP_RELEASE=true" >> $env:GITHUB_ENV
-              Write-Host "Release $version already exists; publication is idempotently skipped."
+              Write-Host "Release $version already exists with required assets; publication is idempotently skipped."
             }
             404 {
               "SKIP_RELEASE=false" >> $env:GITHUB_ENV
@@ -127,6 +134,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
 
       - name: Verify published release
+        if: env.SKIP_RELEASE != 'true'
         shell: pwsh
         run: |
           $headers = @{
