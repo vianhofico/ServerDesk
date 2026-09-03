@@ -60,8 +60,14 @@ public static class AgentLifecyclePlanPolicy
                 Require(plan.CurrentVersion is null && plan.TargetVersion is not null && plan.Steps.Count == 4, plan);
                 break;
             case AgentLifecycleOperation.Update:
-                Require(plan.CurrentVersion is not null && plan.TargetVersion is not null && plan.Steps.Count == 4, plan);
-                Require(plan.TargetVersion.Value.CompareTo(plan.CurrentVersion.Value) > 0, plan);
+                if (plan.CurrentVersion is not AgentReleaseVersion current ||
+                    plan.TargetVersion is not AgentReleaseVersion target ||
+                    plan.Steps.Count != 4)
+                {
+                    throw new ArgumentException("Agent lifecycle plan version/operation invariants are invalid.", nameof(plan));
+                }
+
+                Require(target.CompareTo(current) > 0, plan);
                 break;
             case AgentLifecycleOperation.Uninstall:
                 Require(plan.TargetVersion is null && plan.Steps.Count == 3, plan);
