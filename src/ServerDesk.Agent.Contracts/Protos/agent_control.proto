@@ -62,8 +62,43 @@ message MetricsSample {
   double load_fifteen_minutes = 9;
 }
 
+message EventStreamRequest {
+  uint32 interval_ms = 1;
+}
+
+enum ProcessEventKind {
+  PROCESS_EVENT_KIND_UNSPECIFIED = 0;
+  PROCESS_EVENT_KIND_STARTED = 1;
+  PROCESS_EVENT_KIND_EXITED = 2;
+}
+
+message ProcessEvent {
+  ProcessEventKind kind = 1;
+  int32 process_id = 2;
+  string name = 3;
+  int64 captured_unix_ms = 4;
+}
+
+enum ServiceState {
+  SERVICE_STATE_UNKNOWN = 0;
+  SERVICE_STATE_ACTIVE = 1;
+  SERVICE_STATE_INACTIVE = 2;
+  SERVICE_STATE_ACTIVATING = 3;
+  SERVICE_STATE_DEACTIVATING = 4;
+  SERVICE_STATE_FAILED = 5;
+}
+
+message ServiceEvent {
+  string unit = 1;
+  ServiceState previous_state = 2;
+  ServiceState current_state = 3;
+  int64 captured_unix_ms = 4;
+}
+
 service AgentControl {
   rpc Negotiate(NegotiateRequest) returns (NegotiateResponse);
   rpc Health(HealthRequest) returns (HealthResponse);
   rpc StreamMetrics(StreamMetricsRequest) returns (stream MetricsSample);
+  rpc StreamProcessEvents(EventStreamRequest) returns (stream ProcessEvent);
+  rpc StreamServiceEvents(EventStreamRequest) returns (stream ServiceEvent);
 }
