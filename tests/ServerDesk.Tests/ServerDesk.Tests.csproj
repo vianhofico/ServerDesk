@@ -54,6 +54,10 @@
     <None Include="Fixtures\Firewall\**\*"
           CopyToOutputDirectory="PreserveNewest"
           CopyToPublishDirectory="Never" />
+    <None Include="..\..\src\ServerDesk.Agent.Contracts\Protos\agent_control.proto"
+          Link="Fixtures\Agent\agent_control.proto"
+          CopyToOutputDirectory="PreserveNewest"
+          CopyToPublishDirectory="Never" />
     <None Include="..\..\src\ServerDesk.App\Localization\Strings.*.xaml"
           Link="Fixtures\Localization\%(Filename)%(Extension)"
           CopyToOutputDirectory="PreserveNewest"
