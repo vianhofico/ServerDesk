@@ -1,0 +1,52 @@
+syntax = "proto3";
+
+package serverdesk.agent.v1;
+option csharp_namespace = "ServerDesk.Agent.Contracts.V1";
+
+message ProtocolVersion {
+  uint32 major = 1;
+  uint32 minor = 2;
+}
+
+enum AgentCapability {
+  AGENT_CAPABILITY_UNSPECIFIED = 0;
+  AGENT_CAPABILITY_METRICS_STREAMING = 1;
+  AGENT_CAPABILITY_PROCESS_EVENTS = 2;
+  AGENT_CAPABILITY_SERVICE_EVENTS = 3;
+  AGENT_CAPABILITY_DOCKER_EVENTS = 4;
+  AGENT_CAPABILITY_LOG_STREAMING = 5;
+}
+
+message NegotiateRequest {
+  ProtocolVersion protocol = 1;
+  string client_version = 2;
+  repeated AgentCapability requested_capabilities = 3;
+}
+
+message NegotiateResponse {
+  ProtocolVersion protocol = 1;
+  string agent_version = 2;
+  repeated AgentCapability capabilities = 3;
+  string platform = 4;
+  string architecture = 5;
+}
+
+enum AgentHealthState {
+  AGENT_HEALTH_STATE_UNSPECIFIED = 0;
+  AGENT_HEALTH_STATE_READY = 1;
+  AGENT_HEALTH_STATE_DEGRADED = 2;
+}
+
+message HealthRequest {
+}
+
+message HealthResponse {
+  AgentHealthState state = 1;
+  string agent_version = 2;
+  int64 started_unix_ms = 3;
+}
+
+service AgentControl {
+  rpc Negotiate(NegotiateRequest) returns (NegotiateResponse);
+  rpc Health(HealthRequest) returns (HealthResponse);
+}
