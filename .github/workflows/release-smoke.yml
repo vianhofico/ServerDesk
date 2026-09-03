@@ -30,6 +30,42 @@ jobs:
           $publishDir = Join-Path $env:RUNNER_TEMP 'serverdesk-release-smoke'
           ./scripts/publish-windows-release.ps1 -OutputDirectory $publishDir
 
+      - name: Package verified release candidate
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        shell: pwsh
+        run: |
+          $version = (Get-Content RELEASE_VERSION -Raw).Trim()
+          if ($version -notmatch '^v[0-9]+\.[0-9]+\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?$') {
+            throw "Invalid RELEASE_VERSION: $version"
+          }
+
+          $publishDir = Join-Path $env:RUNNER_TEMP 'serverdesk-release-smoke'
+          $candidateDir = Join-Path $env:GITHUB_WORKSPACE 'artifacts/release-candidate'
+          New-Item -ItemType Directory -Force -Path $candidateDir | Out-Null
+
+          $assetName = "ServerDesk-$version-win-x64.zip"
+          $assetPath = Join-Path $candidateDir $assetName
+          Compress-Archive -Path (Join-Path $publishDir '*') -DestinationPath $assetPath -Force
+          if (-not (Test-Path $assetPath)) {
+            throw "Release candidate ZIP was not created."
+          }
+
+          $hash = (Get-FileHash -Algorithm SHA256 $assetPath).Hash.ToLowerInvariant()
+          "$hash  $assetName" | Set-Content -Encoding ascii (Join-Path $candidateDir 'SHA256SUMS.txt')
+          $env:GITHUB_SHA | Set-Content -Encoding ascii (Join-Path $candidateDir 'RELEASE_SHA.txt')
+          $version | Set-Content -Encoding ascii (Join-Path $candidateDir 'RELEASE_VERSION.txt')
+
+          Write-Host "Packaged verified release candidate $assetName for $env:GITHUB_SHA"
+
+      - name: Upload verified release candidate
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: serverdesk-release-candidate
+          path: artifacts/release-candidate/*
+          if-no-files-found: error
+          retention-days: 14
+
       - name: Upload release diagnostics on failure
         if: failure()
         uses: actions/upload-artifact@v4
