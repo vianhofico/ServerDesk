@@ -1,0 +1,105 @@
+name: Release
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Publish Windows release
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main')
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout certified main commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Resolve release version
+        shell: pwsh
+        run: |
+          $version = (Get-Content RELEASE_VERSION -Raw).Trim()
+          if ($version -notmatch '^v[0-9]+\.[0-9]+\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?$') {
+            throw "Invalid RELEASE_VERSION: $version"
+          }
+
+          $releaseSha = '${{ github.event.workflow_run.head_sha || github.sha }}'
+          "VERSION=$version" >> $env:GITHUB_ENV
+          "RELEASE_SHA=$releaseSha" >> $env:GITHUB_ENV
+
+          $previousErrorPreference = $ErrorActionPreference
+          $ErrorActionPreference = 'SilentlyContinue'
+          gh release view $version --repo $env:GITHUB_REPOSITORY *> $null
+          $exists = $LASTEXITCODE -eq 0
+          $ErrorActionPreference = $previousErrorPreference
+
+          if ($exists) {
+            "SKIP_RELEASE=true" >> $env:GITHUB_ENV
+            Write-Host "Release $version already exists; nothing to publish."
+          }
+          else {
+            "SKIP_RELEASE=false" >> $env:GITHUB_ENV
+          }
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Publish ServerDesk win-x64
+        if: env.SKIP_RELEASE != 'true'
+        shell: pwsh
+        run: |
+          $publishDir = Join-Path $env:RUNNER_TEMP 'serverdesk-publish'
+          dotnet publish src/ServerDesk.App/ServerDesk.App.csproj `
+            -c Release `
+            -r win-x64 `
+            --self-contained true `
+            -p:PublishSingleFile=false `
+            -p:DebugType=None `
+            -o $publishDir
+
+      - name: Package and checksum
+        if: env.SKIP_RELEASE != 'true'
+        shell: pwsh
+        run: |
+          $publishDir = Join-Path $env:RUNNER_TEMP 'serverdesk-publish'
+          $assetName = "ServerDesk-$env:VERSION-win-x64.zip"
+          $assetPath = Join-Path $env:RUNNER_TEMP $assetName
+          $checksumPath = Join-Path $env:RUNNER_TEMP 'SHA256SUMS.txt'
+
+          Compress-Archive -Path (Join-Path $publishDir '*') -DestinationPath $assetPath -Force
+          $hash = (Get-FileHash -Algorithm SHA256 $assetPath).Hash.ToLowerInvariant()
+          "$hash  $assetName" | Set-Content -Encoding ascii $checksumPath
+
+          "ASSET_PATH=$assetPath" >> $env:GITHUB_ENV
+          "CHECKSUM_PATH=$checksumPath" >> $env:GITHUB_ENV
+
+      - name: Create GitHub release
+        if: env.SKIP_RELEASE != 'true'
+        shell: pwsh
+        run: |
+          $notes = "docs/releases/$env:VERSION.md"
+          if (-not (Test-Path $notes)) {
+            throw "Release notes file not found: $notes"
+          }
+
+          gh release create $env:VERSION `
+            --repo $env:GITHUB_REPOSITORY `
+            --target $env:RELEASE_SHA `
+            --title "ServerDesk $env:VERSION" `
+            --notes-file $notes `
+            $env:ASSET_PATH `
+            $env:CHECKSUM_PATH
+        env:
+          GH_TOKEN: ${{ github.token }}
