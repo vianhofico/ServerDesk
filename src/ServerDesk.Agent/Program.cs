@@ -24,6 +24,7 @@ builder.Services.AddGrpc(options =>
     options.MaxSendMessageSize = 64 * 1024;
 });
 builder.Services.AddSingleton(AgentRuntimeInfo.Create());
+builder.Services.AddSingleton<IAgentMetricsSampler, LinuxMetricsSampler>();
 
 var app = builder.Build();
 app.MapGrpcService<AgentControlService>();

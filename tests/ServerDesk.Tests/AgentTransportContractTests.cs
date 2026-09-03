@@ -86,14 +86,14 @@ public sealed class AgentTransportContractTests
     }
 
     [Fact]
-    public void WireSchemaContainsOnlyNegotiationAndHealthControlSurface()
+    public void WireSchemaContainsOnlyBoundedReadOnlyAgentSurface()
     {
         var schemaPath = Path.Combine(AppContext.BaseDirectory, "Fixtures", "Agent", "agent_control.proto");
         var schema = File.ReadAllText(schemaPath);
 
-        Assert.Contains("service AgentControl", schema, StringComparison.Ordinal);
         Assert.Contains("rpc Negotiate", schema, StringComparison.Ordinal);
         Assert.Contains("rpc Health", schema, StringComparison.Ordinal);
+        Assert.Contains("rpc StreamMetrics", schema, StringComparison.Ordinal);
         Assert.DoesNotContain("rpc Execute", schema, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("rpc Run", schema, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("credential", schema, StringComparison.OrdinalIgnoreCase);
@@ -102,6 +102,7 @@ public sealed class AgentTransportContractTests
         Assert.DoesNotContain("private_key", schema, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("secret", schema, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("mutation", schema, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("command", schema, StringComparison.OrdinalIgnoreCase);
     }
 
     private static AgentPeerInfo Peer(AgentProtocolVersion protocol, params AgentCapability[] capabilities) =>
