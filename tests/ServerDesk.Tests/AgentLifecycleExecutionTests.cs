@@ -188,7 +188,7 @@ public sealed class AgentLifecycleExecutionTests
 
         Assert.Equal(AgentLifecycleExecutionState.Ambiguous, result.State);
         Assert.Equal(RemoteErrorCode.AmbiguousState, result.Error?.Code);
-        Assert.Single(commands.Commands.Where(spec => spec.Executable == "sudo"));
+        Assert.Single(commands.Commands, spec => spec.Executable == "sudo");
     }
 
     [Fact]
@@ -209,7 +209,7 @@ public sealed class AgentLifecycleExecutionTests
 
         Assert.Equal(AgentLifecycleExecutionState.Failed, result.State);
         Assert.DoesNotContain(commands.Commands, spec => spec.Executable == "sudo");
-        Assert.Empty(commands.Commands.SelectMany(spec => spec.Arguments).Where(value => value == "bad.name"));
+        Assert.DoesNotContain("bad.name", commands.Commands.SelectMany(spec => spec.Arguments));
     }
 
     [Fact]
