@@ -17,8 +17,10 @@ public sealed class AgentControlService : AgentControl.AgentControlBase
     private readonly IAgentProcessSnapshotReader _processSnapshotReader;
     private readonly IAgentServiceSnapshotReader _serviceSnapshotReader;
     private readonly IAgentDockerEventReader? _dockerEventReader;
+    private readonly IAgentJournalLogReader? _journalLogReader;
     private readonly bool _advertiseEventCapabilities;
     private readonly bool _advertiseDockerCapability;
+    private readonly bool _advertiseLogCapability;
 
     internal AgentControlService(AgentRuntimeInfo runtimeInfo, IAgentMetricsSampler metricsSampler)
         : this(
@@ -27,8 +29,10 @@ public sealed class AgentControlService : AgentControl.AgentControlBase
             new LinuxProcessSnapshotReader(),
             new SystemdServiceSnapshotReader(),
             dockerEventReader: null,
+            journalLogReader: null,
             advertiseEventCapabilities: false,
-            advertiseDockerCapability: false)
+            advertiseDockerCapability: false,
+            advertiseLogCapability: false)
     {
     }
 
@@ -43,8 +47,10 @@ public sealed class AgentControlService : AgentControl.AgentControlBase
             processSnapshotReader,
             serviceSnapshotReader,
             dockerEventReader: null,
+            journalLogReader: null,
             advertiseEventCapabilities: true,
-            advertiseDockerCapability: false)
+            advertiseDockerCapability: false,
+            advertiseLogCapability: false)
     {
     }
 
@@ -60,8 +66,30 @@ public sealed class AgentControlService : AgentControl.AgentControlBase
             processSnapshotReader,
             serviceSnapshotReader,
             dockerEventReader,
+            journalLogReader: null,
             advertiseEventCapabilities: true,
-            advertiseDockerCapability: true)
+            advertiseDockerCapability: true,
+            advertiseLogCapability: false)
+    {
+    }
+
+    public AgentControlService(
+        AgentRuntimeInfo runtimeInfo,
+        IAgentMetricsSampler metricsSampler,
+        IAgentProcessSnapshotReader processSnapshotReader,
+        IAgentServiceSnapshotReader serviceSnapshotReader,
+        IAgentDockerEventReader dockerEventReader,
+        IAgentJournalLogReader journalLogReader)
+        : this(
+            runtimeInfo,
+            metricsSampler,
+            processSnapshotReader,
+            serviceSnapshotReader,
+            dockerEventReader,
+            journalLogReader,
+            advertiseEventCapabilities: true,
+            advertiseDockerCapability: true,
+            advertiseLogCapability: true)
     {
     }
 
@@ -71,8 +99,10 @@ public sealed class AgentControlService : AgentControl.AgentControlBase
         IAgentProcessSnapshotReader processSnapshotReader,
         IAgentServiceSnapshotReader serviceSnapshotReader,
         IAgentDockerEventReader? dockerEventReader,
+        IAgentJournalLogReader? journalLogReader,
         bool advertiseEventCapabilities,
-        bool advertiseDockerCapability)
+        bool advertiseDockerCapability,
+        bool advertiseLogCapability)
     {
         _runtimeInfo = runtimeInfo ?? throw new ArgumentNullException(nameof(runtimeInfo));
         _metricsSampler = metricsSampler ?? throw new ArgumentNullException(nameof(metricsSampler));
@@ -83,9 +113,16 @@ public sealed class AgentControlService : AgentControl.AgentControlBase
             throw new ArgumentNullException(nameof(dockerEventReader));
         }
 
+        if (advertiseLogCapability && journalLogReader is null)
+        {
+            throw new ArgumentNullException(nameof(journalLogReader));
+        }
+
         _dockerEventReader = dockerEventReader;
+        _journalLogReader = journalLogReader;
         _advertiseEventCapabilities = advertiseEventCapabilities;
         _advertiseDockerCapability = advertiseDockerCapability;
+        _advertiseLogCapability = advertiseLogCapability;
     }
 
     public override Task<NegotiateResponse> Negotiate(NegotiateRequest request, ServerCallContext context)
@@ -120,6 +157,11 @@ public sealed class AgentControlService : AgentControl.AgentControlBase
             response.Capabilities.Add((AgentCapability)4);
         }
 
+        if (_advertiseLogCapability && request.RequestedCapabilities.Contains((AgentCapability)5))
+        {
+            response.Capabilities.Add((AgentCapability)5);
+        }
+
         return Task.FromResult(response);
     }
 
@@ -145,6 +187,9 @@ public sealed class AgentControlService : AgentControl.AgentControlBase
 
     public override Task StreamDockerEvents(DockerEventsRequest request, IServerStreamWriter<DockerEvent> responseStream, ServerCallContext context) =>
         StreamDockerEventsCoreAsync(request, responseStream, context.CancellationToken);
+
+    public override Task StreamJournalLogs(LogStreamRequest request, IServerStreamWriter<JournalLogEntry> responseStream, ServerCallContext context) =>
+        StreamJournalLogsCoreAsync(request, responseStream, context.CancellationToken);
 
     internal async Task StreamMetricsCoreAsync(StreamMetricsRequest request, IServerStreamWriter<MetricsSample> responseStream, CancellationToken cancellationToken)
     {
@@ -313,6 +358,48 @@ public sealed class AgentControlService : AgentControl.AgentControlBase
         catch
         {
             throw new RpcException(new Status(StatusCode.Internal, "Docker observation failed."));
+        }
+    }
+
+    internal async Task StreamJournalLogsCoreAsync(
+        LogStreamRequest request,
+        IServerStreamWriter<JournalLogEntry> responseStream,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentNullException.ThrowIfNull(responseStream);
+        if (_journalLogReader is null)
+        {
+            throw new RpcException(new Status(StatusCode.Unimplemented, "Journal log streaming is unavailable."));
+        }
+
+        try
+        {
+            await foreach (var reading in _journalLogReader.StreamAsync(cancellationToken).WithCancellation(cancellationToken).ConfigureAwait(false))
+            {
+                await responseStream.WriteAsync(new JournalLogEntry
+                {
+                    CapturedUnixMs = reading.CapturedAtUtc.ToUnixTimeMilliseconds(),
+                    Severity = (JournalLogSeverity)(int)reading.Severity,
+                    Message = reading.Message,
+                    Identifier = reading.Identifier,
+                    SystemdUnit = reading.SystemdUnit,
+                    ProcessId = reading.ProcessId ?? 0,
+                    Hostname = reading.Hostname,
+                }).ConfigureAwait(false);
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            return;
+        }
+        catch (RpcException)
+        {
+            throw;
+        }
+        catch
+        {
+            throw new RpcException(new Status(StatusCode.Internal, "Journal observation failed."));
         }
     }
 

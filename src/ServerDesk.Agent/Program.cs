@@ -28,6 +28,7 @@ builder.Services.AddSingleton<IAgentMetricsSampler, LinuxMetricsSampler>();
 builder.Services.AddSingleton<IAgentProcessSnapshotReader, LinuxProcessSnapshotReader>();
 builder.Services.AddSingleton<IAgentServiceSnapshotReader, SystemdServiceSnapshotReader>();
 builder.Services.AddSingleton<IAgentDockerEventReader, DockerCliEventReader>();
+builder.Services.AddSingleton<IAgentJournalLogReader, JournalctlLogStreamReader>();
 
 var app = builder.Build();
 app.MapGrpcService<AgentControlService>();

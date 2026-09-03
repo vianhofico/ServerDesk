@@ -147,6 +147,31 @@ message DockerEvent {
   int64 captured_unix_ms = 4;
 }
 
+message LogStreamRequest {
+}
+
+enum JournalLogSeverity {
+  JOURNAL_LOG_SEVERITY_UNKNOWN = 0;
+  JOURNAL_LOG_SEVERITY_EMERGENCY = 1;
+  JOURNAL_LOG_SEVERITY_ALERT = 2;
+  JOURNAL_LOG_SEVERITY_CRITICAL = 3;
+  JOURNAL_LOG_SEVERITY_ERROR = 4;
+  JOURNAL_LOG_SEVERITY_WARNING = 5;
+  JOURNAL_LOG_SEVERITY_NOTICE = 6;
+  JOURNAL_LOG_SEVERITY_INFO = 7;
+  JOURNAL_LOG_SEVERITY_DEBUG = 8;
+}
+
+message JournalLogEntry {
+  int64 captured_unix_ms = 1;
+  JournalLogSeverity severity = 2;
+  string message = 3;
+  string identifier = 4;
+  string systemd_unit = 5;
+  int32 process_id = 6;
+  string hostname = 7;
+}
+
 service AgentControl {
   rpc Negotiate(NegotiateRequest) returns (NegotiateResponse);
   rpc Health(HealthRequest) returns (HealthResponse);
@@ -154,4 +179,5 @@ service AgentControl {
   rpc StreamProcessEvents(EventStreamRequest) returns (stream ProcessEvent);
   rpc StreamServiceEvents(EventStreamRequest) returns (stream ServiceEvent);
   rpc StreamDockerEvents(DockerEventsRequest) returns (stream DockerEvent);
+  rpc StreamJournalLogs(LogStreamRequest) returns (stream JournalLogEntry);
 }
