@@ -64,14 +64,15 @@ Riêng database: Redis backup/restore hiện Unsupported; MongoDB backup/restore
 
 ```text
 src/
-  ServerDesk.App/                       # WPF client
-  ServerDesk.Domain/                    # domain contracts/models
-  ServerDesk.Application/               # use case và transport-neutral ports
-  ServerDesk.Infrastructure/            # persistence/admin infrastructure
-  ServerDesk.Infrastructure.Ssh/        # SSH/SFTP/PTY/routing/agent transport
-  ServerDesk.Infrastructure.Databases/  # database adapters đã certify
-  ServerDesk.Agent.Contracts/           # Protobuf contracts
-  ServerDesk.Agent/                     # optional Linux agent host
+  ServerDesk.App/                        # WPF client
+  ServerDesk.Domain/                     # domain contracts/models
+  ServerDesk.Application/                # use case và transport-neutral ports
+  ServerDesk.Infrastructure.Persistence/ # SQLite/local persistence
+  ServerDesk.Infrastructure.Ssh/         # SSH/SFTP/PTY/routing/agent transport
+  ServerDesk.Infrastructure.Databases/   # database adapters đã certify
+  ServerDesk.Platform.Windows/           # Windows platform/secret integration
+  ServerDesk.Agent.Contracts/            # Protobuf contracts
+  ServerDesk.Agent/                      # optional Linux agent host
 
 tests/
   ServerDesk.Tests/
