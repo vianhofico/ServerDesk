@@ -3,13 +3,15 @@ using Grpc.Core;
 using Grpc.Net.Client;
 using ServerDesk.Agent.Contracts.V1;
 using ServerDesk.Application.Agent;
+using ServerDesk.Application.Logs;
 using WireDockerEvent = ServerDesk.Agent.Contracts.V1.DockerEvent;
+using WireJournalLogEntry = ServerDesk.Agent.Contracts.V1.JournalLogEntry;
 using WireProcessEvent = ServerDesk.Agent.Contracts.V1.ProcessEvent;
 using WireServiceEvent = ServerDesk.Agent.Contracts.V1.ServiceEvent;
 
 namespace ServerDesk.Infrastructure.Ssh.Agent;
 
-public sealed class GrpcAgentEventStreamClient : IAgentProcessEventStreamClient, IAgentServiceEventStreamClient, IAgentDockerEventStreamClient, IAsyncDisposable
+public sealed class GrpcAgentEventStreamClient : IAgentProcessEventStreamClient, IAgentServiceEventStreamClient, IAgentDockerEventStreamClient, IAgentLogStreamClient, IAsyncDisposable
 {
     private readonly GrpcChannel _channel;
     private readonly AgentControl.AgentControlClient _client;
@@ -122,6 +124,35 @@ public sealed class GrpcAgentEventStreamClient : IAgentProcessEventStreamClient,
         }
     }
 
+    public async IAsyncEnumerable<LogEntry> StreamJournalLogsAsync(
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        using var call = _client.StreamJournalLogs(new LogStreamRequest(), cancellationToken: cancellationToken);
+        while (true)
+        {
+            bool hasNext;
+            try
+            {
+                hasNext = await call.ResponseStream.MoveNext(cancellationToken).ConfigureAwait(false);
+            }
+            catch (RpcException exception) when (cancellationToken.IsCancellationRequested)
+            {
+                throw new OperationCanceledException("Agent journal log stream was cancelled.", exception, cancellationToken);
+            }
+            catch (RpcException exception)
+            {
+                throw GrpcAgentTransportClient.MapRpcException(exception);
+            }
+
+            if (!hasNext)
+            {
+                yield break;
+            }
+
+            yield return MapJournalLogEntry(call.ResponseStream.Current);
+        }
+    }
+
     public ValueTask DisposeAsync()
     {
         _channel.Dispose();
@@ -204,6 +235,37 @@ public sealed class GrpcAgentEventStreamClient : IAgentProcessEventStreamClient,
         }
     }
 
+    internal static LogEntry MapJournalLogEntry(WireJournalLogEntry value)
+    {
+        ArgumentNullException.ThrowIfNull(value);
+        try
+        {
+            if (value.CapturedUnixMs <= 0 || value.ProcessId < 0 ||
+                !IsSafeField(value.Message, 4096) ||
+                !IsSafeField(value.Identifier, 256) ||
+                !IsSafeField(value.SystemdUnit, 256) ||
+                !IsSafeField(value.Hostname, 256))
+            {
+                throw new InvalidOperationException();
+            }
+
+            return new LogEntry(
+                DateTimeOffset.FromUnixTimeMilliseconds(value.CapturedUnixMs),
+                null,
+                MapLogSeverity(value.Severity),
+                value.Message,
+                value.Identifier,
+                value.SystemdUnit,
+                value.ProcessId == 0 ? null : value.ProcessId,
+                value.Hostname,
+                ServerLogSource.Journal);
+        }
+        catch (Exception exception) when (exception is not AgentTransportException)
+        {
+            throw new AgentTransportException(AgentConnectionState.Failed, "Agent journal log entry is invalid.", exception);
+        }
+    }
+
     private static AgentServiceState MapServiceState(ServiceState value) =>
         (int)value switch
         {
@@ -263,4 +325,22 @@ public sealed class GrpcAgentEventStreamClient : IAgentProcessEventStreamClient,
             29 => AgentDockerEventKind.ExecDied,
             _ => throw new InvalidOperationException(),
         };
+
+    private static LogSeverity MapLogSeverity(JournalLogSeverity value) =>
+        (int)value switch
+        {
+            0 => LogSeverity.Unknown,
+            1 => LogSeverity.Emergency,
+            2 => LogSeverity.Alert,
+            3 => LogSeverity.Critical,
+            4 => LogSeverity.Error,
+            5 => LogSeverity.Warning,
+            6 => LogSeverity.Notice,
+            7 => LogSeverity.Info,
+            8 => LogSeverity.Debug,
+            _ => throw new InvalidOperationException(),
+        };
+
+    private static bool IsSafeField(string value, int maximumLength) =>
+        value.Length <= maximumLength && value.All(character => character == '\t' || !char.IsControl(character));
 }

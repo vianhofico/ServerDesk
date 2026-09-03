@@ -1,3 +1,5 @@
+using ServerDesk.Application.Logs;
+
 namespace ServerDesk.Application.Agent;
 
 public sealed record AgentEventStreamOptions(TimeSpan ObservationInterval)
@@ -117,6 +119,12 @@ public interface IAgentDockerEventStreamClient
         CancellationToken cancellationToken = default);
 }
 
+public interface IAgentLogStreamClient
+{
+    IAsyncEnumerable<LogEntry> StreamJournalLogsAsync(
+        CancellationToken cancellationToken = default);
+}
+
 public sealed record AgentProcessEventSourceSelection(
     AgentConnectionState State,
     string? Detail,
@@ -131,6 +139,11 @@ public sealed record AgentDockerEventSourceSelection(
     AgentConnectionState State,
     string? Detail,
     IAsyncEnumerable<AgentDockerEvent>? Stream);
+
+public sealed record AgentLogStreamSourceSelection(
+    AgentConnectionState State,
+    string? Detail,
+    IAsyncEnumerable<LogEntry>? Stream);
 
 public sealed class AgentEventSourceService
 {
@@ -187,6 +200,20 @@ public sealed class AgentEventSourceService
         return state == AgentConnectionState.Available
             ? new AgentDockerEventSourceSelection(state, null, eventClient.StreamDockerEventsAsync(cancellationToken))
             : new AgentDockerEventSourceSelection(state, Detail("Docker", state), null);
+    }
+
+    public async ValueTask<AgentLogStreamSourceSelection> SelectJournalLogsAsync(
+        IAgentTransportClient transportClient,
+        IAgentLogStreamClient logClient,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(transportClient);
+        ArgumentNullException.ThrowIfNull(logClient);
+        var negotiation = await _probeService.NegotiateAsync(transportClient, cancellationToken).ConfigureAwait(false);
+        var state = negotiation.GetCapabilityState(AgentCapability.LogStreaming);
+        return state == AgentConnectionState.Available
+            ? new AgentLogStreamSourceSelection(state, null, logClient.StreamJournalLogsAsync(cancellationToken))
+            : new AgentLogStreamSourceSelection(state, Detail("journal log", state), null);
     }
 
     private static string Detail(string stream, AgentConnectionState state) =>
