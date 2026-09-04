@@ -17,7 +17,10 @@ public sealed class SshAgentTunnelSessionFactory : IAgentTunnelSessionFactory
         _forwardSessionFactory = forwardSessionFactory ?? throw new ArgumentNullException(nameof(forwardSessionFactory));
     }
 
-    public SshAgentTunnelSessionFactory(
+    // Kept for same-assembly compatibility only. This must not be public because the
+    // default Microsoft DI container would otherwise see two fully-resolvable public
+    // constructors and fail startup validation with an ambiguous-constructor error.
+    internal SshAgentTunnelSessionFactory(
         ISecretStore secretStore,
         IHostTrustService hostTrustService,
         IInteractiveAuthenticationPrompt interactivePrompt,
