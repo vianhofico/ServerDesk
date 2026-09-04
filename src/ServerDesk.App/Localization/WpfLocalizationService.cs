@@ -25,6 +25,7 @@ public sealed class WpfLocalizationService : ILocalizationService
     private static readonly string[] FeatureDictionaries =
     [
         "Shell",
+        "Explorer",
         "Tasks",
         "Nginx",
         "Tls",

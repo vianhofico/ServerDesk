@@ -11,13 +11,17 @@ public partial class RemoteExplorerWindow
     {
         if (SelectedRow is not { IsDownloadable: true } row)
         {
-            SetState(ServerDesk.Application.RemoteFiles.RemoteExplorerUiState.Error, "Select a text file to edit.");
+            SetStateResource(
+                ServerDesk.Application.RemoteFiles.RemoteExplorerUiState.Error,
+                "Loc.Explorer.Editor.SelectText");
             return;
         }
 
         if (EditorService is not { } editorService)
         {
-            SetState(ServerDesk.Application.RemoteFiles.RemoteExplorerUiState.Error, "Remote editor service is unavailable.");
+            SetStateResource(
+                ServerDesk.Application.RemoteFiles.RemoteExplorerUiState.Error,
+                "Loc.Explorer.Editor.Unavailable");
             return;
         }
 

@@ -53,6 +53,29 @@ public static class RemoteExplorerProjection
             .ToArray();
     }
 
+    public static IReadOnlyList<RemoteExplorerRow> Filter(
+        IEnumerable<RemoteExplorerRow> rows,
+        string? query)
+    {
+        ArgumentNullException.ThrowIfNull(rows);
+        var materialized = rows as IReadOnlyList<RemoteExplorerRow> ?? rows.ToArray();
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            return materialized.ToArray();
+        }
+
+        var term = query.Trim();
+        return materialized
+            .Where(row =>
+                Contains(row.Name, term) ||
+                Contains(row.Path.Value, term) ||
+                Contains(row.Kind.ToString(), term) ||
+                Contains(row.PermissionsText, term) ||
+                Contains(row.OwnerText, term) ||
+                Contains(row.GroupText, term))
+            .ToArray();
+    }
+
     public static RemoteExplorerUiState Classify(RemoteError error)
     {
         ArgumentNullException.ThrowIfNull(error);
@@ -87,4 +110,7 @@ public static class RemoteExplorerProjection
             ? $"{bytes.ToString("N0", CultureInfo.CurrentCulture)} B"
             : $"{value.ToString(value >= 100 ? "N0" : "N1", CultureInfo.CurrentCulture)} {suffixes[suffix]}";
     }
+
+    private static bool Contains(string value, string term) =>
+        value.Contains(term, StringComparison.OrdinalIgnoreCase);
 }

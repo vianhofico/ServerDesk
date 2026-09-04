@@ -1,6 +1,8 @@
 using System.Globalization;
 using System.IO;
 using System.Windows;
+using System.Windows.Automation;
+using System.Windows.Controls;
 using System.Windows.Input;
 using Microsoft.Win32;
 using ServerDesk.Application.RemoteFiles;
@@ -17,10 +19,16 @@ public partial class RemoteExplorerWindow : Window
     private readonly ServerProfile _profile;
     private readonly bool _initiallyConnected;
     private readonly Stack<RemotePath> _backHistory = new();
+    private readonly Stack<RemotePath> _forwardHistory = new();
     private IRemoteFileSystem? _fileSystem;
     private CancellationTokenSource? _operationCancellation;
+    private IReadOnlyList<RemoteExplorerRow> _loadedRows = [];
     private RemotePath _currentPath = RemotePath.Parse(".");
+    private RemoteExplorerUiState _currentState = RemoteExplorerUiState.Disconnected;
+    private string? _statusResourceKey;
+    private string _statusRawMessage = string.Empty;
     private bool _hasLoadedPath;
+    private bool _isAddressEditing;
 
     public RemoteExplorerWindow(
         IRemoteFileSystemFactory fileSystemFactory,
@@ -32,11 +40,29 @@ public partial class RemoteExplorerWindow : Window
         _initiallyConnected = initiallyConnected;
         InitializeComponent();
 
-        TitleText.Text = $"Explorer · {_profile.Name}";
+        ServerNameText.Text = _profile.Name;
         EndpointText.Text = $"{_profile.Username}@{_profile.Host}:{_profile.Port}";
+        if (string.IsNullOrWhiteSpace(_profile.Environment))
+        {
+            EnvironmentValueText.SetResourceReference(TextBlock.TextProperty, "Loc.Explorer.Header.Unlabeled");
+        }
+        else
+        {
+            EnvironmentValueText.Text = _profile.Environment;
+        }
+
+        ConnectionValueText.SetResourceReference(
+            TextBlock.TextProperty,
+            _initiallyConnected ? "Loc.Explorer.Header.Connected" : "Loc.Explorer.Header.OnDemand");
         AddressBox.Text = _currentPath.Value;
-        SetState(RemoteExplorerUiState.Disconnected, "Explorer is not connected yet. Refresh to establish an SFTP channel.");
+        BuildBreadcrumbs();
+        SetAddressEditing(false);
+        SetStateResource(RemoteExplorerUiState.Disconnected, "Loc.Explorer.Message.Initial");
+        ApplyLocalFilter();
+        UpdateCommandState();
     }
+
+    private bool IsBusy => _operationCancellation is not null;
 
     private async void WindowOnLoaded(object sender, RoutedEventArgs e)
     {
@@ -67,22 +93,64 @@ public partial class RemoteExplorerWindow : Window
 
     private async void BackOnClick(object sender, RoutedEventArgs e)
     {
-        if (_backHistory.TryPop(out var previous))
+        if (IsBusy || !_backHistory.TryPop(out var previous))
         {
-            await LoadDirectoryAsync(previous, pushHistory: false);
+            return;
         }
+
+        var origin = _currentPath;
+        if (await LoadDirectoryAsync(previous, pushHistory: false))
+        {
+            _forwardHistory.Push(origin);
+        }
+        else
+        {
+            _backHistory.Push(previous);
+        }
+
+        UpdateCommandState();
+    }
+
+    private async void ForwardOnClick(object sender, RoutedEventArgs e)
+    {
+        if (IsBusy || !_forwardHistory.TryPop(out var next))
+        {
+            return;
+        }
+
+        var origin = _currentPath;
+        if (await LoadDirectoryAsync(next, pushHistory: false))
+        {
+            _backHistory.Push(origin);
+        }
+        else
+        {
+            _forwardHistory.Push(next);
+        }
+
+        UpdateCommandState();
     }
 
     private async void UpOnClick(object sender, RoutedEventArgs e)
     {
-        if (_hasLoadedPath && _currentPath.Parent != _currentPath)
+        if (!IsBusy && _hasLoadedPath && _currentPath.Parent != _currentPath)
         {
             await LoadDirectoryAsync(_currentPath.Parent, pushHistory: true);
         }
     }
 
+    private void EditAddressOnClick(object sender, RoutedEventArgs e) =>
+        SetAddressEditing(!_isAddressEditing);
+
     private async void AddressBoxOnKeyDown(object sender, KeyEventArgs e)
     {
+        if (e.Key == Key.Escape)
+        {
+            e.Handled = true;
+            SetAddressEditing(false);
+            return;
+        }
+
         if (e.Key != Key.Enter)
         {
             return;
@@ -91,25 +159,50 @@ public partial class RemoteExplorerWindow : Window
         e.Handled = true;
         try
         {
-            await LoadDirectoryAsync(RemotePath.Parse(AddressBox.Text), pushHistory: true);
+            var succeeded = await LoadDirectoryAsync(RemotePath.Parse(AddressBox.Text), pushHistory: true);
+            if (succeeded)
+            {
+                SetAddressEditing(false);
+            }
         }
         catch (ArgumentException exception)
         {
-            SetState(RemoteExplorerUiState.Error, exception.Message);
+            SetStateRaw(RemoteExplorerUiState.Error, exception.Message);
+        }
+    }
+
+    private async void BreadcrumbOnClick(object sender, RoutedEventArgs e)
+    {
+        if (!IsBusy && sender is Button { Tag: RemotePath target } && target != _currentPath)
+        {
+            await LoadDirectoryAsync(target, pushHistory: true);
         }
     }
 
     private async void FileGridOnMouseDoubleClick(object sender, MouseButtonEventArgs e)
     {
-        if (SelectedRow is { IsDirectory: true } row)
+        if (!IsBusy && SelectedRow is { IsDirectory: true } row)
         {
             await LoadDirectoryAsync(row.Path, pushHistory: true);
         }
     }
 
+    private void FileGridOnSelectionChanged(object sender, SelectionChangedEventArgs e) => UpdateCommandState();
+
+    private void SearchBoxOnTextChanged(object sender, TextChangedEventArgs e) => ApplyLocalFilter();
+
+    private void ClearSearchOnClick(object sender, RoutedEventArgs e)
+    {
+        SearchBox.Clear();
+        SearchBox.Focus();
+    }
+
     private async void NewFolderOnClick(object sender, RoutedEventArgs e)
     {
-        var name = ExplorerTextPrompt.Show(this, "New remote folder", "Folder name:");
+        var name = ExplorerTextPrompt.Show(
+            this,
+            Localize("Loc.Explorer.Prompt.NewFolder.Title"),
+            Localize("Loc.Explorer.Prompt.NewFolder.Label"));
         if (string.IsNullOrWhiteSpace(name))
         {
             return;
@@ -122,12 +215,12 @@ public partial class RemoteExplorerWindow : Window
         }
         catch (ArgumentException exception)
         {
-            SetState(RemoteExplorerUiState.Error, exception.Message);
+            SetStateRaw(RemoteExplorerUiState.Error, exception.Message);
             return;
         }
 
         if (await ExecuteMutationAsync(
-                $"Creating {target.Value}…",
+                FormatLocalize("Loc.Explorer.Message.Creating", target.Value),
                 (fileSystem, token) => fileSystem.CreateDirectoryAsync(target, token)))
         {
             await LoadDirectoryAsync(_currentPath, pushHistory: false);
@@ -138,11 +231,15 @@ public partial class RemoteExplorerWindow : Window
     {
         if (SelectedRow is not { } row)
         {
-            SetState(RemoteExplorerUiState.Error, "Select a file or folder to rename.");
+            SetStateResource(RemoteExplorerUiState.Error, "Loc.Explorer.Message.SelectRename");
             return;
         }
 
-        var name = ExplorerTextPrompt.Show(this, "Rename remote item", "New name:", row.Name);
+        var name = ExplorerTextPrompt.Show(
+            this,
+            Localize("Loc.Explorer.Prompt.Rename.Title"),
+            Localize("Loc.Explorer.Prompt.Rename.Label"),
+            row.Name);
         if (string.IsNullOrWhiteSpace(name) || string.Equals(name.Trim(), row.Name, StringComparison.Ordinal))
         {
             return;
@@ -155,12 +252,12 @@ public partial class RemoteExplorerWindow : Window
         }
         catch (ArgumentException exception)
         {
-            SetState(RemoteExplorerUiState.Error, exception.Message);
+            SetStateRaw(RemoteExplorerUiState.Error, exception.Message);
             return;
         }
 
         if (await ExecuteMutationAsync(
-                $"Renaming {row.Name}…",
+                FormatLocalize("Loc.Explorer.Message.Renaming", row.Name),
                 (fileSystem, token) => fileSystem.RenameAsync(row.Path, destination, overwrite: false, token)))
         {
             await LoadDirectoryAsync(_currentPath, pushHistory: false);
@@ -171,14 +268,14 @@ public partial class RemoteExplorerWindow : Window
     {
         if (SelectedRow is not { } row)
         {
-            SetState(RemoteExplorerUiState.Error, "Select an item to change permissions.");
+            SetStateResource(RemoteExplorerUiState.Error, "Loc.Explorer.Message.SelectPermissions");
             return;
         }
 
         var raw = ExplorerTextPrompt.Show(
             this,
-            "Unix permissions",
-            "Enter an octal mode such as 640 or 755. ServerDesk never widens permissions automatically.",
+            Localize("Loc.Explorer.Prompt.Permissions.Title"),
+            Localize("Loc.Explorer.Prompt.Permissions.Label"),
             row.PermissionsText);
         if (string.IsNullOrWhiteSpace(raw))
         {
@@ -190,21 +287,25 @@ public partial class RemoteExplorerWindow : Window
         {
             if (!short.TryParse(raw.Trim(), NumberStyles.None, CultureInfo.InvariantCulture, out var mode))
             {
-                throw new ArgumentException("Permission mode must contain octal digits only.");
+                throw new ArgumentException(Localize("Loc.Explorer.Prompt.Permissions.Invalid"));
             }
 
             permissions = RemoteUnixPermissions.FromMode(mode);
         }
         catch (ArgumentException exception)
         {
-            SetState(RemoteExplorerUiState.Error, exception.Message);
+            SetStateRaw(RemoteExplorerUiState.Error, exception.Message);
             return;
         }
 
         if (MessageBox.Show(
                 this,
-                $"Change permissions for '{row.Name}' from {row.PermissionsText} to {permissions}?",
-                "Confirm permission change",
+                FormatLocalize(
+                    "Loc.Explorer.Confirm.Permissions.Body",
+                    row.Name,
+                    row.PermissionsText,
+                    permissions),
+                Localize("Loc.Explorer.Confirm.Permissions.Title"),
                 MessageBoxButton.OKCancel,
                 MessageBoxImage.Warning) != MessageBoxResult.OK)
         {
@@ -212,7 +313,7 @@ public partial class RemoteExplorerWindow : Window
         }
 
         if (await ExecuteMutationAsync(
-                $"Changing permissions on {row.Name}…",
+                FormatLocalize("Loc.Explorer.Message.ChangingPermissions", row.Name),
                 (fileSystem, token) => fileSystem.SetPermissionsAsync(row.Path, permissions, token)))
         {
             await LoadDirectoryAsync(_currentPath, pushHistory: false);
@@ -223,15 +324,16 @@ public partial class RemoteExplorerWindow : Window
     {
         if (SelectedRow is not { } row)
         {
-            SetState(RemoteExplorerUiState.Error, "Select an item to delete.");
+            SetStateResource(RemoteExplorerUiState.Error, "Loc.Explorer.Message.SelectDelete");
             return;
         }
 
-        var description = row.IsDirectory ? "empty directory" : "file";
+        var description = Localize(
+            row.IsDirectory ? "Loc.Explorer.Confirm.Delete.Directory" : "Loc.Explorer.Confirm.Delete.File");
         if (MessageBox.Show(
                 this,
-                $"Delete the remote {description} '{row.Path.Value}'?\n\nThis action cannot be undone by ServerDesk.",
-                "Confirm remote delete",
+                FormatLocalize("Loc.Explorer.Confirm.Delete.Body", description, row.Path.Value),
+                Localize("Loc.Explorer.Confirm.Delete.Title"),
                 MessageBoxButton.YesNo,
                 MessageBoxImage.Warning) != MessageBoxResult.Yes)
         {
@@ -240,10 +342,10 @@ public partial class RemoteExplorerWindow : Window
 
         var succeeded = row.IsDirectory
             ? await ExecuteMutationAsync(
-                $"Deleting {row.Name}…",
+                FormatLocalize("Loc.Explorer.Message.Deleting", row.Name),
                 (fileSystem, token) => fileSystem.DeleteDirectoryAsync(row.Path, token))
             : await ExecuteMutationAsync(
-                $"Deleting {row.Name}…",
+                FormatLocalize("Loc.Explorer.Message.Deleting", row.Name),
                 (fileSystem, token) => fileSystem.DeleteFileAsync(row.Path, token));
 
         if (succeeded)
@@ -256,7 +358,7 @@ public partial class RemoteExplorerWindow : Window
     {
         var dialog = new OpenFileDialog
         {
-            Title = "Upload files to remote server",
+            Title = Localize("Loc.Explorer.Dialog.Upload.Title"),
             Multiselect = true,
             CheckFileExists = true,
         };
@@ -270,13 +372,13 @@ public partial class RemoteExplorerWindow : Window
     {
         if (SelectedRow is not { IsDownloadable: true } row)
         {
-            SetState(RemoteExplorerUiState.Error, "Select a file or symbolic link to download.");
+            SetStateResource(RemoteExplorerUiState.Error, "Loc.Explorer.Message.SelectDownload");
             return;
         }
 
         var dialog = new SaveFileDialog
         {
-            Title = "Download remote file",
+            Title = Localize("Loc.Explorer.Dialog.Download.Title"),
             FileName = row.Name,
             OverwritePrompt = true,
         };
@@ -292,7 +394,7 @@ public partial class RemoteExplorerWindow : Window
 
     private void WindowOnDragOver(object sender, DragEventArgs e)
     {
-        e.Effects = e.Data.GetDataPresent(DataFormats.FileDrop)
+        e.Effects = !IsBusy && e.Data.GetDataPresent(DataFormats.FileDrop)
             ? DragDropEffects.Copy
             : DragDropEffects.None;
         e.Handled = true;
@@ -300,18 +402,16 @@ public partial class RemoteExplorerWindow : Window
 
     private async void WindowOnDrop(object sender, DragEventArgs e)
     {
-        if (e.Data.GetData(DataFormats.FileDrop) is string[] paths)
+        if (!IsBusy && e.Data.GetData(DataFormats.FileDrop) is string[] paths)
         {
             await UploadFilesAsync(paths.Where(File.Exists).ToArray());
         }
     }
 
-    private async Task LoadDirectoryAsync(RemotePath path, bool pushHistory)
+    private async Task<bool> LoadDirectoryAsync(RemotePath path, bool pushHistory)
     {
         using var operation = BeginOperation();
-        SetState(RemoteExplorerUiState.Loading, $"Loading {path.Value}…");
-        FileGrid.ItemsSource = null;
-        FooterText.Text = string.Empty;
+        SetStateResource(RemoteExplorerUiState.Loading, "Loc.Explorer.Message.LoadingDirectory");
 
         try
         {
@@ -322,30 +422,36 @@ public partial class RemoteExplorerWindow : Window
             if (pushHistory && _hasLoadedPath && path != _currentPath)
             {
                 _backHistory.Push(_currentPath);
+                _forwardHistory.Clear();
             }
 
             _currentPath = path;
             _hasLoadedPath = true;
+            _loadedRows = rows;
             AddressBox.Text = path.Value;
-            BackButton.IsEnabled = _backHistory.Count > 0;
-            FileGrid.ItemsSource = rows;
-            FooterText.Text = $"{rows.Count:N0} item(s) · SFTP · virtualized rows";
-            SetState(
+            BuildBreadcrumbs();
+            ConnectionValueText.SetResourceReference(TextBlock.TextProperty, "Loc.Explorer.Header.Connected");
+            SetStateResource(
                 rows.Count == 0 ? RemoteExplorerUiState.Empty : RemoteExplorerUiState.Ready,
-                rows.Count == 0 ? "This directory is empty." : $"Loaded {rows.Count:N0} item(s). Double-click a folder to open it.");
+                rows.Count == 0 ? "Loc.Explorer.Message.Empty" : "Loc.Explorer.Message.Loaded");
+            ApplyLocalFilter();
+            return true;
         }
         catch (OperationCanceledException)
         {
-            SetState(RemoteExplorerUiState.Cancelled, "Operation cancelled. No partial result was committed to the Explorer view.");
+            SetStateResource(RemoteExplorerUiState.Cancelled, "Loc.Explorer.Message.ReadCancelled");
         }
         catch (RemoteFileSystemException exception)
         {
-            SetState(RemoteExplorerProjection.Classify(exception.Error), $"{exception.Error.Code}: {exception.Error.Message}");
+            SetStateRaw(RemoteExplorerProjection.Classify(exception.Error), $"{exception.Error.Code}: {exception.Error.Message}");
         }
         catch (Exception exception)
         {
-            SetState(RemoteExplorerUiState.Error, exception.Message);
+            SetStateRaw(RemoteExplorerUiState.Error, exception.Message);
         }
+
+        ApplyLocalFilter();
+        return false;
     }
 
     private async Task<bool> ExecuteMutationAsync(
@@ -353,25 +459,25 @@ public partial class RemoteExplorerWindow : Window
         Func<IRemoteFileSystem, CancellationToken, ValueTask> action)
     {
         using var operation = BeginOperation();
-        SetState(RemoteExplorerUiState.Loading, activity);
+        SetStateRaw(RemoteExplorerUiState.Loading, activity);
         try
         {
             var fileSystem = await EnsureConnectedAsync(operation.Token);
             await action(fileSystem, operation.Token);
-            SetState(RemoteExplorerUiState.Ready, "Remote operation completed.");
+            SetStateResource(RemoteExplorerUiState.Ready, "Loc.Explorer.Message.MutationCompleted");
             return true;
         }
         catch (OperationCanceledException)
         {
-            SetState(RemoteExplorerUiState.Cancelled, "Operation cancelled.");
+            SetStateResource(RemoteExplorerUiState.Cancelled, "Loc.Explorer.Message.OperationCancelled");
         }
         catch (RemoteFileSystemException exception)
         {
-            SetState(RemoteExplorerProjection.Classify(exception.Error), $"{exception.Error.Code}: {exception.Error.Message}");
+            SetStateRaw(RemoteExplorerProjection.Classify(exception.Error), $"{exception.Error.Code}: {exception.Error.Message}");
         }
         catch (Exception exception)
         {
-            SetState(RemoteExplorerUiState.Error, exception.Message);
+            SetStateRaw(RemoteExplorerUiState.Error, exception.Message);
         }
 
         return false;
@@ -407,8 +513,8 @@ public partial class RemoteExplorerWindow : Window
                 {
                     if (MessageBox.Show(
                             this,
-                            $"'{destination.Value}' already exists. Replace it atomically?",
-                            "Remote file conflict",
+                            FormatLocalize("Loc.Explorer.Conflict.Body", destination.Value),
+                            Localize("Loc.Explorer.Conflict.Title"),
                             MessageBoxButton.YesNo,
                             MessageBoxImage.Warning) != MessageBoxResult.Yes)
                     {
@@ -419,20 +525,22 @@ public partial class RemoteExplorerWindow : Window
                 }
             }
 
-            SetState(RemoteExplorerUiState.Ready, $"Uploaded {localPaths.Count:N0} local item(s).");
+            SetStateRaw(
+                RemoteExplorerUiState.Ready,
+                FormatLocalize("Loc.Explorer.Message.Uploaded", localPaths.Count));
             await LoadDirectoryAfterTransferAsync(operation.Token);
         }
         catch (OperationCanceledException)
         {
-            SetState(RemoteExplorerUiState.Cancelled, "Upload cancelled. Atomic SFTP upload leaves no committed partial destination.");
+            SetStateResource(RemoteExplorerUiState.Cancelled, "Loc.Explorer.Message.UploadCancelled");
         }
         catch (RemoteFileSystemException exception)
         {
-            SetState(RemoteExplorerProjection.Classify(exception.Error), $"{exception.Error.Code}: {exception.Error.Message}");
+            SetStateRaw(RemoteExplorerProjection.Classify(exception.Error), $"{exception.Error.Code}: {exception.Error.Message}");
         }
         catch (Exception exception)
         {
-            SetState(RemoteExplorerUiState.Error, exception.Message);
+            SetStateRaw(RemoteExplorerUiState.Error, exception.Message);
         }
         finally
         {
@@ -448,7 +556,9 @@ public partial class RemoteExplorerWindow : Window
         bool overwrite,
         CancellationToken cancellationToken)
     {
-        SetState(RemoteExplorerUiState.Loading, $"Uploading {localFile.Name}…");
+        SetStateRaw(
+            RemoteExplorerUiState.Loading,
+            FormatLocalize("Loc.Explorer.Message.Uploading", localFile.Name));
         await using var stream = new FileStream(
             localFile.FullName,
             FileMode.Open,
@@ -478,7 +588,9 @@ public partial class RemoteExplorerWindow : Window
         try
         {
             var fileSystem = await EnsureConnectedAsync(operation.Token);
-            SetState(RemoteExplorerUiState.Loading, $"Downloading {row.Name}…");
+            SetStateRaw(
+                RemoteExplorerUiState.Loading,
+                FormatLocalize("Loc.Explorer.Message.Downloading", row.Name));
             await using (var stream = new FileStream(
                              temporaryPath,
                              FileMode.CreateNew,
@@ -496,19 +608,21 @@ public partial class RemoteExplorerWindow : Window
             operation.Token.ThrowIfCancellationRequested();
             File.Move(temporaryPath, destinationPath, overwrite: true);
             committed = true;
-            SetState(RemoteExplorerUiState.Ready, $"Downloaded {row.Name} safely to {destinationPath}.");
+            SetStateRaw(
+                RemoteExplorerUiState.Ready,
+                FormatLocalize("Loc.Explorer.Message.Downloaded", row.Name, destinationPath));
         }
         catch (OperationCanceledException)
         {
-            SetState(RemoteExplorerUiState.Cancelled, "Download cancelled. The local destination was not replaced.");
+            SetStateResource(RemoteExplorerUiState.Cancelled, "Loc.Explorer.Message.DownloadCancelled");
         }
         catch (RemoteFileSystemException exception)
         {
-            SetState(RemoteExplorerProjection.Classify(exception.Error), $"{exception.Error.Code}: {exception.Error.Message}");
+            SetStateRaw(RemoteExplorerProjection.Classify(exception.Error), $"{exception.Error.Code}: {exception.Error.Message}");
         }
         catch (Exception exception)
         {
-            SetState(RemoteExplorerUiState.Error, exception.Message);
+            SetStateRaw(RemoteExplorerUiState.Error, exception.Message);
         }
         finally
         {
@@ -532,10 +646,11 @@ public partial class RemoteExplorerWindow : Window
     private async Task LoadDirectoryAfterTransferAsync(CancellationToken cancellationToken)
     {
         var fileSystem = await EnsureConnectedAsync(cancellationToken);
-        var rows = RemoteExplorerProjection.Project(await fileSystem.ListAsync(_currentPath, cancellationToken));
-        FileGrid.ItemsSource = rows;
-        FooterText.Text = $"{rows.Count:N0} item(s) · SFTP · virtualized rows";
-        SetState(rows.Count == 0 ? RemoteExplorerUiState.Empty : RemoteExplorerUiState.Ready, $"Loaded {rows.Count:N0} item(s).");
+        _loadedRows = RemoteExplorerProjection.Project(await fileSystem.ListAsync(_currentPath, cancellationToken));
+        SetStateResource(
+            _loadedRows.Count == 0 ? RemoteExplorerUiState.Empty : RemoteExplorerUiState.Ready,
+            _loadedRows.Count == 0 ? "Loc.Explorer.Message.Empty" : "Loc.Explorer.Message.Loaded");
+        ApplyLocalFilter();
     }
 
     private async Task<IRemoteFileSystem> EnsureConnectedAsync(CancellationToken cancellationToken)
@@ -546,6 +661,7 @@ public partial class RemoteExplorerWindow : Window
             await _fileSystem.ConnectAsync(cancellationToken);
         }
 
+        ConnectionValueText.SetResourceReference(TextBlock.TextProperty, "Loc.Explorer.Header.Connected");
         return _fileSystem;
     }
 
@@ -553,6 +669,7 @@ public partial class RemoteExplorerWindow : Window
     {
         CancelActiveOperation();
         _operationCancellation = new CancellationTokenSource();
+        UpdateCommandState();
         return new OperationScope(this, _operationCancellation);
     }
 
@@ -576,15 +693,237 @@ public partial class RemoteExplorerWindow : Window
             TransferProgress.IsIndeterminate = true;
         }
 
-        StatusText.Text = $"{progress.Direction}: {name} · {RemoteExplorerProjection.FormatBytes(progress.BytesTransferred)}";
+        StatusMessageText.Text = $"{progress.Direction}: {name} · {RemoteExplorerProjection.FormatBytes(progress.BytesTransferred)}";
     }
 
-    private void SetState(RemoteExplorerUiState state, string message)
+    private void ApplyLocalFilter()
     {
-        StatusText.Text = $"{state}: {message}";
+        var query = SearchBox.Text;
+        var visibleRows = RemoteExplorerProjection.Filter(_loadedRows, query);
+        FileGrid.ItemsSource = visibleRows;
+        ClearSearchButton.Visibility = string.IsNullOrWhiteSpace(query) ? Visibility.Collapsed : Visibility.Visible;
+        FooterText.Text = string.IsNullOrWhiteSpace(query)
+            ? FormatLocalize("Loc.Explorer.Footer.All", _loadedRows.Count)
+            : FormatLocalize("Loc.Explorer.Footer.Filtered", visibleRows.Count, _loadedRows.Count);
+
+        if (_currentState == RemoteExplorerUiState.Ready &&
+            _loadedRows.Count > 0 &&
+            visibleRows.Count == 0 &&
+            !string.IsNullOrWhiteSpace(query))
+        {
+            GridStateOverlay.Visibility = Visibility.Visible;
+            GridStateTitle.SetResourceReference(TextBlock.TextProperty, "Loc.Explorer.Overlay.SearchTitle");
+            GridStateDetail.SetResourceReference(TextBlock.TextProperty, "Loc.Explorer.Overlay.SearchDetail");
+        }
+        else
+        {
+            RefreshGridOverlay();
+        }
+
+        UpdateCommandState();
+    }
+
+    private void SetStateResource(RemoteExplorerUiState state, string messageResourceKey)
+    {
+        _currentState = state;
+        _statusResourceKey = messageResourceKey;
+        _statusRawMessage = string.Empty;
+        StatusStateText.SetResourceReference(TextBlock.TextProperty, StateResourceKey(state));
+        StatusMessageText.SetResourceReference(TextBlock.TextProperty, messageResourceKey);
+        RefreshStateChrome();
+    }
+
+    private void SetStateRaw(RemoteExplorerUiState state, string message)
+    {
+        _currentState = state;
+        _statusResourceKey = null;
+        _statusRawMessage = message;
+        StatusStateText.SetResourceReference(TextBlock.TextProperty, StateResourceKey(state));
+        StatusMessageText.Text = message;
+        RefreshStateChrome();
+    }
+
+    private void RefreshStateChrome()
+    {
+        StatusCard.Style = (Style)FindResource(
+            _currentState is RemoteExplorerUiState.Error or RemoteExplorerUiState.PermissionDenied
+                ? "InlineErrorCard"
+                : "InlineInfoCard");
+        RefreshGridOverlay();
+        UpdateCommandState();
+    }
+
+    private void RefreshGridOverlay()
+    {
+        string? titleKey = null;
+        string? detailKey = null;
+        string? rawDetail = null;
+
+        if (_currentState == RemoteExplorerUiState.Loading)
+        {
+            titleKey = "Loc.Explorer.Overlay.LoadingTitle";
+            detailKey = _statusResourceKey;
+            rawDetail = _statusRawMessage;
+        }
+        else if (_currentState == RemoteExplorerUiState.Empty)
+        {
+            titleKey = "Loc.Explorer.Overlay.EmptyTitle";
+            detailKey = "Loc.Explorer.Overlay.EmptyDetail";
+        }
+        else if (_loadedRows.Count == 0 &&
+                 _currentState is RemoteExplorerUiState.Disconnected or
+                     RemoteExplorerUiState.PermissionDenied or
+                     RemoteExplorerUiState.Error or
+                     RemoteExplorerUiState.Cancelled)
+        {
+            titleKey = StateResourceKey(_currentState);
+            detailKey = _statusResourceKey;
+            rawDetail = _statusRawMessage;
+        }
+
+        if (titleKey is null)
+        {
+            GridStateOverlay.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        GridStateOverlay.Visibility = Visibility.Visible;
+        GridStateTitle.SetResourceReference(TextBlock.TextProperty, titleKey);
+        if (detailKey is not null)
+        {
+            GridStateDetail.SetResourceReference(TextBlock.TextProperty, detailKey);
+        }
+        else
+        {
+            GridStateDetail.Text = rawDetail;
+        }
+    }
+
+    private void UpdateCommandState()
+    {
+        var selected = SelectedRow;
+        var busy = IsBusy;
+
+        BackButton.IsEnabled = !busy && _backHistory.Count > 0;
+        ForwardButton.IsEnabled = !busy && _forwardHistory.Count > 0;
+        UpButton.IsEnabled = !busy && _hasLoadedPath && _currentPath.Parent != _currentPath;
+        EditPathButton.IsEnabled = !busy;
+        RefreshButton.IsEnabled = !busy;
+        CancelButton.IsEnabled = busy;
+        NewFolderButton.IsEnabled = !busy;
+        UploadButton.IsEnabled = !busy;
+        DownloadButton.IsEnabled = !busy && selected?.IsDownloadable == true;
+        EditButton.IsEnabled = !busy && selected?.IsDownloadable == true;
+        RenameButton.IsEnabled = !busy && selected is not null;
+        PermissionsButton.IsEnabled = !busy && selected is not null;
+        DeleteButton.IsEnabled = !busy && selected is not null;
+        FileGrid.IsEnabled = !busy;
+        AddressBox.IsEnabled = !busy;
+        BreadcrumbPanel.IsEnabled = !busy;
+    }
+
+    private void SetAddressEditing(bool editing)
+    {
+        _isAddressEditing = editing;
+        BreadcrumbScroll.Visibility = editing ? Visibility.Collapsed : Visibility.Visible;
+        AddressBox.Visibility = editing ? Visibility.Visible : Visibility.Collapsed;
+        if (editing)
+        {
+            AddressBox.Text = _currentPath.Value;
+            AddressBox.Focus();
+            AddressBox.SelectAll();
+        }
+        else
+        {
+            AddressBox.Text = _currentPath.Value;
+            BuildBreadcrumbs();
+        }
+    }
+
+    private void BuildBreadcrumbs()
+    {
+        BreadcrumbPanel.Children.Clear();
+        foreach (var part in BuildBreadcrumbParts(_currentPath))
+        {
+            if (BreadcrumbPanel.Children.Count > 0)
+            {
+                BreadcrumbPanel.Children.Add(new TextBlock
+                {
+                    Text = "›",
+                    Margin = new Thickness(2, 0, 2, 0),
+                    VerticalAlignment = VerticalAlignment.Center,
+                    Foreground = (System.Windows.Media.Brush)FindResource("MutedTextBrush"),
+                });
+            }
+
+            var button = new Button
+            {
+                Content = part.Label,
+                Tag = part.Path,
+                Style = (Style)FindResource("GhostButton"),
+                Padding = new Thickness(8, 4, 8, 4),
+                MinHeight = 30,
+                ToolTip = part.Path.Value,
+            };
+            AutomationProperties.SetName(button, part.Path.Value);
+            button.Click += BreadcrumbOnClick;
+            BreadcrumbPanel.Children.Add(button);
+        }
+    }
+
+    private static IReadOnlyList<BreadcrumbPart> BuildBreadcrumbParts(RemotePath path)
+    {
+        if (path.Value == ".")
+        {
+            return [new BreadcrumbPart(".", path)];
+        }
+
+        var parts = new List<BreadcrumbPart>();
+        if (path.IsAbsolute)
+        {
+            var root = RemotePath.Parse("/");
+            parts.Add(new BreadcrumbPart("/", root));
+            var current = root;
+            foreach (var segment in path.Value.Split('/', StringSplitOptions.RemoveEmptyEntries))
+            {
+                current = current.Combine(segment);
+                parts.Add(new BreadcrumbPart(segment, current));
+            }
+
+            return parts;
+        }
+
+        RemotePath? relative = null;
+        foreach (var segment in path.Value.Split('/', StringSplitOptions.RemoveEmptyEntries))
+        {
+            relative = relative is null ? RemotePath.Parse(segment) : relative.Value.Combine(segment);
+            parts.Add(new BreadcrumbPart(segment, relative.Value));
+        }
+
+        return parts;
+    }
+
+    private static string StateResourceKey(RemoteExplorerUiState state) => $"Loc.Explorer.State.{state}";
+
+    private static string Localize(string key) =>
+        System.Windows.Application.Current?.TryFindResource(key) as string ?? key;
+
+    private static string FormatLocalize(string key, params object?[] arguments)
+    {
+        var template = Localize(key);
+        try
+        {
+            return string.Format(CultureInfo.CurrentCulture, template, arguments);
+        }
+        catch (FormatException)
+        {
+            return template;
+        }
     }
 
     private RemoteExplorerRow? SelectedRow => FileGrid.SelectedItem as RemoteExplorerRow;
+
+    private sealed record BreadcrumbPart(string Label, RemotePath Path);
 
     private sealed class OperationScope : IDisposable
     {
@@ -611,6 +950,7 @@ public partial class RemoteExplorerWindow : Window
             if (ReferenceEquals(_owner._operationCancellation, _source))
             {
                 _owner._operationCancellation = null;
+                _owner.UpdateCommandState();
             }
 
             _source.Dispose();
