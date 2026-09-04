@@ -24,6 +24,7 @@ public sealed class WpfLocalizationService : ILocalizationService
     private const string LocalizationResourceMarker = "ServerDesk.App;component/Localization/Strings.";
     private static readonly string[] FeatureDictionaries =
     [
+        "Shell",
         "Tasks",
         "Nginx",
         "Tls",
