@@ -64,5 +64,25 @@
           Link="Fixtures\Localization\%(Filename)%(Extension)"
           CopyToOutputDirectory="PreserveNewest"
           CopyToPublishDirectory="Never" />
+    <None Include="..\..\src\ServerDesk.App\Styles\Operational.xaml"
+          Link="Fixtures\Presentation\Operational.xaml"
+          CopyToOutputDirectory="PreserveNewest"
+          CopyToPublishDirectory="Never" />
+    <None Include="..\..\src\ServerDesk.App\RemoteExplorerWindow.xaml"
+          Link="Fixtures\Presentation\RemoteExplorerWindow.xaml"
+          CopyToOutputDirectory="PreserveNewest"
+          CopyToPublishDirectory="Never" />
+    <None Include="..\..\src\ServerDesk.App\ProcessManagerWindow.xaml"
+          Link="Fixtures\Presentation\ProcessManagerWindow.xaml"
+          CopyToOutputDirectory="PreserveNewest"
+          CopyToPublishDirectory="Never" />
+    <None Include="..\..\src\ServerDesk.App\ServiceManagerWindow.xaml"
+          Link="Fixtures\Presentation\ServiceManagerWindow.xaml"
+          CopyToOutputDirectory="PreserveNewest"
+          CopyToPublishDirectory="Never" />
+    <None Include="..\..\src\ServerDesk.App\DockerInventoryWindow.xaml"
+          Link="Fixtures\Presentation\DockerInventoryWindow.xaml"
+          CopyToOutputDirectory="PreserveNewest"
+          CopyToPublishDirectory="Never" />
   </ItemGroup>
 </Project>
