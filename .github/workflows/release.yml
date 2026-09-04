@@ -53,14 +53,19 @@ jobs:
           switch ([int]$response.StatusCode) {
             200 {
               $existingRelease = $response.Content | ConvertFrom-Json
-              $expectedAssetName = "ServerDesk-$version-win-x64.zip"
+              $requiredAssets = @(
+                "ServerDesk-$version-win-x64-setup.exe",
+                "ServerDesk-$version-win-x64.zip",
+                "SHA256SUMS.txt"
+              )
               $assetNames = @($existingRelease.assets | ForEach-Object { $_.name })
-              if ($assetNames -notcontains $expectedAssetName -or $assetNames -notcontains 'SHA256SUMS.txt') {
-                throw "Release $version already exists but is incomplete; refusing to silently treat it as published."
+              $missing = @($requiredAssets | Where-Object { $assetNames -notcontains $_ })
+              if ($missing.Count -gt 0) {
+                throw "Release $version already exists but is incomplete; missing: $($missing -join ', ')."
               }
 
               "SKIP_RELEASE=true" >> $env:GITHUB_ENV
-              Write-Host "Release $version already exists with required assets; publication is idempotently skipped."
+              Write-Host "Release $version already exists with setup, portable ZIP and checksum; publication is idempotently skipped."
             }
             404 {
               "SKIP_RELEASE=false" >> $env:GITHUB_ENV
@@ -143,18 +148,20 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
 
-      - name: Verify release candidate provenance and checksum
+      - name: Verify release candidate provenance and checksums
         if: env.SKIP_RELEASE != 'true'
         shell: pwsh
         run: |
           $candidateDir = $env:CANDIDATE_DIR
-          $expectedAssetName = "ServerDesk-$env:VERSION-win-x64.zip"
-          $assetPath = Join-Path $candidateDir $expectedAssetName
+          $setupName = "ServerDesk-$env:VERSION-win-x64-setup.exe"
+          $portableName = "ServerDesk-$env:VERSION-win-x64.zip"
+          $setupPath = Join-Path $candidateDir $setupName
+          $portablePath = Join-Path $candidateDir $portableName
           $checksumPath = Join-Path $candidateDir 'SHA256SUMS.txt'
           $shaPath = Join-Path $candidateDir 'RELEASE_SHA.txt'
           $versionPath = Join-Path $candidateDir 'RELEASE_VERSION.txt'
 
-          foreach ($requiredPath in @($assetPath, $checksumPath, $shaPath, $versionPath)) {
+          foreach ($requiredPath in @($setupPath, $portablePath, $checksumPath, $shaPath, $versionPath)) {
             if (-not (Test-Path $requiredPath)) {
               throw "Verified release candidate is missing $requiredPath."
             }
@@ -169,25 +176,43 @@ jobs:
             throw "Release candidate version $candidateVersion does not match expected $env:VERSION."
           }
 
-          $checksumLine = (Get-Content $checksumPath -Raw).Trim()
-          if ($checksumLine -notmatch '^([0-9a-fA-F]{64})\s{2}(.+)$') {
-            throw "SHA256SUMS.txt has an invalid format."
+          $checksums = @{}
+          foreach ($line in Get-Content $checksumPath) {
+            if ([string]::IsNullOrWhiteSpace($line)) {
+              continue
+            }
+            if ($line -notmatch '^([0-9a-fA-F]{64})\s{2}(.+)$') {
+              throw "SHA256SUMS.txt contains an invalid line: $line"
+            }
+            $assetName = $Matches[2]
+            if ($checksums.ContainsKey($assetName)) {
+              throw "SHA256SUMS.txt contains a duplicate entry for $assetName."
+            }
+            $checksums[$assetName] = $Matches[1].ToLowerInvariant()
           }
 
-          $expectedHash = $Matches[1].ToLowerInvariant()
-          $checksumAssetName = $Matches[2]
-          if ($checksumAssetName -ne $expectedAssetName) {
-            throw "Checksum references $checksumAssetName instead of $expectedAssetName."
+          $expectedAssets = @{
+            $setupName = $setupPath
+            $portableName = $portablePath
+          }
+          if ($checksums.Count -ne $expectedAssets.Count) {
+            throw "SHA256SUMS.txt must contain exactly setup and portable ZIP checksums."
           }
 
-          $actualHash = (Get-FileHash -Algorithm SHA256 $assetPath).Hash.ToLowerInvariant()
-          if ($actualHash -ne $expectedHash) {
-            throw "Release candidate checksum mismatch: expected $expectedHash, observed $actualHash."
+          foreach ($assetName in $expectedAssets.Keys) {
+            if (-not $checksums.ContainsKey($assetName)) {
+              throw "SHA256SUMS.txt does not contain $assetName."
+            }
+            $actualHash = (Get-FileHash -Algorithm SHA256 $expectedAssets[$assetName]).Hash.ToLowerInvariant()
+            if ($actualHash -ne $checksums[$assetName]) {
+              throw "Release candidate checksum mismatch for $assetName."
+            }
           }
 
-          "ASSET_PATH=$assetPath" >> $env:GITHUB_ENV
+          "SETUP_ASSET_PATH=$setupPath" >> $env:GITHUB_ENV
+          "PORTABLE_ASSET_PATH=$portablePath" >> $env:GITHUB_ENV
           "CHECKSUM_PATH=$checksumPath" >> $env:GITHUB_ENV
-          Write-Host "Verified release candidate provenance and SHA-256 for $expectedAssetName"
+          Write-Host "Verified release candidate provenance and SHA-256 for setup + portable ZIP."
 
       - name: Create GitHub release
         if: env.SKIP_RELEASE != 'true'
@@ -203,7 +228,8 @@ jobs:
             --target $env:RELEASE_SHA `
             --title "ServerDesk $env:VERSION" `
             --notes-file $notes `
-            $env:ASSET_PATH `
+            $env:SETUP_ASSET_PATH `
+            $env:PORTABLE_ASSET_PATH `
             $env:CHECKSUM_PATH
           if ($LASTEXITCODE -ne 0) {
             throw "GitHub release creation failed with exit code $LASTEXITCODE."
@@ -231,14 +257,26 @@ jobs:
           if ($release.tag_name -ne $env:VERSION) {
             throw "Published tag $($release.tag_name) does not match expected $env:VERSION."
           }
-
-          $expectedAssetName = "ServerDesk-$env:VERSION-win-x64.zip"
-          $assetNames = @($release.assets | ForEach-Object { $_.name })
-          if ($assetNames -notcontains $expectedAssetName) {
-            throw "Release is missing $expectedAssetName."
+          if ($release.draft -or $release.prerelease) {
+            throw "Published release must not be a draft or prerelease."
           }
-          if ($assetNames -notcontains 'SHA256SUMS.txt') {
-            throw "Release is missing SHA256SUMS.txt."
+
+          $requiredAssets = @(
+            "ServerDesk-$env:VERSION-win-x64-setup.exe",
+            "ServerDesk-$env:VERSION-win-x64.zip",
+            "SHA256SUMS.txt"
+          )
+          $assetNames = @($release.assets | ForEach-Object { $_.name })
+          foreach ($requiredAsset in $requiredAssets) {
+            if ($assetNames -notcontains $requiredAsset) {
+              throw "Release is missing $requiredAsset."
+            }
+          }
+
+          foreach ($asset in $release.assets | Where-Object { $_.name -in $requiredAssets }) {
+            if ([long]$asset.size -le 0) {
+              throw "Release asset $($asset.name) is empty."
+            }
           }
 
           $commitUri = "https://api.github.com/repos/$env:GITHUB_REPOSITORY/commits/$env:VERSION"
@@ -252,6 +290,6 @@ jobs:
             throw "Release tag resolves to $tagCommit instead of certified main $env:RELEASE_SHA."
           }
 
-          Write-Host "Verified $env:VERSION at $env:RELEASE_SHA with assets: $($assetNames -join ', ')"
+          Write-Host "Verified $env:VERSION at $env:RELEASE_SHA with setup, portable ZIP and checksum."
         env:
           GH_TOKEN: ${{ github.token }}

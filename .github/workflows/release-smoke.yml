@@ -11,9 +11,9 @@ permissions:
 
 jobs:
   publish-smoke:
-    name: Self-contained win-x64 publish and GUI launch
+    name: win-x64 publish, GUI and installer smoke
     runs-on: windows-latest
-    timeout-minutes: 25
+    timeout-minutes: 30
 
     steps:
       - name: Checkout
@@ -23,6 +23,20 @@ jobs:
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: 10.0.x
+
+      - name: Install Inno Setup 6
+        shell: pwsh
+        run: |
+          $iscc = Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6\ISCC.exe'
+          if (-not (Test-Path $iscc)) {
+            choco install innosetup -y --no-progress
+            if ($LASTEXITCODE -ne 0) {
+              throw "Chocolatey failed to install Inno Setup with exit code $LASTEXITCODE."
+            }
+          }
+          if (-not (Test-Path $iscc)) {
+            throw "ISCC.exe was not found after installing Inno Setup."
+          }
 
       - name: Publish release candidate
         shell: pwsh
@@ -36,6 +50,21 @@ jobs:
           $publishDir = Join-Path $env:RUNNER_TEMP 'serverdesk-release-smoke'
           ./scripts/test-windows-gui-launch.ps1 -OutputDirectory $publishDir -StartupTimeoutSeconds 20 -StabilitySeconds 6
 
+      - name: Build Windows installer
+        shell: pwsh
+        run: |
+          $publishDir = Join-Path $env:RUNNER_TEMP 'serverdesk-release-smoke'
+          $installerDir = Join-Path $env:RUNNER_TEMP 'serverdesk-installer-smoke'
+          ./scripts/build-windows-installer.ps1 -PublishDirectory $publishDir -OutputDirectory $installerDir
+
+      - name: Install, shortcut, GUI and uninstall smoke
+        shell: pwsh
+        run: |
+          $version = (Get-Content RELEASE_VERSION -Raw).Trim()
+          $installerDir = Join-Path $env:RUNNER_TEMP 'serverdesk-installer-smoke'
+          $setupPath = Join-Path $installerDir "ServerDesk-$version-win-x64-setup.exe"
+          ./scripts/test-windows-installer.ps1 -SetupPath $setupPath -ReleaseVersion $version -StartupTimeoutSeconds 20 -StabilitySeconds 6
+
       - name: Package verified release candidate
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         shell: pwsh
@@ -46,22 +75,35 @@ jobs:
           }
 
           $publishDir = Join-Path $env:RUNNER_TEMP 'serverdesk-release-smoke'
+          $installerDir = Join-Path $env:RUNNER_TEMP 'serverdesk-installer-smoke'
           $candidateDir = Join-Path $env:GITHUB_WORKSPACE 'artifacts/release-candidate'
           New-Item -ItemType Directory -Force -Path $candidateDir | Out-Null
 
-          $assetName = "ServerDesk-$version-win-x64.zip"
-          $assetPath = Join-Path $candidateDir $assetName
-          Compress-Archive -Path (Join-Path $publishDir '*') -DestinationPath $assetPath -Force
-          if (-not (Test-Path $assetPath)) {
-            throw "Release candidate ZIP was not created."
+          $portableName = "ServerDesk-$version-win-x64.zip"
+          $portablePath = Join-Path $candidateDir $portableName
+          Compress-Archive -Path (Join-Path $publishDir '*') -DestinationPath $portablePath -Force
+          if (-not (Test-Path $portablePath)) {
+            throw "Portable release ZIP was not created."
           }
 
-          $hash = (Get-FileHash -Algorithm SHA256 $assetPath).Hash.ToLowerInvariant()
-          "$hash  $assetName" | Set-Content -Encoding ascii (Join-Path $candidateDir 'SHA256SUMS.txt')
+          $setupName = "ServerDesk-$version-win-x64-setup.exe"
+          $builtSetupPath = Join-Path $installerDir $setupName
+          $setupPath = Join-Path $candidateDir $setupName
+          if (-not (Test-Path $builtSetupPath)) {
+            throw "Smoke-tested installer was not found at $builtSetupPath."
+          }
+          Copy-Item $builtSetupPath $setupPath -Force
+
+          $checksumLines = @()
+          foreach ($assetPath in @($setupPath, $portablePath)) {
+            $hash = (Get-FileHash -Algorithm SHA256 $assetPath).Hash.ToLowerInvariant()
+            $checksumLines += "$hash  $([IO.Path]::GetFileName($assetPath))"
+          }
+          $checksumLines | Set-Content -Encoding ascii (Join-Path $candidateDir 'SHA256SUMS.txt')
           $env:GITHUB_SHA | Set-Content -Encoding ascii (Join-Path $candidateDir 'RELEASE_SHA.txt')
           $version | Set-Content -Encoding ascii (Join-Path $candidateDir 'RELEASE_VERSION.txt')
 
-          Write-Host "Packaged verified release candidate $assetName for $env:GITHUB_SHA"
+          Write-Host "Packaged verified setup + portable release candidate for $version at $env:GITHUB_SHA"
 
       - name: Upload verified release candidate
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -80,5 +122,6 @@ jobs:
           path: |
             artifacts/release-publish/*.binlog
             ${{ runner.temp }}/serverdesk-release-smoke/*.log
+            ${{ runner.temp }}/serverdesk-installer-smoke/*.log
           if-no-files-found: ignore
           retention-days: 7

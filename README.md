@@ -28,7 +28,14 @@ This does **not** mean every Linux distribution, database version, topology, or 
 - [Current scope — what is implemented and what is not](docs/CURRENT_SCOPE.md)
 - [Detailed user guide by module](docs/USER_GUIDE.md)
 - [Certified support matrix](docs/SUPPORT_MATRIX.md)
-- [V1.0.0 release notes](docs/releases/v1.0.0.md)
+- [Windows installation guide](docs/INSTALL.md)
+- [Latest release notes](docs/releases/v1.0.3.md)
+
+## Install on Windows
+
+For the normal Windows desktop experience, use the setup EXE from the latest GitHub Release. The installer is per-user, creates **ServerDesk** shortcuts on the Desktop and Start Menu, registers an uninstaller in Windows Settings, and uses the official ServerDesk app icon. After installation, launch ServerDesk from the Desktop or Start Menu; you do not need to browse into an extracted folder each time.
+
+The portable `win-x64.zip` remains available for users who intentionally do not want installation or shortcuts. See [`docs/INSTALL.md`](docs/INSTALL.md) for installation, portable and checksum instructions.
 
 ## V1 highlights
 
@@ -78,6 +85,8 @@ tests/
   ServerDesk.Tests/
   ServerDesk.Ssh.IntegrationTests/
 
+installer/                              # Windows installer definition
+scripts/                                # build/release/install smoke helpers
 docs/
 .github/
 ```
@@ -86,10 +95,11 @@ docs/
 
 For users:
 
-1. [`docs/USER_GUIDE.md`](docs/USER_GUIDE.md) — how to use each module.
-2. [`docs/CURRENT_SCOPE.md`](docs/CURRENT_SCOPE.md) — delivered, conditional, unsupported and out-of-scope capabilities.
-3. [`docs/SUPPORT_MATRIX.md`](docs/SUPPORT_MATRIX.md) — exact certified platforms/engines.
-4. [`docs/releases/v1.0.0.md`](docs/releases/v1.0.0.md) — first V1 release notes.
+1. [`docs/INSTALL.md`](docs/INSTALL.md) — install, Desktop/Start Menu launch, uninstall and portable package.
+2. [`docs/USER_GUIDE.md`](docs/USER_GUIDE.md) — how to use each module.
+3. [`docs/CURRENT_SCOPE.md`](docs/CURRENT_SCOPE.md) — delivered, conditional, unsupported and out-of-scope capabilities.
+4. [`docs/SUPPORT_MATRIX.md`](docs/SUPPORT_MATRIX.md) — exact certified platforms/engines.
+5. [`docs/releases/v1.0.3.md`](docs/releases/v1.0.3.md) — latest Windows installer release notes.
 
 For contributors/agents:
 
@@ -107,7 +117,7 @@ dotnet restore ServerDesk.sln
 dotnet build ServerDesk.sln -c Release
 ```
 
-The primary WPF build runs on Windows. The release workflow publishes a self-contained `win-x64` package after the exact `main` CI run succeeds.
+The primary WPF build runs on Windows. The release pipeline publishes a self-contained `win-x64` package, verifies the real GUI, builds and smoke-tests the Windows installer, then releases the setup EXE plus portable ZIP only after the exact `main` CI run succeeds.
 
 ## Security model in one sentence
 
