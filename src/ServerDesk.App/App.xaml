@@ -8,6 +8,7 @@
                 <ResourceDictionary Source="/ServerDesk.App;component/Styles/Controls.xaml" />
                 <ResourceDictionary Source="/ServerDesk.App;component/Localization/Strings.en.xaml" />
                 <ResourceDictionary Source="/ServerDesk.App;component/Localization/Strings.Shell.en.xaml" />
+                <ResourceDictionary Source="/ServerDesk.App;component/Localization/Strings.Explorer.en.xaml" />
                 <ResourceDictionary Source="/ServerDesk.App;component/Localization/Strings.Tasks.en.xaml" />
                 <ResourceDictionary Source="/ServerDesk.App;component/Localization/Strings.Nginx.en.xaml" />
             </ResourceDictionary.MergedDictionaries>
