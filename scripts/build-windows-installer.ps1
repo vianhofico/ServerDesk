@@ -25,13 +25,41 @@ if ($ReleaseVersion -notmatch '^v([0-9]+\.[0-9]+\.[0-9]+)$') {
 
 $appVersion = $Matches[1]
 $installerScript = Join-Path $repoRoot "installer\ServerDesk.iss"
-$brandingIcon = Join-Path $repoRoot "src\ServerDesk.App\Assets\Branding\serverdesk.ico"
+$brandingSource = Join-Path $repoRoot "src\ServerDesk.App\Assets\Branding\serverdesk.ico"
 $appExe = Join-Path $publishDir "ServerDesk.App.exe"
 
-foreach ($requiredPath in @($installerScript, $brandingIcon, $appExe)) {
+foreach ($requiredPath in @($installerScript, $brandingSource, $appExe)) {
     if (-not (Test-Path $requiredPath)) {
         throw "Installer input is missing: $requiredPath"
     }
+}
+
+# The historical source ICO is accepted by MSBuild/WPF and is already embedded in the
+# published EXE, but newer Inno Setup versions apply stricter ICO container validation.
+# Extract the exact embedded ServerDesk icon from the published executable and save it
+# as a normalized ICO for SetupIconFile. This preserves the official artwork while
+# giving the installer compiler a Windows-native icon container it accepts.
+Add-Type -AssemblyName System.Drawing
+$setupIconPath = Join-Path $outputDir "serverdesk-setup.ico"
+$embeddedIcon = [System.Drawing.Icon]::ExtractAssociatedIcon($appExe)
+if ($null -eq $embeddedIcon) {
+    throw "Could not extract the embedded ServerDesk application icon from $appExe."
+}
+try {
+    $stream = [System.IO.File]::Create($setupIconPath)
+    try {
+        $embeddedIcon.Save($stream)
+    }
+    finally {
+        $stream.Dispose()
+    }
+}
+finally {
+    $embeddedIcon.Dispose()
+}
+
+if (-not (Test-Path $setupIconPath) -or (Get-Item $setupIconPath).Length -le 0) {
+    throw "Normalized setup icon was not created at $setupIconPath."
 }
 
 $isccCandidates = @()
@@ -57,7 +85,7 @@ Write-Host "==> Build ServerDesk Windows installer with $iscc"
     "/DReleaseTag=$ReleaseVersion" `
     "/DSourceDir=$publishDir" `
     "/DOutputDir=$outputDir" `
-    "/DBrandingIcon=$brandingIcon" `
+    "/DBrandingIcon=$setupIconPath" `
     $installerScript
 
 if ($LASTEXITCODE -ne 0) {
