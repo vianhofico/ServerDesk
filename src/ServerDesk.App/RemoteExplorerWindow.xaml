@@ -15,11 +15,9 @@
         DragOver="WindowOnDragOver"
         Drop="WindowOnDrop">
     <Window.Resources>
-        <Style x:Key="ExplorerTechnicalText" TargetType="TextBlock">
-            <Setter Property="FontFamily" Value="Cascadia Mono, Consolas" />
-            <Setter Property="FontSize" Value="12" />
-            <Setter Property="VerticalAlignment" Value="Center" />
-        </Style>
+        <Style x:Key="ExplorerTechnicalText"
+               TargetType="TextBlock"
+               BasedOn="{StaticResource TechnicalText}" />
         <Style x:Key="ExplorerNameText" TargetType="TextBlock">
             <Setter Property="VerticalAlignment" Value="Center" />
             <Setter Property="TextTrimming" Value="CharacterEllipsis" />
@@ -95,11 +93,7 @@
 
         <Border Grid.Row="1"
                 Margin="0,12,0,0"
-                Padding="8"
-                Background="{DynamicResource SurfaceBrush}"
-                BorderBrush="{DynamicResource BorderBrush}"
-                BorderThickness="1"
-                CornerRadius="8">
+                Style="{StaticResource CommandBarSurface}">
             <WrapPanel VerticalAlignment="Center">
                 <Button x:Name="NewFolderButton"
                         Content="{DynamicResource Loc.Explorer.Command.NewFolder}"
@@ -238,7 +232,7 @@
 
             <Grid Grid.Column="1">
                 <TextBox x:Name="SearchBox"
-                         Style="{StaticResource FieldTextBox}"
+                         Style="{StaticResource OperationalSearchTextBox}"
                          Padding="10,6,38,6"
                          TextChanged="SearchBoxOnTextChanged"
                          ToolTip="{DynamicResource Loc.Explorer.Search.Tooltip}"
@@ -262,26 +256,8 @@
         <Border Grid.Row="4" Style="{StaticResource SurfaceCard}" CornerRadius="8" ClipToBounds="True">
             <Grid>
                 <DataGrid x:Name="FileGrid"
-                          AutoGenerateColumns="False"
-                          IsReadOnly="True"
-                          CanUserAddRows="False"
-                          CanUserDeleteRows="False"
-                          CanUserResizeRows="False"
-                          CanUserSortColumns="True"
-                          HeadersVisibility="Column"
-                          SelectionMode="Single"
-                          SelectionUnit="FullRow"
-                          GridLinesVisibility="Horizontal"
+                          Style="{StaticResource OperationalDataGrid}"
                           BorderThickness="0"
-                          RowHeight="34"
-                          ColumnHeaderHeight="34"
-                          AlternationCount="2"
-                          AlternatingRowBackground="{DynamicResource SurfaceSecondaryBrush}"
-                          EnableRowVirtualization="True"
-                          EnableColumnVirtualization="True"
-                          VirtualizingPanel.IsVirtualizing="True"
-                          VirtualizingPanel.VirtualizationMode="Recycling"
-                          ScrollViewer.CanContentScroll="True"
                           SelectionChanged="FileGridOnSelectionChanged"
                           MouseDoubleClick="FileGridOnMouseDoubleClick">
                     <DataGrid.Columns>
