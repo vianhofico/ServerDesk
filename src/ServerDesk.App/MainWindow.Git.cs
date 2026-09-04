@@ -5,8 +5,6 @@ namespace ServerDesk.App;
 
 public partial class MainWindow
 {
-    private const string GitActionTag = "ServerDesk.GitOperations";
-
     private void OpenGitOperationsOnClick(object sender, RoutedEventArgs e)
     {
         if (_viewModel.SelectedServer is not { } selected)
