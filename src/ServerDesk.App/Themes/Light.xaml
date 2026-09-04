@@ -3,24 +3,31 @@
     <Color x:Key="WindowBackgroundColor">#F5F6F8</Color>
     <Color x:Key="SurfaceColor">#FFFFFF</Color>
     <Color x:Key="SurfaceSecondaryColor">#F0F2F5</Color>
+    <Color x:Key="SurfaceHoverColor">#E9EDF2</Color>
     <Color x:Key="BorderColor">#E2E5E9</Color>
     <Color x:Key="PrimaryTextColor">#1B1B1F</Color>
     <Color x:Key="MutedTextColor">#62666D</Color>
     <Color x:Key="AccentColor">#2563EB</Color>
+    <Color x:Key="AccentHoverColor">#1D4ED8</Color>
     <Color x:Key="AccentSoftColor">#E8F0FF</Color>
     <Color x:Key="SuccessColor">#16803A</Color>
     <Color x:Key="WarningColor">#A15C00</Color>
     <Color x:Key="DangerColor">#C42B1C</Color>
+    <Color x:Key="DangerSoftColor">#FCEDEA</Color>
 
     <SolidColorBrush x:Key="WindowBackgroundBrush" Color="{StaticResource WindowBackgroundColor}" />
     <SolidColorBrush x:Key="SurfaceBrush" Color="{StaticResource SurfaceColor}" />
     <SolidColorBrush x:Key="SurfaceSecondaryBrush" Color="{StaticResource SurfaceSecondaryColor}" />
+    <SolidColorBrush x:Key="SurfaceHoverBrush" Color="{StaticResource SurfaceHoverColor}" />
     <SolidColorBrush x:Key="BorderBrush" Color="{StaticResource BorderColor}" />
     <SolidColorBrush x:Key="PrimaryTextBrush" Color="{StaticResource PrimaryTextColor}" />
     <SolidColorBrush x:Key="MutedTextBrush" Color="{StaticResource MutedTextColor}" />
     <SolidColorBrush x:Key="AccentBrush" Color="{StaticResource AccentColor}" />
+    <SolidColorBrush x:Key="AccentHoverBrush" Color="{StaticResource AccentHoverColor}" />
     <SolidColorBrush x:Key="AccentSoftBrush" Color="{StaticResource AccentSoftColor}" />
+    <SolidColorBrush x:Key="FocusRingBrush" Color="{StaticResource AccentColor}" />
     <SolidColorBrush x:Key="SuccessBrush" Color="{StaticResource SuccessColor}" />
     <SolidColorBrush x:Key="WarningBrush" Color="{StaticResource WarningColor}" />
     <SolidColorBrush x:Key="DangerBrush" Color="{StaticResource DangerColor}" />
+    <SolidColorBrush x:Key="DangerSoftBrush" Color="{StaticResource DangerSoftColor}" />
 </ResourceDictionary>
