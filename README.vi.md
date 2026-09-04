@@ -28,7 +28,14 @@ Roadmap M0–M8 đã được triển khai và certify trong repository. V1 bao 
 - [Scope hiện tại — đã làm gì, chưa làm gì](docs/CURRENT_SCOPE.vi.md)
 - [Hướng dẫn sử dụng chi tiết theo từng phân hệ](docs/USER_GUIDE.vi.md)
 - [Ma trận hỗ trợ/certification](docs/SUPPORT_MATRIX.vi.md)
-- [Release notes V1.0.0](docs/releases/v1.0.0.vi.md)
+- [Hướng dẫn cài trên Windows](docs/INSTALL.vi.md)
+- [Release notes mới nhất](docs/releases/v1.0.3.vi.md)
+
+## Cài trên Windows
+
+Để dùng như một app Windows bình thường, hãy dùng file setup EXE trong GitHub Release mới nhất. Installer cài theo user hiện tại, tạo shortcut **ServerDesk** ngoài Desktop và trong Start Menu, đăng ký uninstaller trong Windows Settings và dùng đúng icon/avatar chính thức của ServerDesk. Sau khi cài, chỉ cần mở ServerDesk từ Desktop hoặc Start Menu; không phải mỗi lần mở thư mục đã giải nén để chạy EXE nữa.
+
+Bản `win-x64.zip` portable vẫn được giữ cho trường hợp chủ động không muốn cài đặt hay tạo shortcut. Xem [`docs/INSTALL.vi.md`](docs/INSTALL.vi.md) để biết cách cài, dùng portable và kiểm tra checksum.
 
 ## Điểm nổi bật của V1
 
@@ -78,6 +85,8 @@ tests/
   ServerDesk.Tests/
   ServerDesk.Ssh.IntegrationTests/
 
+installer/                               # định nghĩa Windows installer
+scripts/                                 # helper build/release/install smoke
 docs/
 .github/
 ```
@@ -86,10 +95,11 @@ docs/
 
 Dành cho người dùng:
 
-1. [`docs/USER_GUIDE.vi.md`](docs/USER_GUIDE.vi.md) — cách sử dụng từng phân hệ.
-2. [`docs/CURRENT_SCOPE.vi.md`](docs/CURRENT_SCOPE.vi.md) — capability đã làm, conditional, unsupported và out-of-scope.
-3. [`docs/SUPPORT_MATRIX.vi.md`](docs/SUPPORT_MATRIX.vi.md) — platform/engine/version được certify chính xác.
-4. [`docs/releases/v1.0.0.vi.md`](docs/releases/v1.0.0.vi.md) — release notes V1 đầu tiên.
+1. [`docs/INSTALL.vi.md`](docs/INSTALL.vi.md) — cài đặt, mở từ Desktop/Start Menu, uninstall và bản portable.
+2. [`docs/USER_GUIDE.vi.md`](docs/USER_GUIDE.vi.md) — cách sử dụng từng phân hệ.
+3. [`docs/CURRENT_SCOPE.vi.md`](docs/CURRENT_SCOPE.vi.md) — capability đã làm, conditional, unsupported và out-of-scope.
+4. [`docs/SUPPORT_MATRIX.vi.md`](docs/SUPPORT_MATRIX.vi.md) — platform/engine/version được certify chính xác.
+5. [`docs/releases/v1.0.3.vi.md`](docs/releases/v1.0.3.vi.md) — release notes bản Windows installer mới nhất.
 
 Dành cho contributor/coding agent:
 
@@ -107,7 +117,7 @@ dotnet restore ServerDesk.sln
 dotnet build ServerDesk.sln -c Release
 ```
 
-WPF build chính chạy trên Windows. Release workflow publish package `win-x64` self-contained chỉ sau khi CI của đúng commit trên `main` xanh.
+WPF build chính chạy trên Windows. Release pipeline publish package `win-x64` self-contained, chạy GUI smoke thật, build và test installer, rồi chỉ release setup EXE + ZIP portable sau khi CI của đúng commit trên `main` xanh.
 
 ## Mô hình bảo mật trong một câu
 
