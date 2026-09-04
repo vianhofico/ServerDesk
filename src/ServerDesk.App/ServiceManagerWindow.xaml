@@ -11,14 +11,6 @@
         Foreground="{DynamicResource PrimaryTextBrush}"
         Loaded="WindowOnLoaded"
         Closed="WindowOnClosed">
-    <Window.Resources>
-        <Style x:Key="ServiceButton" TargetType="Button">
-            <Setter Property="Padding" Value="11,7" />
-            <Setter Property="MinHeight" Value="34" />
-            <Setter Property="Margin" Value="7,0,0,0" />
-            <Setter Property="Cursor" Value="Hand" />
-        </Style>
-    </Window.Resources>
     <Grid Margin="20">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -37,17 +29,19 @@
                 <TextBlock x:Name="TitleText" FontSize="26" FontWeight="SemiBold" />
                 <TextBlock x:Name="EndpointText" Margin="0,5,0,0" Foreground="{DynamicResource MutedTextBrush}" />
             </StackPanel>
-            <WrapPanel Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Top">
-                <Button Content="Refresh" Click="RefreshOnClick" Style="{StaticResource ServiceButton}" Margin="0" />
-                <Button Content="Details" Click="DetailsOnClick" Style="{StaticResource ServiceButton}" />
-                <Button Content="Cancel" Click="CancelOnClick" Style="{StaticResource ServiceButton}" />
-                <Button Content="Start" Click="StartOnClick" Style="{StaticResource ServiceButton}" />
-                <Button Content="Stop" Click="StopOnClick" Style="{StaticResource ServiceButton}" />
-                <Button Content="Restart" Click="RestartOnClick" Style="{StaticResource ServiceButton}" />
-                <Button Content="Reload" Click="ReloadOnClick" Style="{StaticResource ServiceButton}" />
-                <Button Content="Enable" Click="EnableOnClick" Style="{StaticResource ServiceButton}" />
-                <Button Content="Disable" Click="DisableOnClick" Style="{StaticResource ServiceButton}" />
-            </WrapPanel>
+            <Border Grid.Column="1" Style="{StaticResource CommandBarSurface}" VerticalAlignment="Top">
+                <WrapPanel HorizontalAlignment="Right">
+                    <Button Content="Refresh" Click="RefreshOnClick" Style="{StaticResource SecondaryButton}" />
+                    <Button Content="Details" Click="DetailsOnClick" Style="{StaticResource GhostButton}" Margin="6,0,0,0" />
+                    <Button Content="Cancel" Click="CancelOnClick" Style="{StaticResource GhostButton}" Margin="6,0,0,0" />
+                    <Button Content="Start" Click="StartOnClick" Style="{StaticResource SecondaryButton}" Margin="12,0,0,0" />
+                    <Button Content="Stop" Click="StopOnClick" Style="{StaticResource DangerButton}" Margin="6,0,0,0" />
+                    <Button Content="Restart" Click="RestartOnClick" Style="{StaticResource SecondaryButton}" Margin="6,0,0,0" />
+                    <Button Content="Reload" Click="ReloadOnClick" Style="{StaticResource SecondaryButton}" Margin="6,0,0,0" />
+                    <Button Content="Enable" Click="EnableOnClick" Style="{StaticResource SecondaryButton}" Margin="6,0,0,0" />
+                    <Button Content="Disable" Click="DisableOnClick" Style="{StaticResource DangerButton}" Margin="6,0,0,0" />
+                </WrapPanel>
+            </Border>
         </Grid>
 
         <Grid Grid.Row="1" Margin="0,16,0,0">
@@ -56,7 +50,10 @@
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
             <TextBlock VerticalAlignment="Center" Text="Search" Foreground="{DynamicResource MutedTextBrush}" />
-            <TextBox x:Name="SearchBox" Grid.Column="1" TextChanged="SearchBoxOnTextChanged" />
+            <TextBox x:Name="SearchBox"
+                     Grid.Column="1"
+                     Style="{StaticResource OperationalSearchTextBox}"
+                     TextChanged="SearchBoxOnTextChanged" />
         </Grid>
 
         <Border Grid.Row="2" Margin="0,12,0,10" Padding="10" CornerRadius="7"
@@ -70,18 +67,7 @@
                 <ColumnDefinition Width="1.25*" />
             </Grid.ColumnDefinitions>
             <DataGrid x:Name="ServiceGrid"
-                      AutoGenerateColumns="False"
-                      IsReadOnly="True"
-                      CanUserAddRows="False"
-                      CanUserDeleteRows="False"
-                      SelectionMode="Single"
-                      HeadersVisibility="Column"
-                      GridLinesVisibility="Horizontal"
-                      EnableRowVirtualization="True"
-                      EnableColumnVirtualization="True"
-                      VirtualizingPanel.IsVirtualizing="True"
-                      VirtualizingPanel.VirtualizationMode="Recycling"
-                      ScrollViewer.CanContentScroll="True"
+                      Style="{StaticResource OperationalDataGrid}"
                       SelectionChanged="ServiceGridOnSelectionChanged">
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="Unit" Binding="{Binding Unit}" Width="1.8*" />
@@ -93,15 +79,18 @@
                 </DataGrid.Columns>
             </DataGrid>
 
-            <Border Grid.Column="1" Margin="14,0,0,0" Padding="14" CornerRadius="8"
-                    Background="{DynamicResource SurfaceBrush}"
-                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+            <Border Grid.Column="1" Margin="14,0,0,0" Style="{StaticResource DetailsPane}">
                 <StackPanel>
                     <TextBlock Text="Service details" FontSize="17" FontWeight="SemiBold" />
                     <TextBlock x:Name="DetailsText" Margin="0,12,0,0" TextWrapping="Wrap"
                                Foreground="{DynamicResource MutedTextBrush}" />
-                    <Button x:Name="LogsButton" Content="Open logs" Margin="0,16,0,0" Padding="10,6"
-                            HorizontalAlignment="Left" IsEnabled="False" Click="LogsOnClick"
+                    <Button x:Name="LogsButton"
+                            Content="Open logs"
+                            Margin="0,16,0,0"
+                            HorizontalAlignment="Left"
+                            IsEnabled="False"
+                            Click="LogsOnClick"
+                            Style="{StaticResource SecondaryButton}"
                             ToolTip="Open the shared Logs viewer filtered to this systemd unit." />
                 </StackPanel>
             </Border>

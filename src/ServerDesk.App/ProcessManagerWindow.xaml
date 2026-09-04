@@ -11,14 +11,6 @@
         Foreground="{DynamicResource PrimaryTextBrush}"
         Loaded="WindowOnLoaded"
         Closed="WindowOnClosed">
-    <Window.Resources>
-        <Style x:Key="ProcessButton" TargetType="Button">
-            <Setter Property="Padding" Value="12,7" />
-            <Setter Property="MinHeight" Value="34" />
-            <Setter Property="Margin" Value="7,0,0,0" />
-            <Setter Property="Cursor" Value="Hand" />
-        </Style>
-    </Window.Resources>
     <Grid Margin="20">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -37,12 +29,14 @@
                 <TextBlock x:Name="TitleText" FontSize="26" FontWeight="SemiBold" />
                 <TextBlock x:Name="EndpointText" Margin="0,5,0,0" Foreground="{DynamicResource MutedTextBrush}" />
             </StackPanel>
-            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Top">
-                <Button Content="Refresh" Click="RefreshOnClick" Style="{StaticResource ProcessButton}" Margin="0" />
-                <Button Content="Cancel" Click="CancelOnClick" Style="{StaticResource ProcessButton}" />
-                <Button Content="Terminate" Click="TerminateOnClick" Style="{StaticResource ProcessButton}" />
-                <Button Content="Force kill" Click="ForceKillOnClick" Style="{StaticResource ProcessButton}" />
-            </StackPanel>
+            <Border Grid.Column="1" Style="{StaticResource CommandBarSurface}" VerticalAlignment="Top">
+                <StackPanel Orientation="Horizontal">
+                    <Button Content="Refresh" Click="RefreshOnClick" Style="{StaticResource SecondaryButton}" />
+                    <Button Content="Cancel" Click="CancelOnClick" Style="{StaticResource GhostButton}" Margin="6,0,0,0" />
+                    <Button Content="Terminate" Click="TerminateOnClick" Style="{StaticResource DangerButton}" Margin="12,0,0,0" />
+                    <Button Content="Force kill" Click="ForceKillOnClick" Style="{StaticResource DangerButton}" Margin="6,0,0,0" />
+                </StackPanel>
+            </Border>
         </Grid>
 
         <Grid Grid.Row="1" Margin="0,16,0,0">
@@ -51,7 +45,10 @@
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
             <TextBlock VerticalAlignment="Center" Text="Search" Foreground="{DynamicResource MutedTextBrush}" />
-            <TextBox x:Name="SearchBox" Grid.Column="1" TextChanged="SearchBoxOnTextChanged" />
+            <TextBox x:Name="SearchBox"
+                     Grid.Column="1"
+                     Style="{StaticResource OperationalSearchTextBox}"
+                     TextChanged="SearchBoxOnTextChanged" />
         </Grid>
 
         <Border Grid.Row="2" Margin="0,12,0,10" Padding="10" CornerRadius="7"
@@ -65,18 +62,7 @@
                 <ColumnDefinition Width="1.2*" />
             </Grid.ColumnDefinitions>
             <DataGrid x:Name="ProcessGrid"
-                      AutoGenerateColumns="False"
-                      IsReadOnly="True"
-                      CanUserAddRows="False"
-                      CanUserDeleteRows="False"
-                      SelectionMode="Single"
-                      HeadersVisibility="Column"
-                      GridLinesVisibility="Horizontal"
-                      EnableRowVirtualization="True"
-                      EnableColumnVirtualization="True"
-                      VirtualizingPanel.IsVirtualizing="True"
-                      VirtualizingPanel.VirtualizationMode="Recycling"
-                      ScrollViewer.CanContentScroll="True"
+                      Style="{StaticResource OperationalDataGrid}"
                       SelectionChanged="ProcessGridOnSelectionChanged">
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="PID" Binding="{Binding ProcessId}" Width="0.7*" />
@@ -90,9 +76,7 @@
                 </DataGrid.Columns>
             </DataGrid>
 
-            <Border Grid.Column="1" Margin="14,0,0,0" Padding="14" CornerRadius="8"
-                    Background="{DynamicResource SurfaceBrush}"
-                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+            <Border Grid.Column="1" Margin="14,0,0,0" Style="{StaticResource DetailsPane}">
                 <StackPanel>
                     <TextBlock Text="Process details" FontSize="17" FontWeight="SemiBold" />
                     <TextBlock x:Name="DetailsText" Margin="0,12,0,0" TextWrapping="Wrap"
