@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   publish-smoke:
-    name: Self-contained win-x64 publish
+    name: Self-contained win-x64 publish and GUI launch
     runs-on: windows-latest
     timeout-minutes: 25
 
@@ -29,6 +29,12 @@ jobs:
         run: |
           $publishDir = Join-Path $env:RUNNER_TEMP 'serverdesk-release-smoke'
           ./scripts/publish-windows-release.ps1 -OutputDirectory $publishDir
+
+      - name: Launch published Windows GUI
+        shell: pwsh
+        run: |
+          $publishDir = Join-Path $env:RUNNER_TEMP 'serverdesk-release-smoke'
+          ./scripts/test-windows-gui-launch.ps1 -OutputDirectory $publishDir -StartupTimeoutSeconds 20 -StabilitySeconds 6
 
       - name: Package verified release candidate
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -71,6 +77,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: release-publish-diagnostics
-          path: artifacts/release-publish/*.binlog
+          path: |
+            artifacts/release-publish/*.binlog
+            ${{ runner.temp }}/serverdesk-release-smoke/*.log
           if-no-files-found: ignore
           retention-days: 7

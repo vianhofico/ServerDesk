@@ -28,7 +28,7 @@
                         Content="Refresh capabilities"
                         Click="RefreshOnClick"
                         IsEnabled="{Binding CanRefresh}"
-                        Style="{StaticResource SecondaryButton}" />
+                        Style="{DynamicResource SecondaryButton}" />
             </Grid>
 
             <ProgressBar Margin="0,12,0,0"
