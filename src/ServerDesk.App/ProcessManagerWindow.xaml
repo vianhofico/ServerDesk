@@ -1,18 +1,45 @@
 <Window x:Class="ServerDesk.App.ProcessManagerWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Processes"
-        Width="1220"
-        Height="760"
-        MinWidth="940"
-        MinHeight="580"
+        Title="{DynamicResource Loc.Processes.WindowTitle}"
+        Width="1320"
+        Height="820"
+        MinWidth="1020"
+        MinHeight="640"
         WindowStartupLocation="CenterOwner"
         Background="{DynamicResource WindowBackgroundBrush}"
         Foreground="{DynamicResource PrimaryTextBrush}"
         Loaded="WindowOnLoaded"
         Closed="WindowOnClosed">
+    <Window.Resources>
+        <Style x:Key="ProcessSummaryLabel" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" />
+        </Style>
+        <Style x:Key="ProcessSummaryValue" TargetType="TextBlock">
+            <Setter Property="Margin" Value="0,3,0,0" />
+            <Setter Property="FontSize" Value="19" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+        <Style x:Key="ProcessDetailLabel" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" />
+        </Style>
+        <Style x:Key="ProcessDetailValue" TargetType="TextBlock">
+            <Setter Property="Margin" Value="0,2,0,10" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+        </Style>
+        <Style x:Key="ProcessTechnicalValue"
+               TargetType="TextBlock"
+               BasedOn="{StaticResource ProcessDetailValue}">
+            <Setter Property="FontFamily" Value="Cascadia Mono, Consolas" />
+            <Setter Property="FontSize" Value="12" />
+        </Style>
+    </Window.Resources>
+
     <Grid Margin="20">
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
@@ -20,72 +47,277 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <Grid>
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
-            </Grid.ColumnDefinitions>
-            <StackPanel>
-                <TextBlock x:Name="TitleText" FontSize="26" FontWeight="SemiBold" />
-                <TextBlock x:Name="EndpointText" Margin="0,5,0,0" Foreground="{DynamicResource MutedTextBrush}" />
-            </StackPanel>
-            <Border Grid.Column="1" Style="{StaticResource CommandBarSurface}" VerticalAlignment="Top">
-                <StackPanel Orientation="Horizontal">
-                    <Button Content="Refresh" Click="RefreshOnClick" Style="{StaticResource SecondaryButton}" />
-                    <Button Content="Cancel" Click="CancelOnClick" Style="{StaticResource GhostButton}" Margin="6,0,0,0" />
-                    <Button Content="Terminate" Click="TerminateOnClick" Style="{StaticResource DangerButton}" Margin="12,0,0,0" />
-                    <Button Content="Force kill" Click="ForceKillOnClick" Style="{StaticResource DangerButton}" Margin="6,0,0,0" />
+        <Border Grid.Row="0" Style="{StaticResource SurfaceCard}" Padding="18">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel>
+                    <TextBlock Text="{DynamicResource Loc.Processes.Header.Title}"
+                               FontSize="27"
+                               FontWeight="SemiBold" />
+                    <TextBlock Text="{DynamicResource Loc.Processes.Header.Subtitle}"
+                               Margin="0,3,0,10"
+                               Foreground="{DynamicResource MutedTextBrush}" />
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock x:Name="ServerNameText" FontWeight="SemiBold" />
+                        <TextBlock Text="  ·  " Foreground="{DynamicResource MutedTextBrush}" />
+                        <TextBlock x:Name="EndpointText"
+                                   Style="{StaticResource TechnicalText}"
+                                   Foreground="{DynamicResource MutedTextBrush}" />
+                    </StackPanel>
                 </StackPanel>
-            </Border>
-        </Grid>
 
-        <Grid Grid.Row="1" Margin="0,16,0,0">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="90" />
-                <ColumnDefinition Width="*" />
-            </Grid.ColumnDefinitions>
-            <TextBlock VerticalAlignment="Center" Text="Search" Foreground="{DynamicResource MutedTextBrush}" />
-            <TextBox x:Name="SearchBox"
-                     Grid.Column="1"
-                     Style="{StaticResource OperationalSearchTextBox}"
-                     TextChanged="SearchBoxOnTextChanged" />
-        </Grid>
-
-        <Border Grid.Row="2" Margin="0,12,0,10" Padding="10" CornerRadius="7"
-                Background="{DynamicResource SurfaceSecondaryBrush}">
-            <TextBlock x:Name="StatusText" TextWrapping="Wrap" />
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Border Padding="12,8"
+                            CornerRadius="8"
+                            Background="{DynamicResource SurfaceSecondaryBrush}">
+                        <StackPanel>
+                            <TextBlock Text="{DynamicResource Loc.Processes.Header.Environment}"
+                                       Style="{StaticResource ProcessSummaryLabel}" />
+                            <TextBlock x:Name="EnvironmentValueText"
+                                       Margin="0,2,0,0"
+                                       FontWeight="SemiBold" />
+                        </StackPanel>
+                    </Border>
+                    <Border Margin="8,0,0,0"
+                            Padding="12,8"
+                            CornerRadius="8"
+                            Background="{DynamicResource AccentSoftBrush}">
+                        <StackPanel>
+                            <TextBlock Text="{DynamicResource Loc.Processes.Header.Connection}"
+                                       Style="{StaticResource ProcessSummaryLabel}" />
+                            <TextBlock x:Name="ConnectionValueText"
+                                       Margin="0,2,0,0"
+                                       FontWeight="SemiBold" />
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </Grid>
         </Border>
 
-        <Grid Grid.Row="3">
+        <Border Grid.Row="1"
+                Margin="0,12,0,0"
+                Style="{StaticResource CommandBarSurface}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel Orientation="Horizontal">
+                    <Button x:Name="RefreshButton"
+                            Content="{DynamicResource Loc.Processes.Command.Refresh}"
+                            Click="RefreshOnClick"
+                            Style="{StaticResource SecondaryButton}" />
+                    <Button x:Name="CancelButton"
+                            Margin="6,0,0,0"
+                            Content="{DynamicResource Loc.Processes.Command.Cancel}"
+                            Click="CancelOnClick"
+                            Style="{StaticResource GhostButton}"
+                            IsEnabled="False" />
+                </StackPanel>
+
+                <StackPanel Grid.Column="1" Margin="16,0" VerticalAlignment="Center">
+                    <TextBlock Text="{DynamicResource Loc.Processes.Command.Target}"
+                               FontSize="11"
+                               Foreground="{DynamicResource MutedTextBrush}" />
+                    <TextBlock x:Name="TargetValueText"
+                               Margin="0,2,0,0"
+                               FontFamily="Cascadia Mono, Consolas"
+                               Text="{DynamicResource Loc.Processes.Command.NoTarget}" />
+                </StackPanel>
+
+                <StackPanel Grid.Column="2" Orientation="Horizontal">
+                    <Button x:Name="TerminateButton"
+                            Content="{DynamicResource Loc.Processes.Command.Terminate}"
+                            Click="TerminateOnClick"
+                            Style="{StaticResource SecondaryButton}"
+                            IsEnabled="False" />
+                    <Button x:Name="ForceKillButton"
+                            Margin="8,0,0,0"
+                            Content="{DynamicResource Loc.Processes.Command.ForceKill}"
+                            Click="ForceKillOnClick"
+                            Style="{StaticResource DangerButton}"
+                            IsEnabled="False" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <Grid Grid.Row="2" Margin="0,10,0,0">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="3*" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="1.2*" />
             </Grid.ColumnDefinitions>
-            <DataGrid x:Name="ProcessGrid"
-                      Style="{StaticResource OperationalDataGrid}"
-                      SelectionChanged="ProcessGridOnSelectionChanged">
-                <DataGrid.Columns>
-                    <DataGridTextColumn Header="PID" Binding="{Binding ProcessId}" Width="0.7*" />
-                    <DataGridTextColumn Header="User" Binding="{Binding User}" Width="1.1*" />
-                    <DataGridTextColumn Header="CPU" Binding="{Binding CpuText}" Width="0.8*" />
-                    <DataGridTextColumn Header="Memory" Binding="{Binding MemoryText}" Width="1*" />
-                    <DataGridTextColumn Header="State" Binding="{Binding State}" Width="0.7*" />
-                    <DataGridTextColumn Header="Elapsed" Binding="{Binding ElapsedText}" Width="1*" />
-                    <DataGridTextColumn Header="Command" Binding="{Binding Command}" Width="1.3*" />
-                    <DataGridTextColumn Header="Arguments" Binding="{Binding Arguments}" Width="2.8*" />
-                </DataGrid.Columns>
-            </DataGrid>
-
-            <Border Grid.Column="1" Margin="14,0,0,0" Style="{StaticResource DetailsPane}">
+            <Border Grid.Column="0" Style="{StaticResource SurfaceCard}" Padding="12" Margin="0,0,8,0">
                 <StackPanel>
-                    <TextBlock Text="Process details" FontSize="17" FontWeight="SemiBold" />
-                    <TextBlock x:Name="DetailsText" Margin="0,12,0,0" TextWrapping="Wrap"
-                               Foreground="{DynamicResource MutedTextBrush}" />
+                    <TextBlock Text="{DynamicResource Loc.Processes.Summary.Processes}" Style="{StaticResource ProcessSummaryLabel}" />
+                    <TextBlock x:Name="TotalProcessesValue" Text="0" Style="{StaticResource ProcessSummaryValue}" />
+                </StackPanel>
+            </Border>
+            <Border Grid.Column="1" Style="{StaticResource SurfaceCard}" Padding="12" Margin="0,0,8,0">
+                <StackPanel>
+                    <TextBlock Text="{DynamicResource Loc.Processes.Summary.Visible}" Style="{StaticResource ProcessSummaryLabel}" />
+                    <TextBlock x:Name="VisibleProcessesValue" Text="0" Style="{StaticResource ProcessSummaryValue}" />
+                </StackPanel>
+            </Border>
+            <Border Grid.Column="2" Style="{StaticResource SurfaceCard}" Padding="12" Margin="0,0,8,0">
+                <StackPanel>
+                    <TextBlock Text="{DynamicResource Loc.Processes.Summary.Users}" Style="{StaticResource ProcessSummaryLabel}" />
+                    <TextBlock x:Name="UsersValue" Text="0" Style="{StaticResource ProcessSummaryValue}" />
+                </StackPanel>
+            </Border>
+            <Border Grid.Column="3" Style="{StaticResource SurfaceCard}" Padding="12">
+                <StackPanel>
+                    <TextBlock Text="{DynamicResource Loc.Processes.Summary.ResidentMemory}" Style="{StaticResource ProcessSummaryLabel}" />
+                    <TextBlock x:Name="ResidentMemoryValue" Text="0 B" Style="{StaticResource ProcessSummaryValue}" />
                 </StackPanel>
             </Border>
         </Grid>
 
-        <TextBlock x:Name="FooterText" Grid.Row="4" Margin="0,10,0,0"
+        <Grid Grid.Row="3" Margin="0,10,0,10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="330" />
+            </Grid.ColumnDefinitions>
+            <Border x:Name="StatusCard"
+                    Style="{StaticResource InlineInfoCard}"
+                    Margin="0,0,10,0">
+                <TextBlock x:Name="StatusText" TextWrapping="Wrap" VerticalAlignment="Center" />
+            </Border>
+            <Grid Grid.Column="1">
+                <TextBox x:Name="SearchBox"
+                         Style="{StaticResource OperationalSearchTextBox}"
+                         Padding="10,6,38,6"
+                         TextChanged="SearchBoxOnTextChanged"
+                         ToolTip="{DynamicResource Loc.Processes.Search.Tooltip}"
+                         AutomationProperties.Name="{DynamicResource Loc.Processes.Search.Label}" />
+                <Button x:Name="ClearSearchButton"
+                        Width="32"
+                        Height="30"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Center"
+                        Margin="0,0,3,0"
+                        Padding="0"
+                        Content="×"
+                        ToolTip="{DynamicResource Loc.Processes.Search.Clear}"
+                        Click="ClearSearchOnClick"
+                        Style="{StaticResource GhostButton}"
+                        Visibility="Collapsed"
+                        AutomationProperties.Name="{DynamicResource Loc.Processes.Search.Clear}" />
+            </Grid>
+        </Grid>
+
+        <Grid Grid.Row="4">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="3.2*" />
+                <ColumnDefinition Width="1.35*" />
+            </Grid.ColumnDefinitions>
+
+            <Border Style="{StaticResource SurfaceCard}" CornerRadius="8" ClipToBounds="True">
+                <Grid>
+                    <DataGrid x:Name="ProcessGrid"
+                              Style="{StaticResource OperationalDataGrid}"
+                              BorderThickness="0"
+                              SelectionChanged="ProcessGridOnSelectionChanged">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="{DynamicResource Loc.Processes.Column.Pid}" Binding="{Binding ProcessId}" Width="0.65*">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock" BasedOn="{StaticResource TechnicalText}" />
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
+                            <DataGridTextColumn Header="{DynamicResource Loc.Processes.Column.User}" Binding="{Binding User}" Width="1.05*" />
+                            <DataGridTextColumn Header="{DynamicResource Loc.Processes.Column.Cpu}" Binding="{Binding CpuText}" Width="0.75*">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock" BasedOn="{StaticResource TechnicalText}" />
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
+                            <DataGridTextColumn Header="{DynamicResource Loc.Processes.Column.Memory}" Binding="{Binding MemoryText}" Width="0.9*">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock" BasedOn="{StaticResource TechnicalText}" />
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
+                            <DataGridTextColumn Header="{DynamicResource Loc.Processes.Column.State}" Binding="{Binding State}" Width="0.7*" />
+                            <DataGridTextColumn Header="{DynamicResource Loc.Processes.Column.Elapsed}" Binding="{Binding ElapsedText}" Width="1*">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock" BasedOn="{StaticResource TechnicalText}" />
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
+                            <DataGridTextColumn Header="{DynamicResource Loc.Processes.Column.Command}" Binding="{Binding Command}" Width="1.35*">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock" BasedOn="{StaticResource TechnicalText}" />
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
+                            <DataGridTextColumn Header="{DynamicResource Loc.Processes.Column.Arguments}" Binding="{Binding Arguments}" Width="2.6*">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock" BasedOn="{StaticResource TechnicalText}" />
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+
+                    <Border x:Name="GridStateOverlay"
+                            Background="{DynamicResource SurfaceBrush}"
+                            Visibility="Visible"
+                            IsHitTestVisible="False">
+                        <StackPanel MaxWidth="500" HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <TextBlock x:Name="GridStateTitle"
+                                       FontSize="20"
+                                       FontWeight="SemiBold"
+                                       TextAlignment="Center" />
+                            <TextBlock x:Name="GridStateDetail"
+                                       Margin="0,7,0,0"
+                                       Foreground="{DynamicResource MutedTextBrush}"
+                                       TextAlignment="Center"
+                                       TextWrapping="Wrap" />
+                        </StackPanel>
+                    </Border>
+                </Grid>
+            </Border>
+
+            <Border Grid.Column="1" Margin="14,0,0,0" Style="{StaticResource DetailsPane}">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel>
+                        <TextBlock Text="{DynamicResource Loc.Processes.Details.Title}"
+                                   FontSize="17"
+                                   FontWeight="SemiBold" />
+                        <TextBlock x:Name="DetailsHintText"
+                                   Margin="0,10,0,0"
+                                   Text="{DynamicResource Loc.Processes.Details.Hint}"
+                                   Foreground="{DynamicResource MutedTextBrush}"
+                                   TextWrapping="Wrap" />
+
+                        <StackPanel x:Name="DetailsContent" Margin="0,14,0,0" Visibility="Collapsed">
+                            <TextBlock Text="{DynamicResource Loc.Processes.Details.Pid}" Style="{StaticResource ProcessDetailLabel}" />
+                            <TextBlock x:Name="DetailPidText" Style="{StaticResource ProcessTechnicalValue}" />
+                            <TextBlock Text="{DynamicResource Loc.Processes.Details.ParentPid}" Style="{StaticResource ProcessDetailLabel}" />
+                            <TextBlock x:Name="DetailParentPidText" Style="{StaticResource ProcessTechnicalValue}" />
+                            <TextBlock Text="{DynamicResource Loc.Processes.Details.User}" Style="{StaticResource ProcessDetailLabel}" />
+                            <TextBlock x:Name="DetailUserText" Style="{StaticResource ProcessDetailValue}" />
+                            <TextBlock Text="{DynamicResource Loc.Processes.Details.State}" Style="{StaticResource ProcessDetailLabel}" />
+                            <TextBlock x:Name="DetailStateText" Style="{StaticResource ProcessDetailValue}" />
+                            <TextBlock Text="{DynamicResource Loc.Processes.Details.Cpu}" Style="{StaticResource ProcessDetailLabel}" />
+                            <TextBlock x:Name="DetailCpuText" Style="{StaticResource ProcessTechnicalValue}" />
+                            <TextBlock Text="{DynamicResource Loc.Processes.Details.Memory}" Style="{StaticResource ProcessDetailLabel}" />
+                            <TextBlock x:Name="DetailMemoryText" Style="{StaticResource ProcessTechnicalValue}" />
+                            <TextBlock Text="{DynamicResource Loc.Processes.Details.Elapsed}" Style="{StaticResource ProcessDetailLabel}" />
+                            <TextBlock x:Name="DetailElapsedText" Style="{StaticResource ProcessTechnicalValue}" />
+                            <TextBlock Text="{DynamicResource Loc.Processes.Details.Command}" Style="{StaticResource ProcessDetailLabel}" />
+                            <TextBlock x:Name="DetailCommandText" Style="{StaticResource ProcessTechnicalValue}" />
+                            <TextBlock Text="{DynamicResource Loc.Processes.Details.Arguments}" Style="{StaticResource ProcessDetailLabel}" />
+                            <TextBlock x:Name="DetailArgumentsText" Style="{StaticResource ProcessTechnicalValue}" Margin="0,2,0,0" />
+                        </StackPanel>
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+        </Grid>
+
+        <TextBlock x:Name="FooterText"
+                   Grid.Row="5"
+                   Margin="0,10,0,0"
                    Foreground="{DynamicResource MutedTextBrush}" />
     </Grid>
 </Window>
