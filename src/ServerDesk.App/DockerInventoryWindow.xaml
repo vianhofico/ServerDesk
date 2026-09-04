@@ -12,12 +12,6 @@
         Loaded="WindowOnLoaded"
         Closed="WindowOnClosed">
     <Window.Resources>
-        <Style x:Key="DockerButton" TargetType="Button">
-            <Setter Property="Padding" Value="11,7" />
-            <Setter Property="MinHeight" Value="34" />
-            <Setter Property="Margin" Value="8,0,0,0" />
-            <Setter Property="Cursor" Value="Hand" />
-        </Style>
         <Style x:Key="SummaryValue" TargetType="TextBlock">
             <Setter Property="FontSize" Value="18" />
             <Setter Property="FontWeight" Value="SemiBold" />
@@ -48,13 +42,22 @@
                 <TextBlock x:Name="EndpointText" Margin="0,5,0,0"
                            Foreground="{DynamicResource MutedTextBrush}" />
             </StackPanel>
-            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Top">
-                <Button Content="Refresh" Click="RefreshOnClick" Style="{StaticResource DockerButton}" Margin="0" />
-                <Button x:Name="DiagnosticsButton" Content="Container diagnostics" Click="DiagnosticsOnClick"
-                        Style="{StaticResource DockerButton}" IsEnabled="False"
-                        ToolTip="Open inspect, stats and logs for the selected container." />
-                <Button Content="Cancel" Click="CancelOnClick" Style="{StaticResource DockerButton}" />
-            </StackPanel>
+            <Border Grid.Column="1" Style="{StaticResource CommandBarSurface}" VerticalAlignment="Top">
+                <StackPanel Orientation="Horizontal">
+                    <Button Content="Refresh" Click="RefreshOnClick" Style="{StaticResource SecondaryButton}" />
+                    <Button x:Name="DiagnosticsButton"
+                            Content="Container diagnostics"
+                            Click="DiagnosticsOnClick"
+                            Style="{StaticResource SecondaryButton}"
+                            Margin="6,0,0,0"
+                            IsEnabled="False"
+                            ToolTip="Open inspect, stats and logs for the selected container." />
+                    <Button Content="Cancel"
+                            Click="CancelOnClick"
+                            Style="{StaticResource GhostButton}"
+                            Margin="6,0,0,0" />
+                </StackPanel>
+            </Border>
         </Grid>
 
         <Grid Grid.Row="1" Margin="0,16,0,0">
@@ -64,7 +67,10 @@
             </Grid.ColumnDefinitions>
             <TextBlock Text="Search" VerticalAlignment="Center"
                        Foreground="{DynamicResource MutedTextBrush}" />
-            <TextBox x:Name="SearchBox" Grid.Column="1" Margin="10,0,0,0"
+            <TextBox x:Name="SearchBox"
+                     Grid.Column="1"
+                     Margin="10,0,0,0"
+                     Style="{StaticResource OperationalSearchTextBox}"
                      TextChanged="SearchBoxOnTextChanged"
                      ToolTip="Filter the currently loaded Docker inventory locally." />
         </Grid>
@@ -133,13 +139,8 @@
 
         <TabControl Grid.Row="4" x:Name="InventoryTabs">
             <TabItem Header="Containers">
-                <DataGrid x:Name="ContainerGrid" AutoGenerateColumns="False" IsReadOnly="True"
-                          CanUserAddRows="False" CanUserDeleteRows="False"
-                          EnableRowVirtualization="True" EnableColumnVirtualization="True"
-                          VirtualizingPanel.IsVirtualizing="True"
-                          VirtualizingPanel.VirtualizationMode="Recycling"
-                          ScrollViewer.CanContentScroll="True"
-                          CanUserSortColumns="True"
+                <DataGrid x:Name="ContainerGrid"
+                          Style="{StaticResource OperationalDataGrid}"
                           SelectionChanged="ContainerGridOnSelectionChanged"
                           MouseDoubleClick="ContainerGridOnMouseDoubleClick">
                     <DataGrid.Columns>
@@ -154,13 +155,7 @@
                 </DataGrid>
             </TabItem>
             <TabItem Header="Images">
-                <DataGrid x:Name="ImageGrid" AutoGenerateColumns="False" IsReadOnly="True"
-                          CanUserAddRows="False" CanUserDeleteRows="False"
-                          EnableRowVirtualization="True" EnableColumnVirtualization="True"
-                          VirtualizingPanel.IsVirtualizing="True"
-                          VirtualizingPanel.VirtualizationMode="Recycling"
-                          ScrollViewer.CanContentScroll="True"
-                          CanUserSortColumns="True">
+                <DataGrid x:Name="ImageGrid" Style="{StaticResource OperationalDataGrid}">
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="Repository" Binding="{Binding Repository}" Width="1.5*" />
                         <DataGridTextColumn Header="Tag" Binding="{Binding Tag}" Width="0.8*" />
@@ -172,13 +167,7 @@
                 </DataGrid>
             </TabItem>
             <TabItem Header="Volumes">
-                <DataGrid x:Name="VolumeGrid" AutoGenerateColumns="False" IsReadOnly="True"
-                          CanUserAddRows="False" CanUserDeleteRows="False"
-                          EnableRowVirtualization="True" EnableColumnVirtualization="True"
-                          VirtualizingPanel.IsVirtualizing="True"
-                          VirtualizingPanel.VirtualizationMode="Recycling"
-                          ScrollViewer.CanContentScroll="True"
-                          CanUserSortColumns="True">
+                <DataGrid x:Name="VolumeGrid" Style="{StaticResource OperationalDataGrid}">
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="1.5*" />
                         <DataGridTextColumn Header="Driver" Binding="{Binding Driver}" Width="0.8*" />
@@ -189,13 +178,7 @@
                 </DataGrid>
             </TabItem>
             <TabItem Header="Networks">
-                <DataGrid x:Name="NetworkGrid" AutoGenerateColumns="False" IsReadOnly="True"
-                          CanUserAddRows="False" CanUserDeleteRows="False"
-                          EnableRowVirtualization="True" EnableColumnVirtualization="True"
-                          VirtualizingPanel.IsVirtualizing="True"
-                          VirtualizingPanel.VirtualizationMode="Recycling"
-                          ScrollViewer.CanContentScroll="True"
-                          CanUserSortColumns="True">
+                <DataGrid x:Name="NetworkGrid" Style="{StaticResource OperationalDataGrid}">
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="1.4*" />
                         <DataGridTextColumn Header="Driver" Binding="{Binding Driver}" Width="0.9*" />
