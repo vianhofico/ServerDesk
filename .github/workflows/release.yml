@@ -191,10 +191,9 @@ jobs:
             $checksums[$assetName] = $Matches[1].ToLowerInvariant()
           }
 
-          $expectedAssets = @{
-            $setupName = $setupPath
-            $portableName = $portablePath
-          }
+          $expectedAssets = @{}
+          $expectedAssets[$setupName] = $setupPath
+          $expectedAssets[$portableName] = $portablePath
           if ($checksums.Count -ne $expectedAssets.Count) {
             throw "SHA256SUMS.txt must contain exactly setup and portable ZIP checksums."
           }
