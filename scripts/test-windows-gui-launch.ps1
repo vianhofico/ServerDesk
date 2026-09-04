@@ -47,7 +47,7 @@ try {
             throw "ServerDesk exited during GUI startup with code $($process.ExitCode).`n$events"
         }
 
-        if ($process.MainWindowHandle -ne 0 -and -not [string]::IsNullOrWhiteSpace($process.MainWindowTitle)) {
+        if ($process.MainWindowHandle -ne 0 -and $process.MainWindowTitle -eq 'ServerDesk') {
             $windowSeen = $true
             break
         }
@@ -57,10 +57,10 @@ try {
 
     if (-not $windowSeen) {
         $events = Get-RecentServerDeskEvents
-        throw "ServerDesk remained alive but did not expose a visible main window within $StartupTimeoutSeconds second(s).`n$events"
+        throw "ServerDesk remained alive but did not expose the expected visible 'ServerDesk' main window within $StartupTimeoutSeconds second(s). Current title: '$($process.MainWindowTitle)'.`n$events"
     }
 
-    Write-Host "Visible window detected: '$($process.MainWindowTitle)' (handle $($process.MainWindowHandle))."
+    Write-Host "Visible ServerDesk main window detected (handle $($process.MainWindowHandle))."
     Start-Sleep -Seconds $StabilitySeconds
 
     $process.Refresh()
@@ -69,12 +69,12 @@ try {
         throw "ServerDesk exited during the $StabilitySeconds-second GUI stability window with code $($process.ExitCode).`n$events"
     }
 
-    if ($process.MainWindowHandle -eq 0) {
+    if ($process.MainWindowHandle -eq 0 -or $process.MainWindowTitle -ne 'ServerDesk') {
         $events = Get-RecentServerDeskEvents
-        throw "ServerDesk lost its main window during the GUI stability window.`n$events"
+        throw "ServerDesk lost its expected main window during the GUI stability window. Current title: '$($process.MainWindowTitle)'.`n$events"
     }
 
-    Write-Host "ServerDesk GUI launch smoke passed: process is alive and the main window remained visible."
+    Write-Host "ServerDesk GUI launch smoke passed: process is alive and the expected main window remained visible."
 }
 finally {
     try {
