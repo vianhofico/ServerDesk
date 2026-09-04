@@ -2,44 +2,18 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="ServerDesk"
-        Width="1320"
-        Height="840"
-        MinWidth="1040"
-        MinHeight="680"
+        Width="1360"
+        Height="860"
+        MinWidth="1080"
+        MinHeight="700"
         WindowStartupLocation="CenterScreen">
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
-
-        <Style x:Key="PrimaryButton" TargetType="Button">
-            <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
-            <Setter Property="Foreground" Value="White" />
-            <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="Padding" Value="14,8" />
-            <Setter Property="MinHeight" Value="34" />
-            <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="Cursor" Value="Hand" />
-        </Style>
-
-        <Style x:Key="SecondaryButton" TargetType="Button">
-            <Setter Property="Background" Value="{DynamicResource SurfaceSecondaryBrush}" />
-            <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}" />
-            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="Padding" Value="12,7" />
-            <Setter Property="MinHeight" Value="34" />
-            <Setter Property="Cursor" Value="Hand" />
-        </Style>
-
-        <Style x:Key="FieldTextBox" TargetType="TextBox">
-            <Setter Property="MinHeight" Value="36" />
-            <Setter Property="Padding" Value="10,6" />
-            <Setter Property="VerticalContentAlignment" Value="Center" />
-        </Style>
     </Window.Resources>
 
     <Grid Background="{DynamicResource WindowBackgroundBrush}">
         <Grid.RowDefinitions>
-            <RowDefinition Height="64" />
+            <RowDefinition Height="68" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
@@ -49,13 +23,18 @@
                 BorderThickness="0,0,0,1">
             <Grid Margin="20,0">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="250" />
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
 
-                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                    <Border Width="34" Height="34" CornerRadius="9" Background="{DynamicResource AccentBrush}">
+                <StackPanel Grid.Column="0"
+                            Orientation="Horizontal"
+                            VerticalAlignment="Center">
+                    <Border Width="36"
+                            Height="36"
+                            CornerRadius="9"
+                            Background="{DynamicResource AccentBrush}">
                         <TextBlock Text="S"
                                    Foreground="White"
                                    FontWeight="SemiBold"
@@ -63,47 +42,100 @@
                                    HorizontalAlignment="Center"
                                    VerticalAlignment="Center" />
                     </Border>
-                    <StackPanel Margin="10,0,0,0" VerticalAlignment="Center">
-                        <TextBlock Text="ServerDesk" FontSize="17" FontWeight="SemiBold" />
+                    <StackPanel Margin="10,0,0,0"
+                                VerticalAlignment="Center">
+                        <TextBlock Text="ServerDesk"
+                                   FontSize="17"
+                                   FontWeight="SemiBold" />
                         <TextBlock Text="{DynamicResource Loc.AppSubtitle}"
                                    FontSize="11"
                                    Foreground="{DynamicResource MutedTextBrush}" />
                     </StackPanel>
                 </StackPanel>
 
-                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                    <Border Margin="0,0,14,0"
-                            Padding="10,5"
-                            CornerRadius="12"
-                            Background="{DynamicResource AccentSoftBrush}">
-                        <StackPanel Orientation="Horizontal">
-                            <Ellipse Width="7" Height="7"
-                                     Fill="{DynamicResource SuccessBrush}"
-                                     VerticalAlignment="Center" />
-                            <TextBlock Margin="7,0,0,0"
-                                       Text="{DynamicResource Loc.Header.Milestone}"
-                                       FontSize="12"
-                                       FontWeight="SemiBold" />
+                <Grid Grid.Column="1"
+                      Margin="16,0"
+                      VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal"
+                                Visibility="{Binding HasSelectedServer, Converter={StaticResource BoolToVisibility}}">
+                        <Border Width="3"
+                                Height="34"
+                                Margin="0,0,10,0"
+                                CornerRadius="2"
+                                Background="{DynamicResource AccentBrush}" />
+                        <StackPanel>
+                            <TextBlock Text="{DynamicResource Loc.Shell.Header.Server}"
+                                       FontSize="10"
+                                       FontWeight="SemiBold"
+                                       Foreground="{DynamicResource MutedTextBrush}" />
+                            <StackPanel Margin="0,3,0,0"
+                                        Orientation="Horizontal">
+                                <TextBlock Text="{Binding SelectedServer.Name}"
+                                           FontWeight="SemiBold"
+                                           TextTrimming="CharacterEllipsis"
+                                           MaxWidth="230" />
+                                <Border Margin="8,0,0,0"
+                                        Padding="7,2"
+                                        CornerRadius="9"
+                                        Background="{DynamicResource SurfaceSecondaryBrush}">
+                                    <TextBlock Text="{Binding SelectedServer.Environment}"
+                                               FontSize="10"
+                                               FontWeight="SemiBold" />
+                                </Border>
+                                <Border Margin="6,0,0,0"
+                                        Padding="7,2"
+                                        CornerRadius="9"
+                                        Background="{DynamicResource AccentSoftBrush}">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Ellipse Width="6"
+                                                 Height="6"
+                                                 Margin="0,0,6,0"
+                                                 Fill="{DynamicResource AccentBrush}"
+                                                 VerticalAlignment="Center" />
+                                        <TextBlock Text="{Binding SelectedServer.ConnectionLabel}"
+                                                   FontSize="10"
+                                                   FontWeight="SemiBold" />
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
                         </StackPanel>
+                    </StackPanel>
+
+                    <StackPanel Visibility="{Binding HasNoSelectedServer, Converter={StaticResource BoolToVisibility}}">
+                        <TextBlock Text="{DynamicResource Loc.Shell.Header.NoServer}"
+                                   FontWeight="SemiBold" />
+                        <TextBlock Margin="0,2,0,0"
+                                   Text="{DynamicResource Loc.Shell.Header.NoServerHint}"
+                                   FontSize="11"
+                                   Foreground="{DynamicResource MutedTextBrush}" />
+                    </StackPanel>
+                </Grid>
+
+                <StackPanel Grid.Column="2"
+                            Orientation="Horizontal"
+                            VerticalAlignment="Center">
+                    <Border Margin="0,0,14,0"
+                            Padding="9,4"
+                            CornerRadius="10"
+                            Background="{DynamicResource AccentSoftBrush}">
+                        <TextBlock Text="{DynamicResource Loc.Shell.Header.ProductStatus}"
+                                   FontSize="11"
+                                   FontWeight="SemiBold" />
                     </Border>
-                    <TextBlock Text="{DynamicResource Loc.Settings}"
-                               Margin="0,0,12,0"
-                               FontWeight="SemiBold"
-                               VerticalAlignment="Center" />
                     <TextBlock Text="{DynamicResource Loc.Theme}"
                                Margin="0,0,7,0"
                                Foreground="{DynamicResource MutedTextBrush}"
                                VerticalAlignment="Center" />
-                    <ComboBox Width="122"
+                    <ComboBox Width="116"
                               ItemsSource="{Binding ThemeOptions}"
                               DisplayMemberPath="DisplayName"
                               SelectedValuePath="Value"
                               SelectedValue="{Binding ThemePreference, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                     <TextBlock Text="{DynamicResource Loc.Language}"
-                               Margin="16,0,7,0"
+                               Margin="14,0,7,0"
                                Foreground="{DynamicResource MutedTextBrush}"
                                VerticalAlignment="Center" />
-                    <ComboBox Width="166"
+                    <ComboBox Width="154"
                               ItemsSource="{Binding LanguageOptions}"
                               DisplayMemberPath="DisplayName"
                               SelectedValuePath="Value"
@@ -114,7 +146,7 @@
 
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="302" />
+                <ColumnDefinition Width="304" />
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
 
@@ -125,21 +157,25 @@
                 <Grid Margin="14">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
-                        <RowDefinition Height="250" />
+                        <RowDefinition Height="220" />
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="*" />
                         <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
 
-                    <Grid Grid.Row="0" Margin="2,2,2,10">
+                    <Grid Grid.Row="0"
+                          Margin="2,2,2,10">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
                         <StackPanel VerticalAlignment="Center">
-                            <TextBlock Text="{DynamicResource Loc.Servers}" FontSize="11" FontWeight="SemiBold"
+                            <TextBlock Text="{DynamicResource Loc.Shell.ServerPane.Title}"
+                                       FontSize="11"
+                                       FontWeight="SemiBold"
                                        Foreground="{DynamicResource MutedTextBrush}" />
-                            <TextBlock Text="{Binding ServerCountLabel}" FontSize="11"
+                            <TextBlock Text="{Binding ServerCountLabel}"
+                                       FontSize="11"
                                        Foreground="{DynamicResource MutedTextBrush}" />
                         </StackPanel>
                         <Button Grid.Column="1"
@@ -151,36 +187,10 @@
                     <ListBox Grid.Row="1"
                              ItemsSource="{Binding Servers}"
                              SelectedItem="{Binding SelectedServer, Mode=TwoWay}"
+                             ItemContainerStyle="{StaticResource ServerListItem}"
                              BorderThickness="0"
                              Background="Transparent"
                              ScrollViewer.VerticalScrollBarVisibility="Auto">
-                        <ListBox.ItemContainerStyle>
-                            <Style TargetType="ListBoxItem">
-                                <Setter Property="Padding" Value="0" />
-                                <Setter Property="Margin" Value="0,2" />
-                                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-                                <Setter Property="Background" Value="Transparent" />
-                                <Setter Property="BorderThickness" Value="0" />
-                                <Setter Property="Template">
-                                    <Setter.Value>
-                                        <ControlTemplate TargetType="ListBoxItem">
-                                            <Border x:Name="Root"
-                                                    Padding="10,9"
-                                                    CornerRadius="8"
-                                                    Background="{TemplateBinding Background}">
-                                                <ContentPresenter />
-                                            </Border>
-                                            <ControlTemplate.Triggers>
-                                                <Trigger Property="IsSelected" Value="True">
-                                                    <Setter TargetName="Root" Property="Background"
-                                                            Value="{DynamicResource AccentSoftBrush}" />
-                                                </Trigger>
-                                            </ControlTemplate.Triggers>
-                                        </ControlTemplate>
-                                    </Setter.Value>
-                                </Setter>
-                            </Style>
-                        </ListBox.ItemContainerStyle>
                         <ListBox.ItemTemplate>
                             <DataTemplate>
                                 <Grid>
@@ -188,19 +198,34 @@
                                         <ColumnDefinition Width="14" />
                                         <ColumnDefinition Width="*" />
                                     </Grid.ColumnDefinitions>
-                                    <Ellipse Width="7" Height="7"
+                                    <Ellipse Width="7"
+                                             Height="7"
                                              Fill="{DynamicResource MutedTextBrush}"
                                              VerticalAlignment="Top"
                                              Margin="0,6,0,0" />
                                     <StackPanel Grid.Column="1">
-                                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
-                                        <TextBlock Text="{Binding Endpoint}"
-                                                   Margin="0,2,0,0"
-                                                   FontSize="11"
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Text="{Binding Name}"
+                                                       FontWeight="SemiBold"
+                                                       TextTrimming="CharacterEllipsis" />
+                                            <TextBlock Grid.Column="1"
+                                                       Margin="8,0,0,0"
+                                                       Text="{Binding Environment}"
+                                                       FontSize="10"
+                                                       Foreground="{DynamicResource MutedTextBrush}" />
+                                        </Grid>
+                                        <TextBlock Margin="0,2,0,0"
+                                                   Text="{Binding Endpoint}"
+                                                   FontFamily="Cascadia Mono, Consolas"
+                                                   FontSize="10.5"
                                                    TextTrimming="CharacterEllipsis"
                                                    Foreground="{DynamicResource MutedTextBrush}" />
-                                        <TextBlock Text="{Binding ConnectionLabel}"
-                                                   Margin="0,3,0,0"
+                                        <TextBlock Margin="0,3,0,0"
+                                                   Text="{Binding ConnectionLabel}"
                                                    FontSize="11"
                                                    FontWeight="SemiBold" />
                                     </StackPanel>
@@ -210,35 +235,52 @@
                     </ListBox>
 
                     <TextBlock Grid.Row="2"
-                               Text="{DynamicResource Loc.Workspace}"
-                               Margin="8,18,8,6"
+                               Margin="8,16,8,6"
+                               Text="{DynamicResource Loc.Shell.Workspace.Title}"
                                FontSize="11"
                                FontWeight="SemiBold"
-                               TextWrapping="Wrap"
                                Foreground="{DynamicResource MutedTextBrush}" />
 
-                    <ListBox Grid.Row="3"
-                             ItemsSource="{Binding NavigationItems}"
-                             SelectedItem="{Binding SelectedNavigationItem, Mode=TwoWay}"
+                    <ListBox x:Name="WorkspaceNavigationList"
+                             Grid.Row="3"
                              BorderThickness="0"
-                             Background="Transparent">
+                             Background="Transparent"
+                             ScrollViewer.VerticalScrollBarVisibility="Auto">
                         <ListBox.ItemContainerStyle>
                             <Style TargetType="ListBoxItem">
-                                <Setter Property="IsEnabled" Value="{Binding IsAvailable}" />
-                                <Setter Property="Padding" Value="10,7" />
-                                <Setter Property="Margin" Value="0,1" />
+                                <Setter Property="Padding" Value="0" />
+                                <Setter Property="Margin" Value="0" />
                                 <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-                                <Setter Property="BorderThickness" Value="0" />
-                                <Style.Triggers>
-                                    <Trigger Property="IsEnabled" Value="False">
-                                        <Setter Property="Opacity" Value="0.45" />
-                                    </Trigger>
-                                </Style.Triggers>
+                                <Setter Property="Focusable" Value="False" />
+                                <Setter Property="IsHitTestVisible" Value="True" />
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="ListBoxItem">
+                                            <ContentPresenter />
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
                             </Style>
                         </ListBox.ItemContainerStyle>
                         <ListBox.ItemTemplate>
                             <DataTemplate>
-                                <TextBlock Text="{Binding Title}" FontSize="13" />
+                                <StackPanel>
+                                    <TextBlock Margin="8,10,8,4"
+                                               Text="{Binding Group}"
+                                               FontSize="10"
+                                               FontWeight="SemiBold"
+                                               Foreground="{DynamicResource MutedTextBrush}"
+                                               Visibility="{Binding ShowGroupHeader, Converter={StaticResource BoolToVisibility}}" />
+                                    <Button Style="{StaticResource WorkspaceNavigationButton}"
+                                            IsEnabled="{Binding IsAvailable}"
+                                            Click="WorkspaceNavigationOnClick"
+                                            ToolTip="{Binding Description}"
+                                            ToolTipService.ShowOnDisabled="True">
+                                        <TextBlock Text="{Binding Title}"
+                                                   FontSize="13"
+                                                   VerticalAlignment="Center" />
+                                    </Button>
+                                </StackPanel>
                             </DataTemplate>
                         </ListBox.ItemTemplate>
                     </ListBox>
@@ -249,27 +291,22 @@
                             CornerRadius="8"
                             Background="{DynamicResource SurfaceSecondaryBrush}">
                         <StackPanel>
-                            <TextBlock Text="{DynamicResource Loc.SecurityBoundary}" FontSize="12" FontWeight="SemiBold" />
+                            <TextBlock Text="{DynamicResource Loc.Shell.Security.Title}"
+                                       FontSize="11"
+                                       FontWeight="SemiBold" />
                             <TextBlock Margin="0,3,0,0"
-                                       Text="{DynamicResource Loc.Security.SecretsStore}"
+                                       Text="{DynamicResource Loc.Shell.Security.Description}"
                                        TextWrapping="Wrap"
-                                       FontSize="11"
-                                       Foreground="{DynamicResource MutedTextBrush}" />
-                            <TextBlock Text="{DynamicResource Loc.Security.HostTrustStore}"
-                                       TextWrapping="Wrap"
-                                       FontSize="11"
-                                       Foreground="{DynamicResource MutedTextBrush}" />
-                            <TextBlock Text="{DynamicResource Loc.Security.Transport}"
-                                       TextWrapping="Wrap"
-                                       FontSize="11"
+                                       FontSize="10.5"
                                        Foreground="{DynamicResource MutedTextBrush}" />
                         </StackPanel>
                     </Border>
                 </Grid>
             </Border>
 
-            <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto">
-                <Grid Margin="34,28">
+            <ScrollViewer Grid.Column="1"
+                          VerticalScrollBarVisibility="Auto">
+                <Grid Margin="30,26,34,34">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
@@ -282,9 +319,12 @@
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
                         <StackPanel>
-                            <TextBlock Text="{Binding CurrentTitle}" FontSize="29" FontWeight="SemiBold" />
-                            <TextBlock Margin="0,6,0,0"
-                                       Text="{Binding CurrentDescription}"
+                            <TextBlock Text="{DynamicResource Loc.Shell.Home.Title}"
+                                       FontSize="28"
+                                       FontWeight="SemiBold" />
+                            <TextBlock Margin="0,5,0,0"
+                                       Text="{DynamicResource Loc.Shell.Home.Description}"
+                                       TextWrapping="Wrap"
                                        Foreground="{DynamicResource MutedTextBrush}" />
                         </StackPanel>
                         <ProgressBar Grid.Column="1"
@@ -295,18 +335,15 @@
                                      VerticalAlignment="Center" />
                     </Grid>
 
-                    <StackPanel Grid.Row="1" Margin="0,18,0,0">
-                        <Border Padding="12"
-                                CornerRadius="8"
-                                Background="{DynamicResource AccentSoftBrush}"
+                    <StackPanel Grid.Row="1"
+                                Margin="0,16,0,0">
+                        <Border Style="{StaticResource InlineInfoCard}"
                                 Visibility="{Binding HasStatusMessage, Converter={StaticResource BoolToVisibility}}">
-                            <TextBlock Text="{Binding StatusMessage}" TextWrapping="Wrap" />
+                            <TextBlock Text="{Binding StatusMessage}"
+                                       TextWrapping="Wrap" />
                         </Border>
                         <Border Margin="0,8,0,0"
-                                Padding="12"
-                                CornerRadius="8"
-                                BorderBrush="{DynamicResource DangerBrush}"
-                                BorderThickness="1"
+                                Style="{StaticResource InlineErrorCard}"
                                 Visibility="{Binding HasErrorMessage, Converter={StaticResource BoolToVisibility}}">
                             <TextBlock Text="{Binding ErrorMessage}"
                                        TextWrapping="Wrap"
@@ -314,17 +351,18 @@
                         </Border>
                     </StackPanel>
 
-                    <Grid Grid.Row="2" Margin="0,18,0,0">
+                    <Grid Grid.Row="2"
+                          Margin="0,18,0,0">
                         <Border Padding="24"
-                                CornerRadius="12"
-                                Background="{DynamicResource SurfaceBrush}"
-                                BorderBrush="{DynamicResource BorderBrush}"
-                                BorderThickness="1"
+                                Style="{StaticResource SurfaceCard}"
                                 Visibility="{Binding IsEditorOpen, Converter={StaticResource BoolToVisibility}}">
-                            <StackPanel MaxWidth="760" HorizontalAlignment="Left">
-                                <TextBlock Text="Server profile" FontSize="20" FontWeight="SemiBold" />
+                            <StackPanel MaxWidth="780"
+                                        HorizontalAlignment="Left">
+                                <TextBlock Text="{DynamicResource Loc.Shell.Profile.Title}"
+                                           FontSize="20"
+                                           FontWeight="SemiBold" />
                                 <TextBlock Margin="0,5,0,20"
-                                           Text="Save connection metadata locally. Existing passwords are never loaded back into this form."
+                                           Text="{DynamicResource Loc.Shell.Profile.Description}"
                                            Foreground="{DynamicResource MutedTextBrush}"
                                            TextWrapping="Wrap" />
 
@@ -340,33 +378,49 @@
                                         <RowDefinition Height="Auto" />
                                     </Grid.RowDefinitions>
 
-                                    <StackPanel Grid.Row="0" Grid.Column="0">
-                                        <TextBlock Text="Display name" Margin="0,0,0,5" />
+                                    <StackPanel Grid.Row="0"
+                                                Grid.Column="0">
+                                        <TextBlock Text="{DynamicResource Loc.Shell.Profile.DisplayName}"
+                                                   Margin="0,0,0,5" />
                                         <TextBox Text="{Binding Editor.Name, UpdateSourceTrigger=PropertyChanged}"
                                                  Style="{StaticResource FieldTextBox}" />
                                     </StackPanel>
-                                    <StackPanel Grid.Row="0" Grid.Column="2">
-                                        <TextBlock Text="Environment" Margin="0,0,0,5" />
+                                    <StackPanel Grid.Row="0"
+                                                Grid.Column="2">
+                                        <TextBlock Text="{DynamicResource Loc.Shell.Profile.Environment}"
+                                                   Margin="0,0,0,5" />
                                         <TextBox Text="{Binding Editor.Environment, UpdateSourceTrigger=PropertyChanged}"
                                                  Style="{StaticResource FieldTextBox}" />
                                     </StackPanel>
-                                    <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,14,0,0">
-                                        <TextBlock Text="Host / IP" Margin="0,0,0,5" />
+                                    <StackPanel Grid.Row="1"
+                                                Grid.Column="0"
+                                                Margin="0,14,0,0">
+                                        <TextBlock Text="{DynamicResource Loc.Shell.Profile.Host}"
+                                                   Margin="0,0,0,5" />
                                         <TextBox Text="{Binding Editor.Host, UpdateSourceTrigger=PropertyChanged}"
                                                  Style="{StaticResource FieldTextBox}" />
                                     </StackPanel>
-                                    <StackPanel Grid.Row="1" Grid.Column="2" Margin="0,14,0,0">
-                                        <TextBlock Text="Port" Margin="0,0,0,5" />
+                                    <StackPanel Grid.Row="1"
+                                                Grid.Column="2"
+                                                Margin="0,14,0,0">
+                                        <TextBlock Text="{DynamicResource Loc.Shell.Profile.Port}"
+                                                   Margin="0,0,0,5" />
                                         <TextBox Text="{Binding Editor.PortText, UpdateSourceTrigger=PropertyChanged}"
                                                  Style="{StaticResource FieldTextBox}" />
                                     </StackPanel>
-                                    <StackPanel Grid.Row="2" Grid.Column="0" Margin="0,14,0,0">
-                                        <TextBlock Text="Username" Margin="0,0,0,5" />
+                                    <StackPanel Grid.Row="2"
+                                                Grid.Column="0"
+                                                Margin="0,14,0,0">
+                                        <TextBlock Text="{DynamicResource Loc.Shell.Profile.Username}"
+                                                   Margin="0,0,0,5" />
                                         <TextBox Text="{Binding Editor.Username, UpdateSourceTrigger=PropertyChanged}"
                                                  Style="{StaticResource FieldTextBox}" />
                                     </StackPanel>
-                                    <StackPanel Grid.Row="2" Grid.Column="2" Margin="0,14,0,0">
-                                        <TextBlock Text="Authentication" Margin="0,0,0,5" />
+                                    <StackPanel Grid.Row="2"
+                                                Grid.Column="2"
+                                                Margin="0,14,0,0">
+                                        <TextBlock Text="{DynamicResource Loc.Shell.Profile.Authentication}"
+                                                   Margin="0,0,0,5" />
                                         <ComboBox ItemsSource="{Binding Editor.AuthenticationChoices}"
                                                   DisplayMemberPath="DisplayName"
                                                   SelectedValuePath="Kind"
@@ -376,18 +430,20 @@
 
                                 <StackPanel Margin="0,16,0,0"
                                             Visibility="{Binding Editor.IsPrivateKey, Converter={StaticResource BoolToVisibility}}">
-                                    <TextBlock Text="Private key path" Margin="0,0,0,5" />
+                                    <TextBlock Text="{DynamicResource Loc.Shell.Profile.PrivateKeyPath}"
+                                               Margin="0,0,0,5" />
                                     <TextBox Text="{Binding Editor.PrivateKeyPath, UpdateSourceTrigger=PropertyChanged}"
                                              Style="{StaticResource FieldTextBox}" />
                                     <TextBlock Margin="0,4,0,0"
-                                               Text="Path is metadata only; ServerDesk never copies private-key contents into SQLite."
+                                               Text="{DynamicResource Loc.Shell.Profile.PrivateKeyHint}"
                                                FontSize="11"
                                                Foreground="{DynamicResource MutedTextBrush}" />
                                 </StackPanel>
 
                                 <StackPanel Margin="0,16,0,0"
                                             Visibility="{Binding Editor.CanStoreSecret, Converter={StaticResource BoolToVisibility}}">
-                                    <TextBlock Text="{Binding Editor.SecretLabel}" Margin="0,0,0,5" />
+                                    <TextBlock Text="{Binding Editor.SecretLabel}"
+                                               Margin="0,0,0,5" />
                                     <PasswordBox x:Name="CredentialSecretBox"
                                                  MinHeight="36"
                                                  Padding="10,6"
@@ -403,16 +459,17 @@
                                         Padding="12"
                                         CornerRadius="8"
                                         Background="{DynamicResource SurfaceSecondaryBrush}">
-                                    <TextBlock Text="Passwords/passphrases are stored in Windows Credential Manager. Host-key trust is evaluated before any SSH credential is accepted by the remote endpoint."
+                                    <TextBlock Text="{DynamicResource Loc.Shell.Profile.SecretSafety}"
                                                TextWrapping="Wrap"
                                                FontSize="12" />
                                 </Border>
 
-                                <StackPanel Orientation="Horizontal" Margin="0,22,0,0">
-                                    <Button Content="Save server"
+                                <StackPanel Orientation="Horizontal"
+                                            Margin="0,22,0,0">
+                                    <Button Content="{DynamicResource Loc.Shell.Profile.Save}"
                                             Command="{Binding SaveServerCommand}"
                                             Style="{StaticResource PrimaryButton}" />
-                                    <Button Content="Cancel"
+                                    <Button Content="{DynamicResource Loc.Common.Cancel}"
                                             Margin="10,0,0,0"
                                             Command="{Binding CancelEditorCommand}"
                                             Style="{StaticResource SecondaryButton}" />
@@ -422,40 +479,40 @@
 
                         <StackPanel Visibility="{Binding IsDashboardVisible, Converter={StaticResource BoolToVisibility}}">
                             <Border Padding="28"
-                                    CornerRadius="12"
-                                    Background="{DynamicResource SurfaceBrush}"
-                                    BorderBrush="{DynamicResource BorderBrush}"
-                                    BorderThickness="1"
+                                    Style="{StaticResource SurfaceCard}"
                                     Visibility="{Binding HasNoSelectedServer, Converter={StaticResource BoolToVisibility}}">
-                                <StackPanel HorizontalAlignment="Center" MaxWidth="520">
-                                    <Border Width="52" Height="52" CornerRadius="14"
+                                <StackPanel HorizontalAlignment="Center"
+                                            MaxWidth="520">
+                                    <Border Width="48"
+                                            Height="48"
+                                            CornerRadius="12"
                                             Background="{DynamicResource AccentSoftBrush}"
                                             HorizontalAlignment="Center">
-                                        <TextBlock Text="+" FontSize="28" FontWeight="Light"
-                                                   HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                        <TextBlock Text="+"
+                                                   FontSize="26"
+                                                   FontWeight="Light"
+                                                   HorizontalAlignment="Center"
+                                                   VerticalAlignment="Center" />
                                     </Border>
-                                    <TextBlock Margin="0,16,0,0"
-                                               Text="Add your first server"
-                                               FontSize="21"
+                                    <TextBlock Margin="0,14,0,0"
+                                               Text="{DynamicResource Loc.Shell.Empty.Title}"
+                                               FontSize="20"
                                                FontWeight="SemiBold"
                                                HorizontalAlignment="Center" />
                                     <TextBlock Margin="0,7,0,18"
-                                               Text="Create a secure local profile, then connect through SSH without exposing a management agent on the server."
+                                               Text="{DynamicResource Loc.Shell.Empty.Description}"
                                                TextAlignment="Center"
                                                TextWrapping="Wrap"
                                                Foreground="{DynamicResource MutedTextBrush}" />
-                                    <Button Content="Add server"
+                                    <Button Content="{DynamicResource Loc.Common.Add}"
                                             Command="{Binding AddServerCommand}"
                                             Style="{StaticResource PrimaryButton}"
                                             HorizontalAlignment="Center" />
                                 </StackPanel>
                             </Border>
 
-                            <Border Padding="24"
-                                    CornerRadius="12"
-                                    Background="{DynamicResource SurfaceBrush}"
-                                    BorderBrush="{DynamicResource BorderBrush}"
-                                    BorderThickness="1"
+                            <Border Padding="22"
+                                    Style="{StaticResource SurfaceCard}"
                                     Visibility="{Binding HasSelectedServer, Converter={StaticResource BoolToVisibility}}">
                                 <StackPanel>
                                     <Grid>
@@ -464,13 +521,19 @@
                                             <ColumnDefinition Width="Auto" />
                                         </Grid.ColumnDefinitions>
                                         <StackPanel>
-                                            <TextBlock Text="{Binding SelectedServer.Name}" FontSize="23" FontWeight="SemiBold" />
+                                            <TextBlock Text="{Binding SelectedServer.Name}"
+                                                       FontSize="23"
+                                                       FontWeight="SemiBold" />
                                             <TextBlock Margin="0,4,0,0"
                                                        Text="{Binding SelectedServer.Endpoint}"
-                                                       FontSize="14"
+                                                       FontFamily="Cascadia Mono, Consolas"
+                                                       FontSize="12"
                                                        Foreground="{DynamicResource MutedTextBrush}" />
                                         </StackPanel>
-                                        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Top">
+                                        <WrapPanel Grid.Column="1"
+                                                   Margin="16,0,0,0"
+                                                   HorizontalAlignment="Right"
+                                                   VerticalAlignment="Top">
                                             <Button Content="{Binding SelectedServer.ConnectActionLabel}"
                                                     Command="{Binding ConnectServerCommand}"
                                                     Style="{StaticResource PrimaryButton}"
@@ -480,67 +543,99 @@
                                                     Command="{Binding DisconnectServerCommand}"
                                                     Style="{StaticResource SecondaryButton}"
                                                     Visibility="{Binding SelectedServer.CanDisconnect, Converter={StaticResource BoolToVisibility}}" />
-                                            <Button Content="Edit"
+                                            <Button Content="{DynamicResource Loc.Shell.Server.Edit}"
                                                     Margin="8,0,0,0"
                                                     Command="{Binding EditServerCommand}"
                                                     Style="{StaticResource SecondaryButton}" />
-                                            <Button Content="Delete"
+                                            <Button Content="{DynamicResource Loc.Shell.Server.Delete}"
                                                     Margin="8,0,0,0"
                                                     Command="{Binding RequestDeleteServerCommand}"
-                                                    Style="{StaticResource SecondaryButton}" />
-                                        </StackPanel>
+                                                    Style="{StaticResource GhostButton}" />
+                                        </WrapPanel>
                                     </Grid>
 
-                                    <UniformGrid Columns="4" Margin="0,22,0,0">
-                                        <Border Padding="14" Margin="0,0,6,0" CornerRadius="9"
+                                    <UniformGrid Columns="4"
+                                                 Margin="0,20,0,0">
+                                        <Border Padding="13"
+                                                Margin="0,0,6,0"
+                                                CornerRadius="8"
                                                 Background="{DynamicResource SurfaceSecondaryBrush}">
                                             <StackPanel>
-                                                <TextBlock Text="Environment" FontSize="11" Foreground="{DynamicResource MutedTextBrush}" />
-                                                <TextBlock Margin="0,4,0,0" Text="{Binding SelectedServer.Environment}" FontWeight="SemiBold" />
+                                                <TextBlock Text="{DynamicResource Loc.Shell.Server.Environment}"
+                                                           FontSize="10.5"
+                                                           Foreground="{DynamicResource MutedTextBrush}" />
+                                                <TextBlock Margin="0,4,0,0"
+                                                           Text="{Binding SelectedServer.Environment}"
+                                                           FontWeight="SemiBold" />
                                             </StackPanel>
                                         </Border>
-                                        <Border Padding="14" Margin="2,0,4,0" CornerRadius="9"
+                                        <Border Padding="13"
+                                                Margin="2,0,4,0"
+                                                CornerRadius="8"
                                                 Background="{DynamicResource SurfaceSecondaryBrush}">
                                             <StackPanel>
-                                                <TextBlock Text="Authentication" FontSize="11" Foreground="{DynamicResource MutedTextBrush}" />
-                                                <TextBlock Margin="0,4,0,0" Text="{Binding SelectedServer.AuthenticationLabel}" FontWeight="SemiBold" />
+                                                <TextBlock Text="{DynamicResource Loc.Shell.Server.Authentication}"
+                                                           FontSize="10.5"
+                                                           Foreground="{DynamicResource MutedTextBrush}" />
+                                                <TextBlock Margin="0,4,0,0"
+                                                           Text="{Binding SelectedServer.AuthenticationLabel}"
+                                                           FontWeight="SemiBold" />
                                             </StackPanel>
                                         </Border>
-                                        <Border Padding="14" Margin="4,0,2,0" CornerRadius="9"
+                                        <Border Padding="13"
+                                                Margin="4,0,2,0"
+                                                CornerRadius="8"
                                                 Background="{DynamicResource SurfaceSecondaryBrush}">
                                             <StackPanel>
-                                                <TextBlock Text="Connection" FontSize="11" Foreground="{DynamicResource MutedTextBrush}" />
-                                                <TextBlock Margin="0,4,0,0" Text="{Binding SelectedServer.ConnectionLabel}" FontWeight="SemiBold" />
+                                                <TextBlock Text="{DynamicResource Loc.Shell.Server.Connection}"
+                                                           FontSize="10.5"
+                                                           Foreground="{DynamicResource MutedTextBrush}" />
+                                                <TextBlock Margin="0,4,0,0"
+                                                           Text="{Binding SelectedServer.ConnectionLabel}"
+                                                           FontWeight="SemiBold" />
                                             </StackPanel>
                                         </Border>
-                                        <Border Padding="14" Margin="6,0,0,0" CornerRadius="9"
+                                        <Border Padding="13"
+                                                Margin="6,0,0,0"
+                                                CornerRadius="8"
                                                 Background="{DynamicResource SurfaceSecondaryBrush}">
                                             <StackPanel>
-                                                <TextBlock Text="Connected since" FontSize="11" Foreground="{DynamicResource MutedTextBrush}" />
-                                                <TextBlock Margin="0,4,0,0" Text="{Binding SelectedServer.ConnectedSinceDisplay}" FontWeight="SemiBold" />
+                                                <TextBlock Text="{DynamicResource Loc.Shell.Server.ConnectedSince}"
+                                                           FontSize="10.5"
+                                                           Foreground="{DynamicResource MutedTextBrush}" />
+                                                <TextBlock Margin="0,4,0,0"
+                                                           Text="{Binding SelectedServer.ConnectedSinceDisplay}"
+                                                           FontWeight="SemiBold" />
                                             </StackPanel>
                                         </Border>
                                     </UniformGrid>
 
-                                    <Border Margin="0,20,0,0"
-                                            Padding="14"
-                                            CornerRadius="9"
+                                    <Border Margin="0,18,0,0"
+                                            Padding="13"
+                                            CornerRadius="8"
                                             Background="{DynamicResource AccentSoftBrush}">
                                         <StackPanel>
                                             <TextBlock Text="{Binding SelectedServer.ConnectionDetail}"
                                                        TextWrapping="Wrap" />
-                                            <TextBlock Margin="0,5,0,0"
-                                                       Text="{Binding SelectedServer.ServerVersionDisplay, StringFormat=Server version: {0}}"
-                                                       FontSize="11"
-                                                       Foreground="{DynamicResource MutedTextBrush}" />
+                                            <StackPanel Margin="0,5,0,0"
+                                                        Orientation="Horizontal">
+                                                <TextBlock Text="{DynamicResource Loc.Shell.Server.Version}"
+                                                           FontSize="11"
+                                                           Foreground="{DynamicResource MutedTextBrush}" />
+                                                <TextBlock Margin="4,0,0,0"
+                                                           Text="{Binding SelectedServer.ServerVersionDisplay}"
+                                                           FontFamily="Cascadia Mono, Consolas"
+                                                           FontSize="11"
+                                                           Foreground="{DynamicResource MutedTextBrush}" />
+                                            </StackPanel>
                                         </StackPanel>
                                     </Border>
 
+                                    <ContentControl x:Name="CapabilityHost"
+                                                    Margin="0,14,0,0" />
+
                                     <Border Margin="0,14,0,0"
-                                            Padding="14"
-                                            CornerRadius="9"
-                                            BorderBrush="{DynamicResource DangerBrush}"
-                                            BorderThickness="1"
+                                            Style="{StaticResource InlineErrorCard}"
                                             Visibility="{Binding IsDeleteConfirmationVisible, Converter={StaticResource BoolToVisibility}}">
                                         <Grid>
                                             <Grid.ColumnDefinitions>
@@ -548,23 +643,23 @@
                                                 <ColumnDefinition Width="Auto" />
                                             </Grid.ColumnDefinitions>
                                             <StackPanel>
-                                                <TextBlock Text="Delete this server profile?" FontWeight="SemiBold" />
+                                                <TextBlock Text="{DynamicResource Loc.Shell.Delete.Title}"
+                                                           FontWeight="SemiBold" />
                                                 <TextBlock Margin="0,3,12,0"
-                                                           Text="The local profile and its stored Windows credential will both be removed. Connected profiles must be disconnected first."
+                                                           Text="{DynamicResource Loc.Shell.Delete.Description}"
                                                            TextWrapping="Wrap"
                                                            Foreground="{DynamicResource MutedTextBrush}" />
                                             </StackPanel>
-                                            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                                                <Button Content="Cancel"
+                                            <StackPanel Grid.Column="1"
+                                                        Orientation="Horizontal"
+                                                        VerticalAlignment="Center">
+                                                <Button Content="{DynamicResource Loc.Common.Cancel}"
                                                         Command="{Binding CancelDeleteServerCommand}"
                                                         Style="{StaticResource SecondaryButton}" />
-                                                <Button Content="Delete"
+                                                <Button Content="{DynamicResource Loc.Shell.Server.Delete}"
                                                         Margin="8,0,0,0"
                                                         Command="{Binding ConfirmDeleteServerCommand}"
-                                                        Background="{DynamicResource DangerBrush}"
-                                                        Foreground="White"
-                                                        BorderThickness="0"
-                                                        Padding="12,7" />
+                                                        Style="{StaticResource DangerButton}" />
                                             </StackPanel>
                                         </Grid>
                                     </Border>

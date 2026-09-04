@@ -1,7 +1,8 @@
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Media;
+using ServerDesk.App.Localization;
 using ServerDesk.App.Presentation;
 using ServerDesk.Application.Capabilities;
 using ServerDesk.Application.Dashboard;
@@ -25,6 +26,7 @@ namespace ServerDesk.App;
 public partial class MainWindow : Window
 {
     private readonly ShellViewModel _viewModel;
+    private readonly ILocalizationService _localization;
     private readonly IRemoteTerminalSessionFactory _terminalFactory;
     private readonly IRemoteFileSystemFactory _remoteFileSystemFactory;
     private readonly IRemoteFileEditorService _remoteFileEditorService;
@@ -43,12 +45,14 @@ public partial class MainWindow : Window
     private readonly IServerConnectionRouteService _connectionRouteService;
     private readonly IServerProfileOrganizationService _organizationService;
     private readonly IConnectionHistoryRepository _historyRepository;
+    private readonly ObservableCollection<WorkspaceNavigationItem> _workspaceNavigationItems = [];
     private ProfileEditorViewModel? _observedEditor;
     private ServerProfileListItemViewModel? _observedServer;
     private CapabilitySummaryControl? _capabilitySummary;
 
     public MainWindow(
         ShellViewModel viewModel,
+        ILocalizationService localization,
         IRemoteTerminalSessionFactory terminalFactory,
         IRemoteFileSystemFactory remoteFileSystemFactory,
         IRemoteFileEditorService remoteFileEditorService,
@@ -70,6 +74,7 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         _viewModel = viewModel;
+        _localization = localization;
         _terminalFactory = terminalFactory;
         _remoteFileSystemFactory = remoteFileSystemFactory;
         _remoteFileEditorService = remoteFileEditorService;
@@ -88,21 +93,27 @@ public partial class MainWindow : Window
         _connectionRouteService = connectionRouteService;
         _organizationService = organizationService;
         _historyRepository = historyRepository;
+
         DataContext = viewModel;
+        WorkspaceNavigationList.ItemsSource = _workspaceNavigationItems;
         _viewModel.PropertyChanged += ViewModelOnPropertyChanged;
-        Loaded += AddRemoteActionsOnLoaded;
+        _localization.LanguageChanged += LocalizationOnLanguageChanged;
+        Loaded += InitializeShellOnLoaded;
         ObserveEditor(_viewModel.Editor);
         ObserveSelectedServer(_viewModel.SelectedServer);
+        RefreshWorkspaceNavigation();
     }
 
     protected override void OnClosed(EventArgs e)
     {
-        Loaded -= AddRemoteActionsOnLoaded;
+        Loaded -= InitializeShellOnLoaded;
         _viewModel.PropertyChanged -= ViewModelOnPropertyChanged;
+        _localization.LanguageChanged -= LocalizationOnLanguageChanged;
         ObserveEditor(null);
         ObserveSelectedServer(null);
         _capabilitySummary?.Dispose();
         _capabilitySummary = null;
+        CapabilityHost.Content = null;
         CredentialSecretBox.Password = string.Empty;
         base.OnClosed(e);
     }
@@ -115,105 +126,141 @@ public partial class MainWindow : Window
         }
     }
 
-    private void AddRemoteActionsOnLoaded(object sender, RoutedEventArgs e)
+    private void InitializeShellOnLoaded(object sender, RoutedEventArgs e)
     {
-        Loaded -= AddRemoteActionsOnLoaded;
-        var editButton = FindDescendant<Button>(this, button => string.Equals(button.Content as string, "Edit", StringComparison.Ordinal));
-        if (editButton is null || VisualTreeHelper.GetParent(editButton) is not StackPanel actionPanel)
+        Loaded -= InitializeShellOnLoaded;
+
+        _capabilitySummary = new CapabilitySummaryControl(_capabilityService);
+        CapabilityHost.Content = _capabilitySummary;
+        UpdateCapabilitySummary();
+    }
+
+    private void LocalizationOnLanguageChanged()
+    {
+        RefreshWorkspaceNavigation();
+    }
+
+    private void RefreshWorkspaceNavigation()
+    {
+        _workspaceNavigationItems.Clear();
+        string? previousGroupKey = null;
+        var hasServer = _viewModel.SelectedServer is not null;
+
+        foreach (var definition in WorkspaceNavigationCatalog.Items)
+        {
+            var isAvailable = !definition.RequiresServer || hasServer;
+            var group = _localization.Get(definition.GroupKey);
+            var title = _localization.Get(definition.TitleKey);
+            var description = _localization.Get(definition.DescriptionKey);
+            if (!isAvailable)
+            {
+                description = $"{_localization.Get("Loc.Shell.Workspace.RequiresServer")} {description}";
+            }
+
+            _workspaceNavigationItems.Add(
+                new WorkspaceNavigationItem(
+                    definition.Route,
+                    group,
+                    title,
+                    description,
+                    isAvailable,
+                    !string.Equals(previousGroupKey, definition.GroupKey, StringComparison.Ordinal)));
+
+            previousGroupKey = definition.GroupKey;
+        }
+    }
+
+    private void WorkspaceNavigationOnClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { DataContext: WorkspaceNavigationItem item } || !item.IsAvailable)
         {
             return;
         }
 
-        var editIndex = Math.Max(0, actionPanel.Children.IndexOf(editButton));
-        var dashboardButton = CreateActionButton(
-            "Dashboard",
-            "Open read-only CPU, memory, load, uptime, network and filesystem health metrics.",
-            OpenDashboardOnClick);
-        var explorerButton = CreateActionButton(
-            "Explorer",
-            "Browse and manage remote files over the certified SFTP channel.",
-            OpenExplorerOnClick);
-        var processesButton = CreateActionButton(
-            "Processes",
-            "Inspect processes and send confirmed SIGTERM/SIGKILL actions.",
-            OpenProcessesOnClick);
-        var servicesButton = CreateActionButton(
-            "Services",
-            "Inspect systemd services and run confirmed lifecycle actions with verification.",
-            OpenServicesOnClick);
-        var dockerButton = CreateActionButton(
-            "Docker",
-            "Inspect Docker resources, verified container lifecycle actions and container exec without exposing the Docker socket.",
-            OpenDockerOnClick);
-        var storageButton = CreateActionButton(
-            "Storage",
-            "Inspect filesystems, block devices and run cancellable read-only directory analysis.",
-            OpenStorageOnClick);
-        var networkButton = CreateActionButton(
-            "Network",
-            "Inspect interfaces, traffic rates and listening TCP/UDP sockets without mutating the server.",
-            OpenNetworkOnClick);
-        var logsButton = CreateActionButton(
-            "Logs",
-            "Inspect journald or remote text logs with follow, pause, filters and explicit local export.",
-            OpenLogsOnClick);
-        var organizeButton = CreateActionButton(
-            "Organize",
-            "Manage groups, tags and favorites and search/filter saved servers.",
-            OpenOrganizationOnClick);
-        var historyButton = CreateActionButton(
-            "History",
-            "View recent secret-safe SSH connection attempts.",
-            OpenConnectionHistoryOnClick);
-        var routeButton = CreateActionButton(
-            "Route",
-            "Choose Direct, HTTP/SOCKS proxy or an SSH bastion route for this server.",
-            OpenConnectionRouteOnClick);
-        var terminalButton = CreateActionButton(
-            "Terminal",
-            "Open a real SSH PTY terminal (Ctrl+Shift+F searches scrollback).",
-            OpenTerminalOnClick);
-        var tunnelsButton = CreateActionButton(
-            "Tunnels",
-            "Manage local, remote and SOCKS5 SSH port forwarding.",
-            OpenPortForwardingOnClick);
-        actionPanel.Children.Insert(editIndex, dashboardButton);
-        actionPanel.Children.Insert(editIndex + 1, explorerButton);
-        actionPanel.Children.Insert(editIndex + 2, processesButton);
-        actionPanel.Children.Insert(editIndex + 3, servicesButton);
-        actionPanel.Children.Insert(editIndex + 4, dockerButton);
-        actionPanel.Children.Insert(editIndex + 5, storageButton);
-        actionPanel.Children.Insert(editIndex + 6, networkButton);
-        actionPanel.Children.Insert(editIndex + 7, logsButton);
-        actionPanel.Children.Insert(editIndex + 8, organizeButton);
-        actionPanel.Children.Insert(editIndex + 9, historyButton);
-        actionPanel.Children.Insert(editIndex + 10, routeButton);
-        actionPanel.Children.Insert(editIndex + 11, terminalButton);
-        actionPanel.Children.Insert(editIndex + 12, tunnelsButton);
-
-        if (VisualTreeHelper.GetParent(actionPanel) is Grid headerGrid &&
-            VisualTreeHelper.GetParent(headerGrid) is StackPanel serverCardPanel)
+        switch (item.Route)
         {
-            _capabilitySummary = new CapabilitySummaryControl(_capabilityService)
-            {
-                Margin = new Thickness(0, 14, 0, 0),
-            };
-            serverCardPanel.Children.Insert(Math.Min(3, serverCardPanel.Children.Count), _capabilitySummary);
-            UpdateCapabilitySummary();
+            case WorkspaceNavigationCatalog.GlobalDashboard:
+                OpenGlobalDashboardOnClick(sender, e);
+                break;
+            case WorkspaceNavigationCatalog.Dashboard:
+                OpenDashboardOnClick(sender, e);
+                break;
+            case WorkspaceNavigationCatalog.Explorer:
+                OpenExplorerOnClick(sender, e);
+                break;
+            case WorkspaceNavigationCatalog.Terminal:
+                OpenTerminalOnClick(sender, e);
+                break;
+            case WorkspaceNavigationCatalog.Processes:
+                OpenProcessesOnClick(sender, e);
+                break;
+            case WorkspaceNavigationCatalog.Services:
+                OpenServicesOnClick(sender, e);
+                break;
+            case WorkspaceNavigationCatalog.Docker:
+                OpenDockerOnClick(sender, e);
+                break;
+            case WorkspaceNavigationCatalog.Storage:
+                OpenStorageOnClick(sender, e);
+                break;
+            case WorkspaceNavigationCatalog.Network:
+                OpenNetworkOnClick(sender, e);
+                break;
+            case WorkspaceNavigationCatalog.Logs:
+                OpenLogsOnClick(sender, e);
+                break;
+            case WorkspaceNavigationCatalog.Tunnels:
+                OpenPortForwardingOnClick(sender, e);
+                break;
+            case WorkspaceNavigationCatalog.ScheduledTasks:
+                OpenScheduledTasksOnClick(sender, e);
+                break;
+            case WorkspaceNavigationCatalog.Git:
+                OpenGitOperationsOnClick(sender, e);
+                break;
+            case WorkspaceNavigationCatalog.Nginx:
+                OpenNginxInventoryOnClick(sender, e);
+                break;
+            case WorkspaceNavigationCatalog.Tls:
+                OpenTlsCertificatesOnClick(sender, e);
+                break;
+            case WorkspaceNavigationCatalog.EnvironmentFiles:
+                OpenEnvironmentFilesOnClick(sender, e);
+                break;
+            case WorkspaceNavigationCatalog.Deployment:
+                OpenDeploymentOnClick(sender, e);
+                break;
+            case WorkspaceNavigationCatalog.Firewall:
+                OpenFirewallOnClick(sender, e);
+                break;
+            case WorkspaceNavigationCatalog.Users:
+                OpenUserAdministrationOnClick(sender, e);
+                break;
+            case WorkspaceNavigationCatalog.Packages:
+                OpenPackageAdministrationOnClick(sender, e);
+                break;
+            case WorkspaceNavigationCatalog.Databases:
+                OpenDatabaseRuntimeOnClick(sender, e);
+                break;
+            case WorkspaceNavigationCatalog.DatabaseProfiles:
+                OpenDatabaseProfilesOnClick(sender, e);
+                break;
+            case WorkspaceNavigationCatalog.Backups:
+                OpenBackupRestoreOnClick(sender, e);
+                break;
+            case WorkspaceNavigationCatalog.OperationHistory:
+                OpenOperationHistoryOnClick(sender, e);
+                break;
+            case WorkspaceNavigationCatalog.Organize:
+                OpenOrganizationOnClick(sender, e);
+                break;
+            case WorkspaceNavigationCatalog.ConnectionHistory:
+                OpenConnectionHistoryOnClick(sender, e);
+                break;
+            case WorkspaceNavigationCatalog.ConnectionRoute:
+                OpenConnectionRouteOnClick(sender, e);
+                break;
         }
-    }
-
-    private Button CreateActionButton(string label, string toolTip, RoutedEventHandler handler)
-    {
-        var button = new Button
-        {
-            Content = label,
-            Margin = new Thickness(8, 0, 0, 0),
-            Style = (Style)FindResource("SecondaryButton"),
-            ToolTip = toolTip,
-        };
-        button.Click += handler;
-        return button;
     }
 
     private void OpenDashboardOnClick(object sender, RoutedEventArgs e)
@@ -429,6 +476,7 @@ public partial class MainWindow : Window
         else if (e.PropertyName == nameof(ShellViewModel.SelectedServer))
         {
             ObserveSelectedServer(_viewModel.SelectedServer);
+            RefreshWorkspaceNavigation();
             UpdateCapabilitySummary();
         }
     }
@@ -491,26 +539,5 @@ public partial class MainWindow : Window
         _capabilitySummary.SetServer(
             selected?.Profile,
             selected?.ConnectionState == RemoteSessionState.Connected);
-    }
-
-    private static T? FindDescendant<T>(DependencyObject root, Func<T, bool> predicate)
-        where T : DependencyObject
-    {
-        for (var index = 0; index < VisualTreeHelper.GetChildrenCount(root); index++)
-        {
-            var child = VisualTreeHelper.GetChild(root, index);
-            if (child is T candidate && predicate(candidate))
-            {
-                return candidate;
-            }
-
-            var nested = FindDescendant(child, predicate);
-            if (nested is not null)
-            {
-                return nested;
-            }
-        }
-
-        return null;
     }
 }
