@@ -88,5 +88,9 @@
           Link="Fixtures\Presentation\ScheduledTasksWindow.xaml"
           CopyToOutputDirectory="PreserveNewest"
           CopyToPublishDirectory="Never" />
+    <None Include="..\..\src\ServerDesk.App\StorageWindow.xaml"
+          Link="Fixtures\Presentation\StorageWindow.xaml"
+          CopyToOutputDirectory="PreserveNewest"
+          CopyToPublishDirectory="Never" />
   </ItemGroup>
 </Project>
