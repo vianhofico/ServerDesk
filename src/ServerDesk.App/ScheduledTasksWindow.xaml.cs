@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
 using ServerDesk.App.Localization;
+using ServerDesk.App.Presentation;
 using ServerDesk.Application.ScheduledTasks;
 using ServerDesk.Domain.Errors;
 using ServerDesk.Domain.Servers;
@@ -18,6 +19,9 @@ public partial class ScheduledTasksWindow : Window
     private ScheduledTaskSnapshot? _snapshot;
     private string? _editingCronId;
     private bool _mutationActive;
+    private bool _editorRequestedEnabled;
+    private bool _hasLoadedSnapshot;
+    private ScheduledTasksUiState _currentState;
 
     public ScheduledTasksWindow(
         IScheduledTaskService service,
@@ -30,14 +34,36 @@ public partial class ScheduledTasksWindow : Window
         _profile = profile ?? throw new ArgumentNullException(nameof(profile));
         _initiallyConnected = connected;
         InitializeComponent();
+
         Title = _localization.Get("Loc.Tasks.WindowTitle");
-        TitleText.Text = _localization.Format("Loc.Tasks.Title", profile.Name);
+        ServerNameText.Text = profile.Name;
         EndpointText.Text = $"{profile.Username}@{profile.Host}:{profile.Port}";
-        StatusText.Text = connected
-            ? _localization.Get("Loc.Tasks.Initial")
-            : _localization.Get("Loc.Tasks.Disconnected");
+        if (string.IsNullOrWhiteSpace(profile.Environment))
+        {
+            EnvironmentValueText.SetResourceReference(TextBlock.TextProperty, "Loc.TasksWorkspace.Header.Unlabeled");
+        }
+        else
+        {
+            EnvironmentValueText.Text = profile.Environment;
+        }
+
+        ConnectionValueText.SetResourceReference(
+            TextBlock.TextProperty,
+            connected ? "Loc.TasksWorkspace.Header.Connected" : "Loc.TasksWorkspace.Header.Disconnected");
+        SetStateResource(
+            connected ? ScheduledTasksUiState.Ready : ScheduledTasksUiState.Disconnected,
+            connected ? "Loc.Tasks.Initial" : "Loc.Tasks.Disconnected");
+        CapabilityText.Text = string.Empty;
+        CronCapabilityText.SetResourceReference(TextBlock.TextProperty, "Loc.TasksWorkspace.Summary.Unavailable");
+        SystemdCapabilityText.SetResourceReference(TextBlock.TextProperty, "Loc.TasksWorkspace.Summary.Unavailable");
+        FooterText.SetResourceReference(TextBlock.TextProperty, "Loc.TasksWorkspace.Footer.None");
         SetEditorEnabled(false);
+        ClearDetails();
+        UpdateCommandState();
+        RefreshOverlay();
     }
+
+    private bool IsBusy => _activeCancellation is not null;
 
     private async void WindowOnLoaded(object sender, RoutedEventArgs e)
     {
@@ -59,23 +85,32 @@ public partial class ScheduledTasksWindow : Window
     private void CancelOnClick(object sender, RoutedEventArgs e)
     {
         _activeCancellation?.Cancel();
-        StatusText.Text = _mutationActive
-            ? _localization.Get("Loc.Tasks.CancelledMutation")
-            : _localization.Get("Loc.Tasks.Cancelled");
+        SetStateResource(
+            ScheduledTasksUiState.Cancelled,
+            _mutationActive ? "Loc.Tasks.CancelledMutation" : "Loc.Tasks.Cancelled");
+        RefreshOverlay();
+    }
+
+    private void ClearSearchOnClick(object sender, RoutedEventArgs e)
+    {
+        SearchBox.Clear();
+        SearchBox.Focus();
     }
 
     private async Task RefreshAsync()
     {
         if (!_initiallyConnected)
         {
-            StatusText.Text = _localization.Get("Loc.Tasks.Disconnected");
+            SetStateResource(ScheduledTasksUiState.Disconnected, "Loc.Tasks.Disconnected");
+            RefreshOverlay();
             return;
         }
 
         using var scope = BeginOperation();
         try
         {
-            StatusText.Text = _localization.Get("Loc.Tasks.Loading");
+            SetStateResource(ScheduledTasksUiState.Loading, "Loc.Tasks.Loading");
+            RefreshOverlay();
             var result = await _service.InspectAsync(_profile, scope.Token).ConfigureAwait(true);
             if (!result.IsSuccess || result.Snapshot is null)
             {
@@ -84,24 +119,42 @@ public partial class ScheduledTasksWindow : Window
             }
 
             ApplySnapshot(result.Snapshot);
-            StatusText.Text = result.Snapshot.Tasks.Count == 0
-                ? _localization.Get("Loc.Tasks.Empty")
-                : _localization.Format("Loc.Tasks.Loaded", result.Snapshot.Tasks.Count);
+            SetStateResource(
+                result.Snapshot.Tasks.Count == 0 ? ScheduledTasksUiState.Empty : ScheduledTasksUiState.Ready,
+                result.Snapshot.Tasks.Count == 0 ? "Loc.Tasks.Empty" : "Loc.Tasks.Loaded");
+            if (result.Snapshot.Tasks.Count > 0)
+            {
+                StatusText.Text = _localization.Format("Loc.Tasks.Loaded", result.Snapshot.Tasks.Count);
+            }
+
+            RefreshOverlay();
         }
         catch (OperationCanceledException)
         {
-            StatusText.Text = _localization.Get("Loc.Tasks.Cancelled");
+            SetStateResource(ScheduledTasksUiState.Cancelled, "Loc.Tasks.Cancelled");
+            RefreshOverlay();
         }
     }
 
     private void ApplySnapshot(ScheduledTaskSnapshot snapshot)
     {
         _snapshot = snapshot;
+        _hasLoadedSnapshot = true;
         _allTasks.Clear();
         _allTasks.AddRange(snapshot.Tasks);
-        ApplyFilter();
         RawCronBox.Text = snapshot.RawCrontab;
-        ApplyRawCronButton.IsEnabled = snapshot.CronAvailable;
+
+        CronCapabilityText.SetResourceReference(
+            TextBlock.TextProperty,
+            snapshot.CronAvailable
+                ? "Loc.TasksWorkspace.Summary.Available"
+                : "Loc.TasksWorkspace.Summary.Unavailable");
+        SystemdCapabilityText.SetResourceReference(
+            TextBlock.TextProperty,
+            snapshot.SystemdAvailable
+                ? "Loc.TasksWorkspace.Summary.Available"
+                : "Loc.TasksWorkspace.Summary.Unavailable");
+
         CapabilityText.Text = _localization.Format(
             "Loc.Tasks.Capabilities",
             snapshot.CronAvailable ? _localization.Get("Loc.Common.Yes") : _localization.Get("Loc.Common.No"),
@@ -110,52 +163,73 @@ public partial class ScheduledTasksWindow : Window
         {
             CapabilityText.Text += " · " + string.Join(" · ", snapshot.Warnings);
         }
+
+        ApplyFilter();
+        UpdateCommandState();
     }
 
     private void SearchBoxOnTextChanged(object sender, TextChangedEventArgs e) => ApplyFilter();
 
     private void ApplyFilter()
     {
-        var query = SearchBox.Text.Trim();
-        TaskGrid.ItemsSource = query.Length == 0
-            ? _allTasks.ToArray()
-            : _allTasks.Where(task =>
-                    task.Name.Contains(query, StringComparison.OrdinalIgnoreCase) ||
-                    task.Schedule.Contains(query, StringComparison.OrdinalIgnoreCase) ||
-                    task.CommandOrUnit.Contains(query, StringComparison.OrdinalIgnoreCase))
-                .ToArray();
+        var query = SearchBox.Text;
+        var rows = ScheduledTaskWorkspaceProjection.Filter(_allTasks, query);
+        TaskGrid.ItemsSource = rows;
+        ClearSearchButton.Visibility = string.IsNullOrWhiteSpace(query) ? Visibility.Collapsed : Visibility.Visible;
+
+        var summary = ScheduledTaskWorkspaceProjection.Summarize(_allTasks, rows);
+        TotalTasksValue.Text = summary.Total.ToString("N0");
+        VisibleTasksValue.Text = summary.Visible.ToString("N0");
+        CronTasksValue.Text = summary.Cron.ToString("N0");
+        SystemdTasksValue.Text = summary.SystemdTimers.ToString("N0");
+        EnabledTasksValue.Text = summary.Enabled.ToString("N0");
+
+        if (!_hasLoadedSnapshot)
+        {
+            FooterText.SetResourceReference(TextBlock.TextProperty, "Loc.TasksWorkspace.Footer.None");
+        }
+        else if (string.IsNullOrWhiteSpace(query))
+        {
+            FooterText.Text = _localization.Format("Loc.TasksWorkspace.Footer.All", rows.Count);
+        }
+        else
+        {
+            FooterText.Text = _localization.Format(
+                "Loc.TasksWorkspace.Footer.Filtered",
+                rows.Count,
+                _allTasks.Count,
+                query.Trim());
+        }
+
+        RefreshOverlay();
+        UpdateCommandState();
     }
 
     private void TaskGridOnSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (TaskGrid.SelectedItem is not ScheduledTaskInfo task)
         {
-            SelectedTitleText.Text = _localization.Get("Loc.Tasks.SelectTask");
-            SelectedDetailText.Text = string.Empty;
-            EnableButton.IsEnabled = false;
-            DisableButton.IsEnabled = false;
-            DeleteButton.IsEnabled = false;
-            HistoryButton.IsEnabled = false;
-            RawSourceButton.IsEnabled = false;
+            _editingCronId = null;
             SetEditorEnabled(false);
+            ClearDetails();
+            UpdateCommandState();
             return;
         }
 
-        SelectedTitleText.Text = task.Name;
-        SelectedDetailText.Text = _localization.Format(
-            "Loc.Tasks.DetailFormat",
-            task.Kind,
-            task.Schedule,
-            task.Enabled ? _localization.Get("Loc.Common.Yes") : _localization.Get("Loc.Common.No"),
-            task.Active?.ToString() ?? "—",
-            task.LastRun ?? "—",
-            task.NextRun ?? "—");
-        EnableButton.IsEnabled = !task.Enabled;
-        DisableButton.IsEnabled = task.Enabled;
-        DeleteButton.IsEnabled = task.Kind == ScheduledTaskKind.Cron ||
-                                 task.SourcePath?.StartsWith("/etc/systemd/system/", StringComparison.Ordinal) == true;
-        HistoryButton.IsEnabled = task.Kind == ScheduledTaskKind.SystemdTimer;
-        RawSourceButton.IsEnabled = true;
+        DetailsHintText.Visibility = Visibility.Collapsed;
+        DetailsContent.Visibility = Visibility.Visible;
+        TargetValueText.Text = _localization.Format("Loc.TasksWorkspace.Command.TargetValue", task.Name);
+        DetailKindText.Text = _localization.Get(
+            task.Kind == ScheduledTaskKind.Cron ? "Loc.Tasks.Kind.Cron" : "Loc.Tasks.Kind.SystemdTimer");
+        DetailNameText.Text = task.Name;
+        DetailScheduleText.Text = DisplayOrDash(task.Schedule);
+        DetailCommandText.Text = DisplayOrDash(task.CommandOrUnit);
+        DetailEnabledText.Text = YesNo(task.Enabled);
+        DetailActiveText.Text = task.Active.HasValue ? YesNo(task.Active.Value) : "—";
+        DetailLastRunText.Text = DisplayOrDash(task.LastRun);
+        DetailNextRunText.Text = DisplayOrDash(task.NextRun);
+        DetailSourceText.Text = DisplayOrDash(task.SourcePath ?? task.Unit ?? task.Raw);
+        DetailEditableText.Text = YesNo(task.Kind == ScheduledTaskKind.Cron && task.IsSimpleEditable);
 
         if (task.Kind == ScheduledTaskKind.Cron && task.IsSimpleEditable)
         {
@@ -171,19 +245,21 @@ public partial class ScheduledTasksWindow : Window
                 CommandBox.Text = task.CommandOrUnit;
                 CronEnabledCheck.IsChecked = task.Enabled;
                 SetEditorEnabled(_snapshot?.CronAvailable == true);
+                UpdateCommandState();
                 return;
             }
         }
 
         _editingCronId = null;
         SetEditorEnabled(false);
+        UpdateCommandState();
     }
 
     private void NewCronOnClick(object sender, RoutedEventArgs e)
     {
-        if (_snapshot?.CronAvailable != true)
+        if (_snapshot?.CronAvailable != true || IsBusy)
         {
-            StatusText.Text = _localization.Get("Loc.Tasks.CronUnavailable");
+            SetStateResource(ScheduledTasksUiState.Error, "Loc.Tasks.CronUnavailable");
             return;
         }
 
@@ -197,13 +273,14 @@ public partial class ScheduledTasksWindow : Window
         CommandBox.Text = string.Empty;
         CronEnabledCheck.IsChecked = true;
         SetEditorEnabled(true);
+        WorkspaceTabs.SelectedIndex = 0;
         CommandBox.Focus();
-        StatusText.Text = _localization.Get("Loc.Tasks.NewCronReady");
+        SetStateResource(ScheduledTasksUiState.Ready, "Loc.Tasks.NewCronReady");
     }
 
     private async void SaveCronOnClick(object sender, RoutedEventArgs e)
     {
-        if (_snapshot is null)
+        if (_snapshot is null || IsBusy)
         {
             return;
         }
@@ -224,19 +301,19 @@ public partial class ScheduledTasksWindow : Window
         }
         catch (FormatException exception)
         {
-            StatusText.Text = _localization.Format("Loc.Tasks.ValidationError", exception.Message);
+            SetStateRaw(ScheduledTasksUiState.Error, _localization.Format("Loc.Tasks.ValidationError", exception.Message));
             return;
         }
 
         if (!Confirm(_editingCronId is null ? "Loc.Tasks.Action.Create" : "Loc.Tasks.Action.Update", draft.Command))
         {
-            StatusText.Text = _localization.Get("Loc.Tasks.ActionNotRun");
+            SetStateResource(ScheduledTasksUiState.Ready, "Loc.Tasks.ActionNotRun");
             return;
         }
 
         await RunMutationAsync(
-            token => _service.SaveCronAsync(_profile, draft, _snapshot.RawCrontab, token),
-            _localization.Get("Loc.Tasks.SavingCron"))
+                token => _service.SaveCronAsync(_profile, draft, _snapshot.RawCrontab, token),
+                _localization.Get("Loc.Tasks.SavingCron"))
             .ConfigureAwait(true);
     }
 
@@ -246,26 +323,26 @@ public partial class ScheduledTasksWindow : Window
 
     private async Task SetEnabledAsync(bool enabled)
     {
-        if (_snapshot is null || TaskGrid.SelectedItem is not ScheduledTaskInfo task)
+        if (_snapshot is null || TaskGrid.SelectedItem is not ScheduledTaskInfo task || IsBusy)
         {
             return;
         }
 
         if (!Confirm(enabled ? "Loc.Tasks.Action.Enable" : "Loc.Tasks.Action.Disable", task.Name))
         {
-            StatusText.Text = _localization.Get("Loc.Tasks.ActionNotRun");
+            SetStateResource(ScheduledTasksUiState.Ready, "Loc.Tasks.ActionNotRun");
             return;
         }
 
         await RunMutationAsync(
-            token => _service.SetEnabledAsync(_profile, task, enabled, _snapshot.RawCrontab, token),
-            _localization.Format("Loc.Tasks.ChangingState", task.Name))
+                token => _service.SetEnabledAsync(_profile, task, enabled, _snapshot.RawCrontab, token),
+                _localization.Format("Loc.Tasks.ChangingState", task.Name))
             .ConfigureAwait(true);
     }
 
     private async void DeleteOnClick(object sender, RoutedEventArgs e)
     {
-        if (_snapshot is null || TaskGrid.SelectedItem is not ScheduledTaskInfo task)
+        if (_snapshot is null || TaskGrid.SelectedItem is not ScheduledTaskInfo task || IsBusy)
         {
             return;
         }
@@ -278,19 +355,19 @@ public partial class ScheduledTasksWindow : Window
             MessageBoxResult.No);
         if (result != MessageBoxResult.Yes)
         {
-            StatusText.Text = _localization.Get("Loc.Tasks.ActionNotRun");
+            SetStateResource(ScheduledTasksUiState.Ready, "Loc.Tasks.ActionNotRun");
             return;
         }
 
         await RunMutationAsync(
-            token => _service.DeleteAsync(_profile, task, _snapshot.RawCrontab, token),
-            _localization.Format("Loc.Tasks.Deleting", task.Name))
+                token => _service.DeleteAsync(_profile, task, _snapshot.RawCrontab, token),
+                _localization.Format("Loc.Tasks.Deleting", task.Name))
             .ConfigureAwait(true);
     }
 
     private async void ApplyRawCronOnClick(object sender, RoutedEventArgs e)
     {
-        if (_snapshot is null)
+        if (_snapshot is null || IsBusy)
         {
             return;
         }
@@ -303,26 +380,26 @@ public partial class ScheduledTasksWindow : Window
             MessageBoxResult.No);
         if (result != MessageBoxResult.Yes)
         {
-            StatusText.Text = _localization.Get("Loc.Tasks.ActionNotRun");
+            SetStateResource(ScheduledTasksUiState.Ready, "Loc.Tasks.ActionNotRun");
             return;
         }
 
         try
         {
             await RunMutationAsync(
-                token => _service.ApplyRawCrontabAsync(_profile, RawCronBox.Text, _snapshot.RawCrontab, token),
-                _localization.Get("Loc.Tasks.ApplyingRawCron"))
+                    token => _service.ApplyRawCrontabAsync(_profile, RawCronBox.Text, _snapshot.RawCrontab, token),
+                    _localization.Get("Loc.Tasks.ApplyingRawCron"))
                 .ConfigureAwait(true);
         }
         catch (FormatException exception)
         {
-            StatusText.Text = _localization.Format("Loc.Tasks.ValidationError", exception.Message);
+            SetStateRaw(ScheduledTasksUiState.Error, _localization.Format("Loc.Tasks.ValidationError", exception.Message));
         }
     }
 
     private async void HistoryOnClick(object sender, RoutedEventArgs e)
     {
-        if (TaskGrid.SelectedItem is not ScheduledTaskInfo task)
+        if (TaskGrid.SelectedItem is not ScheduledTaskInfo task || IsBusy)
         {
             return;
         }
@@ -330,7 +407,7 @@ public partial class ScheduledTasksWindow : Window
         using var scope = BeginOperation();
         try
         {
-            StatusText.Text = _localization.Format("Loc.Tasks.LoadingHistory", task.Name);
+            SetStateRaw(ScheduledTasksUiState.Loading, _localization.Format("Loc.Tasks.LoadingHistory", task.Name));
             var result = await _service.ReadHistoryAsync(_profile, task, scope.Token).ConfigureAwait(true);
             if (!result.IsSuccess)
             {
@@ -339,17 +416,18 @@ public partial class ScheduledTasksWindow : Window
             }
 
             HistoryBox.Text = result.Text;
-            StatusText.Text = _localization.Get("Loc.Tasks.HistoryLoaded");
+            WorkspaceTabs.SelectedIndex = 2;
+            SetStateResource(ScheduledTasksUiState.Ready, "Loc.Tasks.HistoryLoaded");
         }
         catch (OperationCanceledException)
         {
-            StatusText.Text = _localization.Get("Loc.Tasks.Cancelled");
+            SetStateResource(ScheduledTasksUiState.Cancelled, "Loc.Tasks.Cancelled");
         }
     }
 
     private async void RawSourceOnClick(object sender, RoutedEventArgs e)
     {
-        if (TaskGrid.SelectedItem is not ScheduledTaskInfo task)
+        if (TaskGrid.SelectedItem is not ScheduledTaskInfo task || IsBusy)
         {
             return;
         }
@@ -357,7 +435,7 @@ public partial class ScheduledTasksWindow : Window
         using var scope = BeginOperation();
         try
         {
-            StatusText.Text = _localization.Format("Loc.Tasks.LoadingRawSource", task.Name);
+            SetStateRaw(ScheduledTasksUiState.Loading, _localization.Format("Loc.Tasks.LoadingRawSource", task.Name));
             var result = await _service.ReadRawSourceAsync(_profile, task, scope.Token).ConfigureAwait(true);
             if (!result.IsSuccess)
             {
@@ -366,11 +444,12 @@ public partial class ScheduledTasksWindow : Window
             }
 
             RawSourceBox.Text = result.Text;
-            StatusText.Text = _localization.Get("Loc.Tasks.RawSourceLoaded");
+            WorkspaceTabs.SelectedIndex = 3;
+            SetStateResource(ScheduledTasksUiState.Ready, "Loc.Tasks.RawSourceLoaded");
         }
         catch (OperationCanceledException)
         {
-            StatusText.Text = _localization.Get("Loc.Tasks.Cancelled");
+            SetStateResource(ScheduledTasksUiState.Cancelled, "Loc.Tasks.Cancelled");
         }
     }
 
@@ -378,11 +457,11 @@ public partial class ScheduledTasksWindow : Window
         Func<CancellationToken, Task<ScheduledTaskMutationResult>> mutation,
         string runningStatus)
     {
-        using var scope = BeginOperation();
         _mutationActive = true;
+        using var scope = BeginOperation();
         try
         {
-            StatusText.Text = runningStatus;
+            SetStateRaw(ScheduledTasksUiState.Loading, runningStatus);
             var result = await mutation(scope.Token).ConfigureAwait(true);
             if (!result.IsSuccess)
             {
@@ -399,15 +478,16 @@ public partial class ScheduledTasksWindow : Window
                 await RefreshAsync().ConfigureAwait(true);
             }
 
-            StatusText.Text = _localization.Get("Loc.Tasks.ActionVerified");
+            SetStateResource(ScheduledTasksUiState.Ready, "Loc.Tasks.ActionVerified");
         }
         catch (OperationCanceledException)
         {
-            StatusText.Text = _localization.Get("Loc.Tasks.CancelledMutation");
+            SetStateResource(ScheduledTasksUiState.Cancelled, "Loc.Tasks.CancelledMutation");
         }
         finally
         {
             _mutationActive = false;
+            UpdateCommandState();
         }
     }
 
@@ -426,11 +506,11 @@ public partial class ScheduledTasksWindow : Window
     {
         if (error is null)
         {
-            StatusText.Text = _localization.Get("Loc.Tasks.UnknownError");
+            SetStateResource(ScheduledTasksUiState.Error, "Loc.Tasks.UnknownError");
             return;
         }
 
-        StatusText.Text = error.Code switch
+        var message = error.Code switch
         {
             RemoteErrorCode.AmbiguousState => _localization.Format("Loc.Tasks.Ambiguous", error.Message),
             RemoteErrorCode.PermissionDenied or RemoteErrorCode.SudoRequired => _localization.Format("Loc.Tasks.Permission", error.Message),
@@ -439,10 +519,38 @@ public partial class ScheduledTasksWindow : Window
             RemoteErrorCode.ParseFailed => _localization.Format("Loc.Tasks.ParseError", error.Message),
             _ => _localization.Format("Loc.Tasks.Error", error.Message),
         };
+        SetStateRaw(ScheduledTasksUiState.Error, message);
+    }
+
+    private void ClearDetails()
+    {
+        DetailsHintText.Visibility = Visibility.Visible;
+        DetailsContent.Visibility = Visibility.Collapsed;
+        TargetValueText.SetResourceReference(TextBlock.TextProperty, "Loc.TasksWorkspace.Command.NoTarget");
+        DetailKindText.Text = string.Empty;
+        DetailNameText.Text = string.Empty;
+        DetailScheduleText.Text = string.Empty;
+        DetailCommandText.Text = string.Empty;
+        DetailEnabledText.Text = string.Empty;
+        DetailActiveText.Text = string.Empty;
+        DetailLastRunText.Text = string.Empty;
+        DetailNextRunText.Text = string.Empty;
+        DetailSourceText.Text = string.Empty;
+        DetailEditableText.Text = string.Empty;
     }
 
     private void SetEditorEnabled(bool enabled)
     {
+        _editorRequestedEnabled = enabled;
+        ApplyEditorState();
+    }
+
+    private void ApplyEditorState()
+    {
+        var enabled = _editorRequestedEnabled &&
+                      !IsBusy &&
+                      _initiallyConnected &&
+                      _snapshot?.CronAvailable == true;
         MinuteBox.IsEnabled = enabled;
         HourBox.IsEnabled = enabled;
         DayOfMonthBox.IsEnabled = enabled;
@@ -453,12 +561,129 @@ public partial class ScheduledTasksWindow : Window
         SaveCronButton.IsEnabled = enabled;
     }
 
+    private void UpdateCommandState()
+    {
+        var task = TaskGrid.SelectedItem as ScheduledTaskInfo;
+        var state = ScheduledTaskWorkspaceProjection.GetCommandState(
+            task,
+            _snapshot,
+            _initiallyConnected,
+            IsBusy);
+
+        EnableButton.IsEnabled = state.CanEnable;
+        DisableButton.IsEnabled = state.CanDisable;
+        DeleteButton.IsEnabled = state.CanDelete;
+        HistoryButton.IsEnabled = state.CanLoadHistory;
+        RawSourceButton.IsEnabled = state.CanLoadRawSource;
+        NewCronButton.IsEnabled = !IsBusy && _initiallyConnected && _snapshot?.CronAvailable == true;
+        ApplyRawCronButton.IsEnabled = !IsBusy && _initiallyConnected && _snapshot?.CronAvailable == true;
+        RefreshButton.IsEnabled = !IsBusy && _initiallyConnected;
+        CancelButton.IsEnabled = IsBusy;
+        SearchBox.IsEnabled = !IsBusy;
+        ClearSearchButton.IsEnabled = !IsBusy;
+        TaskGrid.IsEnabled = !IsBusy;
+        RawCronBox.IsEnabled = !IsBusy && _snapshot?.CronAvailable == true;
+        ApplyEditorState();
+    }
+
+    private void RefreshOverlay()
+    {
+        if (_currentState == ScheduledTasksUiState.Loading)
+        {
+            ShowOverlay("Loc.TasksWorkspace.Overlay.LoadingTitle", StatusText.Text);
+            return;
+        }
+
+        if (!_hasLoadedSnapshot && _currentState == ScheduledTasksUiState.Disconnected)
+        {
+            ShowOverlay("Loc.TasksWorkspace.Overlay.DisconnectedTitle", StatusText.Text);
+            return;
+        }
+
+        if (!_hasLoadedSnapshot && _currentState == ScheduledTasksUiState.Error)
+        {
+            ShowOverlay("Loc.TasksWorkspace.Overlay.ErrorTitle", StatusText.Text);
+            return;
+        }
+
+        if (!_hasLoadedSnapshot && _currentState == ScheduledTasksUiState.Cancelled)
+        {
+            ShowOverlay("Loc.TasksWorkspace.Overlay.CancelledTitle", StatusText.Text);
+            return;
+        }
+
+        if (_hasLoadedSnapshot && _allTasks.Count == 0)
+        {
+            ShowOverlay(
+                "Loc.TasksWorkspace.Overlay.EmptyTitle",
+                _localization.Get("Loc.TasksWorkspace.Overlay.EmptyDetail"));
+            return;
+        }
+
+        if (_hasLoadedSnapshot &&
+            _allTasks.Count > 0 &&
+            TaskGrid.Items.Count == 0 &&
+            !string.IsNullOrWhiteSpace(SearchBox.Text))
+        {
+            ShowOverlay(
+                "Loc.TasksWorkspace.Overlay.SearchTitle",
+                _localization.Get("Loc.TasksWorkspace.Overlay.SearchDetail"));
+            return;
+        }
+
+        TaskStateOverlay.Visibility = Visibility.Collapsed;
+    }
+
+    private void ShowOverlay(string titleKey, string detail)
+    {
+        TaskStateOverlay.Visibility = Visibility.Visible;
+        TaskStateTitle.SetResourceReference(TextBlock.TextProperty, titleKey);
+        TaskStateDetail.Text = detail;
+    }
+
+    private void SetStateResource(ScheduledTasksUiState state, string resourceKey)
+    {
+        _currentState = state;
+        StatusText.SetResourceReference(TextBlock.TextProperty, resourceKey);
+        RefreshStatusChrome();
+        UpdateCommandState();
+    }
+
+    private void SetStateRaw(ScheduledTasksUiState state, string message)
+    {
+        _currentState = state;
+        StatusText.Text = message;
+        RefreshStatusChrome();
+        UpdateCommandState();
+    }
+
+    private void RefreshStatusChrome()
+    {
+        var error = _currentState is ScheduledTasksUiState.Error or ScheduledTasksUiState.Disconnected;
+        StatusCard.Style = (Style)FindResource(error ? "InlineErrorCard" : "InlineInfoCard");
+    }
+
     private OperationScope BeginOperation()
     {
         _activeCancellation?.Cancel();
         _activeCancellation?.Dispose();
         _activeCancellation = new CancellationTokenSource();
+        UpdateCommandState();
         return new OperationScope(this, _activeCancellation);
+    }
+
+    private string YesNo(bool value) => _localization.Get(value ? "Loc.Common.Yes" : "Loc.Common.No");
+
+    private static string DisplayOrDash(string? value) => string.IsNullOrWhiteSpace(value) ? "—" : value;
+
+    private enum ScheduledTasksUiState
+    {
+        Disconnected,
+        Ready,
+        Loading,
+        Empty,
+        Error,
+        Cancelled,
     }
 
     private sealed class OperationScope : IDisposable
@@ -489,6 +714,8 @@ public partial class ScheduledTasksWindow : Window
             }
 
             _source.Dispose();
+            _owner.UpdateCommandState();
+            _owner.RefreshOverlay();
         }
     }
 }
