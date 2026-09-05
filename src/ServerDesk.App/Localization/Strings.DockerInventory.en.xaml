@@ -1,0 +1,112 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:system="clr-namespace:System;assembly=System.Runtime">
+    <system:String x:Key="Loc.Docker.WindowTitle">Docker</system:String>
+    <system:String x:Key="Loc.Docker.Header.Title">Docker</system:String>
+    <system:String x:Key="Loc.Docker.Header.Subtitle">Inspect Docker runtime health and resource inventory over the existing SSH command channel</system:String>
+    <system:String x:Key="Loc.Docker.Header.Environment">Environment</system:String>
+    <system:String x:Key="Loc.Docker.Header.Connection">Connection</system:String>
+    <system:String x:Key="Loc.Docker.Header.Connected">Connected</system:String>
+    <system:String x:Key="Loc.Docker.Header.Disconnected">Disconnected</system:String>
+    <system:String x:Key="Loc.Docker.Header.Unlabeled">Unlabeled</system:String>
+
+    <system:String x:Key="Loc.Docker.Command.Refresh">Refresh</system:String>
+    <system:String x:Key="Loc.Docker.Command.Cancel">Cancel</system:String>
+    <system:String x:Key="Loc.Docker.Command.Diagnostics">Container diagnostics</system:String>
+    <system:String x:Key="Loc.Docker.Command.Target">Selected container</system:String>
+    <system:String x:Key="Loc.Docker.Command.NoTarget">No container selected</system:String>
+    <system:String x:Key="Loc.Docker.Command.TargetValue">{0}</system:String>
+    <system:String x:Key="Loc.Docker.Command.DiagnosticsTooltip">Open inspect, stats, logs, confirmed lifecycle actions and exec for the selected container.</system:String>
+
+    <system:String x:Key="Loc.Docker.Search.Label">Search Docker inventory</system:String>
+    <system:String x:Key="Loc.Docker.Search.Tooltip">Filter the currently loaded containers, images, volumes and networks locally.</system:String>
+    <system:String x:Key="Loc.Docker.Search.Clear">Clear search</system:String>
+
+    <system:String x:Key="Loc.Docker.Runtime.Title">Runtime</system:String>
+    <system:String x:Key="Loc.Docker.Runtime.Channel">Remote Docker CLI over SSH; the Docker socket is never exposed or forwarded.</system:String>
+    <system:String x:Key="Loc.Docker.Runtime.Available">Available</system:String>
+    <system:String x:Key="Loc.Docker.Runtime.CliUnavailable">CLI unavailable</system:String>
+    <system:String x:Key="Loc.Docker.Runtime.DaemonUnavailable">Daemon unavailable</system:String>
+    <system:String x:Key="Loc.Docker.Runtime.PermissionDenied">Permission required</system:String>
+    <system:String x:Key="Loc.Docker.Runtime.Unsupported">Unsupported</system:String>
+    <system:String x:Key="Loc.Docker.Runtime.Unknown">Unknown</system:String>
+
+    <system:String x:Key="Loc.Docker.Summary.Engine">Engine / API</system:String>
+    <system:String x:Key="Loc.Docker.Summary.Containers">Running / total containers</system:String>
+    <system:String x:Key="Loc.Docker.Summary.Images">Images</system:String>
+    <system:String x:Key="Loc.Docker.Summary.Volumes">Volumes</system:String>
+    <system:String x:Key="Loc.Docker.Summary.Networks">Networks</system:String>
+    <system:String x:Key="Loc.Docker.Summary.Host">Docker host</system:String>
+
+    <system:String x:Key="Loc.Docker.Tab.Containers">Containers</system:String>
+    <system:String x:Key="Loc.Docker.Tab.Images">Images</system:String>
+    <system:String x:Key="Loc.Docker.Tab.Volumes">Volumes</system:String>
+    <system:String x:Key="Loc.Docker.Tab.Networks">Networks</system:String>
+
+    <system:String x:Key="Loc.Docker.Column.Name">Name</system:String>
+    <system:String x:Key="Loc.Docker.Column.State">State</system:String>
+    <system:String x:Key="Loc.Docker.Column.Image">Image</system:String>
+    <system:String x:Key="Loc.Docker.Column.Status">Status</system:String>
+    <system:String x:Key="Loc.Docker.Column.Ports">Ports</system:String>
+    <system:String x:Key="Loc.Docker.Column.Networks">Networks</system:String>
+    <system:String x:Key="Loc.Docker.Column.Id">ID</system:String>
+    <system:String x:Key="Loc.Docker.Column.Repository">Repository</system:String>
+    <system:String x:Key="Loc.Docker.Column.Tag">Tag</system:String>
+    <system:String x:Key="Loc.Docker.Column.Size">Size</system:String>
+    <system:String x:Key="Loc.Docker.Column.Created">Created</system:String>
+    <system:String x:Key="Loc.Docker.Column.Digest">Digest</system:String>
+    <system:String x:Key="Loc.Docker.Column.Driver">Driver</system:String>
+    <system:String x:Key="Loc.Docker.Column.Scope">Scope</system:String>
+    <system:String x:Key="Loc.Docker.Column.Mountpoint">Mountpoint</system:String>
+    <system:String x:Key="Loc.Docker.Column.Labels">Labels</system:String>
+    <system:String x:Key="Loc.Docker.Column.Ipv6">IPv6</system:String>
+    <system:String x:Key="Loc.Docker.Column.Internal">Internal</system:String>
+
+    <system:String x:Key="Loc.Docker.Details.Title">Container details</system:String>
+    <system:String x:Key="Loc.Docker.Details.Hint">Select a container to inspect its loaded inventory fields. Open diagnostics for live inspect, stats, logs and management.</system:String>
+    <system:String x:Key="Loc.Docker.Details.Name">Name</system:String>
+    <system:String x:Key="Loc.Docker.Details.State">State</system:String>
+    <system:String x:Key="Loc.Docker.Details.Image">Image</system:String>
+    <system:String x:Key="Loc.Docker.Details.Status">Status</system:String>
+    <system:String x:Key="Loc.Docker.Details.Ports">Ports</system:String>
+    <system:String x:Key="Loc.Docker.Details.Networks">Networks</system:String>
+    <system:String x:Key="Loc.Docker.Details.Mounts">Mounts</system:String>
+    <system:String x:Key="Loc.Docker.Details.Created">Created</system:String>
+    <system:String x:Key="Loc.Docker.Details.Size">Size</system:String>
+    <system:String x:Key="Loc.Docker.Details.Id">Container ID</system:String>
+
+    <system:String x:Key="Loc.Docker.Status.ReadyInitial">Ready to detect Docker runtime access and load inventory.</system:String>
+    <system:String x:Key="Loc.Docker.Status.DisconnectedInitial">Connect the server before inspecting Docker.</system:String>
+    <system:String x:Key="Loc.Docker.Status.Loading">Detecting Docker runtime access and reading structured inventory…</system:String>
+    <system:String x:Key="Loc.Docker.Status.Loaded">Docker inventory contains {0:N0} resource row(s).</system:String>
+    <system:String x:Key="Loc.Docker.Status.Partial">Docker is usable, but {0:N0} inventory read(s) failed. {1}</system:String>
+    <system:String x:Key="Loc.Docker.Status.Empty">Docker is usable, but no containers, images, volumes or networks were returned.</system:String>
+    <system:String x:Key="Loc.Docker.Status.Cancelled">Docker inspection was stopped.</system:String>
+    <system:String x:Key="Loc.Docker.Status.SelectFirst">Select a container first.</system:String>
+    <system:String x:Key="Loc.Docker.Status.NoSnapshot">Docker inspection returned no normalized snapshot.</system:String>
+    <system:String x:Key="Loc.Docker.Status.Error">Recoverable error: {0}</system:String>
+    <system:String x:Key="Loc.Docker.Status.ErrorTyped">Recoverable error ({0}): {1}</system:String>
+    <system:String x:Key="Loc.Docker.Status.Disconnected">Disconnected: {0}</system:String>
+    <system:String x:Key="Loc.Docker.Status.Permission">Permission required: {0}</system:String>
+    <system:String x:Key="Loc.Docker.Status.Capability">Capability unavailable: {0}</system:String>
+    <system:String x:Key="Loc.Docker.Status.Unsupported">Unsupported: {0}</system:String>
+    <system:String x:Key="Loc.Docker.Status.Malformed">Malformed/partial Docker output: {0}</system:String>
+    <system:String x:Key="Loc.Docker.Status.CliUnavailable">Docker CLI was not found on this server.</system:String>
+    <system:String x:Key="Loc.Docker.Status.DaemonUnavailable">Docker CLI exists, but the Docker daemon is unavailable.</system:String>
+    <system:String x:Key="Loc.Docker.Status.RuntimePermission">Docker exists, but the current SSH user cannot access the Docker daemon.</system:String>
+    <system:String x:Key="Loc.Docker.Status.RuntimeUnsupported">Docker client/daemon versions cannot communicate safely.</system:String>
+    <system:String x:Key="Loc.Docker.Status.RuntimeUnknown">Docker runtime usability could not be determined.</system:String>
+
+    <system:String x:Key="Loc.Docker.Overlay.LoadingTitle">Loading Docker inventory…</system:String>
+    <system:String x:Key="Loc.Docker.Overlay.EmptyTitle">No resources in this view</system:String>
+    <system:String x:Key="Loc.Docker.Overlay.EmptyDetail">The loaded Docker snapshot has no resources for this tab.</system:String>
+    <system:String x:Key="Loc.Docker.Overlay.SearchTitle">No matching resources</system:String>
+    <system:String x:Key="Loc.Docker.Overlay.SearchDetail">Clear the local search or try another Docker name, ID, image, state, label or network value.</system:String>
+    <system:String x:Key="Loc.Docker.Overlay.DisconnectedTitle">Server disconnected</system:String>
+    <system:String x:Key="Loc.Docker.Overlay.RuntimeTitle">Docker runtime unavailable</system:String>
+    <system:String x:Key="Loc.Docker.Overlay.ErrorTitle">Unable to load Docker inventory</system:String>
+    <system:String x:Key="Loc.Docker.Overlay.CancelledTitle">Docker inspection cancelled</system:String>
+
+    <system:String x:Key="Loc.Docker.Footer.None">No Docker inventory is loaded.</system:String>
+    <system:String x:Key="Loc.Docker.Footer.Visible">Visible: {0:N0} container(s), {1:N0} image(s), {2:N0} volume(s), {3:N0} network(s).</system:String>
+</ResourceDictionary>
