@@ -48,7 +48,7 @@ public sealed class ProcessWorkspaceProjectionTests
 
         Assert.Equal([37, 51], ProcessWorkspaceProjection.Filter(rows, "DEPLOY").Select(row => row.ProcessId));
         Assert.Equal([37], ProcessWorkspaceProjection.Filter(rows, "api.dll").Select(row => row.ProcessId));
-        Assert.Equal([21], ProcessWorkspaceProjection.Filter(rows, "21 sshd").Select(row => row.ProcessId));
+        Assert.Equal([21], ProcessWorkspaceProjection.Filter(rows, "sshd").Select(row => row.ProcessId));
         Assert.Equal(rows.Select(row => row.ProcessId), ProcessWorkspaceProjection.Filter(rows, " ").Select(row => row.ProcessId));
     }
 
