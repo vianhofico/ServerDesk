@@ -11,6 +11,7 @@
                 <ResourceDictionary Source="/ServerDesk.App;component/Localization/Strings.Shell.en.xaml" />
                 <ResourceDictionary Source="/ServerDesk.App;component/Localization/Strings.Explorer.en.xaml" />
                 <ResourceDictionary Source="/ServerDesk.App;component/Localization/Strings.Processes.en.xaml" />
+                <ResourceDictionary Source="/ServerDesk.App;component/Localization/Strings.Services.en.xaml" />
                 <ResourceDictionary Source="/ServerDesk.App;component/Localization/Strings.Tasks.en.xaml" />
                 <ResourceDictionary Source="/ServerDesk.App;component/Localization/Strings.Nginx.en.xaml" />
             </ResourceDictionary.MergedDictionaries>

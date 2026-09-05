@@ -1,0 +1,100 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:system="clr-namespace:System;assembly=System.Runtime">
+    <system:String x:Key="Loc.Services.WindowTitle">Services</system:String>
+    <system:String x:Key="Loc.Services.Header.Title">Services</system:String>
+    <system:String x:Key="Loc.Services.Header.Subtitle">Inspect and control systemd services with verified remote state</system:String>
+    <system:String x:Key="Loc.Services.Header.Environment">Environment</system:String>
+    <system:String x:Key="Loc.Services.Header.Connection">Connection</system:String>
+    <system:String x:Key="Loc.Services.Header.Connected">Connected</system:String>
+    <system:String x:Key="Loc.Services.Header.Disconnected">Disconnected</system:String>
+    <system:String x:Key="Loc.Services.Header.Unlabeled">Unlabeled</system:String>
+
+    <system:String x:Key="Loc.Services.Command.Refresh">Refresh</system:String>
+    <system:String x:Key="Loc.Services.Command.Cancel">Cancel</system:String>
+    <system:String x:Key="Loc.Services.Command.Details">Load details</system:String>
+    <system:String x:Key="Loc.Services.Command.Logs">Open logs</system:String>
+    <system:String x:Key="Loc.Services.Command.Start">Start</system:String>
+    <system:String x:Key="Loc.Services.Command.Stop">Stop</system:String>
+    <system:String x:Key="Loc.Services.Command.Restart">Restart</system:String>
+    <system:String x:Key="Loc.Services.Command.Reload">Reload</system:String>
+    <system:String x:Key="Loc.Services.Command.Enable">Enable</system:String>
+    <system:String x:Key="Loc.Services.Command.Disable">Disable</system:String>
+    <system:String x:Key="Loc.Services.Command.Target">Selected target</system:String>
+    <system:String x:Key="Loc.Services.Command.NoTarget">No service selected</system:String>
+    <system:String x:Key="Loc.Services.Command.TargetValue">{0}</system:String>
+    <system:String x:Key="Loc.Services.Command.LogsTooltip">Open the shared Logs viewer filtered to this systemd unit.</system:String>
+
+    <system:String x:Key="Loc.Services.Search.Label">Search services</system:String>
+    <system:String x:Key="Loc.Services.Search.Tooltip">Filter the loaded service snapshot locally by unit, description, load, active, sub or enabled state.</system:String>
+    <system:String x:Key="Loc.Services.Search.Clear">Clear search</system:String>
+
+    <system:String x:Key="Loc.Services.Summary.Services">Services</system:String>
+    <system:String x:Key="Loc.Services.Summary.Visible">Visible</system:String>
+    <system:String x:Key="Loc.Services.Summary.Active">Active</system:String>
+    <system:String x:Key="Loc.Services.Summary.Enabled">Enabled</system:String>
+
+    <system:String x:Key="Loc.Services.Column.Unit">Unit</system:String>
+    <system:String x:Key="Loc.Services.Column.Description">Description</system:String>
+    <system:String x:Key="Loc.Services.Column.Load">Load</system:String>
+    <system:String x:Key="Loc.Services.Column.Active">Active</system:String>
+    <system:String x:Key="Loc.Services.Column.Sub">Sub</system:String>
+    <system:String x:Key="Loc.Services.Column.Enabled">Enabled</system:String>
+
+    <system:String x:Key="Loc.Services.Details.Title">Service details</system:String>
+    <system:String x:Key="Loc.Services.Details.Hint">Select a service to inspect snapshot state, then load details for Main PID and status text.</system:String>
+    <system:String x:Key="Loc.Services.Details.Unit">Unit</system:String>
+    <system:String x:Key="Loc.Services.Details.Description">Description</system:String>
+    <system:String x:Key="Loc.Services.Details.Load">Load state</system:String>
+    <system:String x:Key="Loc.Services.Details.Active">Active state</system:String>
+    <system:String x:Key="Loc.Services.Details.Sub">Sub state</system:String>
+    <system:String x:Key="Loc.Services.Details.Enabled">Unit-file state</system:String>
+    <system:String x:Key="Loc.Services.Details.MainPid">Main PID</system:String>
+    <system:String x:Key="Loc.Services.Details.Status">Status</system:String>
+    <system:String x:Key="Loc.Services.Details.NotLoaded">Load details to fetch Main PID and current status.</system:String>
+
+    <system:String x:Key="Loc.Services.Status.ReadyInitial">Ready to load systemd services.</system:String>
+    <system:String x:Key="Loc.Services.Status.DisconnectedInitial">Connect the server before loading systemd services.</system:String>
+    <system:String x:Key="Loc.Services.Status.Loading">Loading normalized systemd service list…</system:String>
+    <system:String x:Key="Loc.Services.Status.Empty">No systemd service units were returned.</system:String>
+    <system:String x:Key="Loc.Services.Status.Loaded">{0:N0} service(s) loaded.</system:String>
+    <system:String x:Key="Loc.Services.Status.RefreshCancelled">Service refresh stopped.</system:String>
+    <system:String x:Key="Loc.Services.Status.SelectFirst">Select a service first.</system:String>
+    <system:String x:Key="Loc.Services.Status.LoadingDetails">Loading details for {0}…</system:String>
+    <system:String x:Key="Loc.Services.Status.DetailsLoaded">Details loaded for {0}.</system:String>
+    <system:String x:Key="Loc.Services.Status.DetailsCancelled">Service detail load stopped.</system:String>
+    <system:String x:Key="Loc.Services.Status.Running">Running systemctl {0} for {1}…</system:String>
+    <system:String x:Key="Loc.Services.Status.Interrupted">Cancelled or interrupted: refresh service state before deciding whether to retry this action.</system:String>
+    <system:String x:Key="Loc.Services.Status.Error">Error: {0}</system:String>
+    <system:String x:Key="Loc.Services.Status.Permission">Permission: {0}</system:String>
+    <system:String x:Key="Loc.Services.Status.Capability">Capability: {0}</system:String>
+    <system:String x:Key="Loc.Services.Status.NotFound">Not found: {0}</system:String>
+    <system:String x:Key="Loc.Services.Status.Disconnected">Disconnected: {0}</system:String>
+    <system:String x:Key="Loc.Services.Status.Cancelled">Cancelled: {0}</system:String>
+    <system:String x:Key="Loc.Services.Status.Ambiguous">Ambiguous state: {0}</system:String>
+    <system:String x:Key="Loc.Services.Status.Typed">{0}: {1}</system:String>
+    <system:String x:Key="Loc.Services.Status.IncompleteDetails">Service details were incomplete.</system:String>
+
+    <system:String x:Key="Loc.Services.Overlay.LoadingTitle">Loading services…</system:String>
+    <system:String x:Key="Loc.Services.Overlay.EmptyTitle">No services returned</system:String>
+    <system:String x:Key="Loc.Services.Overlay.EmptyDetail">Refresh after systemd has service units available to inspect.</system:String>
+    <system:String x:Key="Loc.Services.Overlay.SearchTitle">No matching services</system:String>
+    <system:String x:Key="Loc.Services.Overlay.SearchDetail">Clear the local search or try another unit, description or service state.</system:String>
+    <system:String x:Key="Loc.Services.Overlay.DisconnectedTitle">Server disconnected</system:String>
+    <system:String x:Key="Loc.Services.Overlay.ErrorTitle">Unable to load services</system:String>
+    <system:String x:Key="Loc.Services.Overlay.CancelledTitle">Service operation cancelled</system:String>
+
+    <system:String x:Key="Loc.Services.Footer.None">No service data loaded.</system:String>
+    <system:String x:Key="Loc.Services.Footer.All">{0:N0} service(s).</system:String>
+    <system:String x:Key="Loc.Services.Footer.Filtered">{0:N0} of {1:N0} service(s) match '{2}'.</system:String>
+
+    <system:String x:Key="Loc.Services.Confirm.Title">Confirm {0}</system:String>
+    <system:String x:Key="Loc.Services.Confirm.DisruptiveTitle">Confirm disruptive {0}</system:String>
+    <system:String x:Key="Loc.Services.Confirm.Body">Run systemctl {0} for '{1}' on {2}?&#x0A;&#x0A;{3}&#x0A;&#x0A;ServerDesk will verify state afterwards. If transport drops around execution, it reports ambiguous state instead of retrying automatically.</system:String>
+    <system:String x:Key="Loc.Services.Consequence.Stop">This stops the workload and can cause an outage.</system:String>
+    <system:String x:Key="Loc.Services.Consequence.Restart">This interrupts the workload while the service restarts.</system:String>
+    <system:String x:Key="Loc.Services.Consequence.Disable">This changes boot-time availability and can prevent the service from starting automatically.</system:String>
+    <system:String x:Key="Loc.Services.Consequence.Start">This starts the service and may consume resources or expose a workload.</system:String>
+    <system:String x:Key="Loc.Services.Consequence.Reload">This asks the service to reload configuration and may affect live traffic.</system:String>
+    <system:String x:Key="Loc.Services.Consequence.Enable">This changes boot-time configuration so the service starts automatically.</system:String>
+</ResourceDictionary>
