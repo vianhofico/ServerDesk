@@ -8,7 +8,7 @@ public partial class DockerInventoryWindow
     protected override void OnInitialized(EventArgs e)
     {
         base.OnInitialized(e);
-        if (DiagnosticsButton.Parent is not StackPanel panel)
+        if (DiagnosticsButton.Parent is not Panel parent)
         {
             return;
         }
@@ -16,12 +16,35 @@ public partial class DockerInventoryWindow
         var button = new Button
         {
             Style = (Style)FindResource("DockerButton"),
+            Margin = new Thickness(6, 0, 0, 0),
         };
         button.SetResourceReference(ContentControl.ContentProperty, "Loc.Compose.Projects");
         button.SetResourceReference(FrameworkElement.ToolTipProperty, "Loc.Compose.RuntimeSafety");
         button.Click += OpenComposeOnClick;
-        var diagnosticsIndex = panel.Children.IndexOf(DiagnosticsButton);
-        panel.Children.Insert(Math.Max(0, diagnosticsIndex + 1), button);
+
+        if (parent is StackPanel panel)
+        {
+            var diagnosticsIndex = panel.Children.IndexOf(DiagnosticsButton);
+            panel.Children.Insert(Math.Max(0, diagnosticsIndex + 1), button);
+            return;
+        }
+
+        if (parent is Grid grid)
+        {
+            var column = Grid.GetColumn(DiagnosticsButton);
+            var row = Grid.GetRow(DiagnosticsButton);
+            grid.Children.Remove(DiagnosticsButton);
+
+            var actionPanel = new StackPanel
+            {
+                Orientation = Orientation.Horizontal,
+            };
+            Grid.SetColumn(actionPanel, column);
+            Grid.SetRow(actionPanel, row);
+            actionPanel.Children.Add(DiagnosticsButton);
+            actionPanel.Children.Add(button);
+            grid.Children.Add(actionPanel);
+        }
     }
 
     private void OpenComposeOnClick(object sender, RoutedEventArgs e)
@@ -32,6 +55,6 @@ public partial class DockerInventoryWindow
             return;
         }
 
-        app.OpenDockerCompose(_profile, _initiallyConnected, this);
+        app.OpenDockerCompose(_profile, _hasConnection, this);
     }
 }
