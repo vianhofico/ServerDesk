@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
 using ServerDesk.Application.ScheduledTasks;
@@ -11,6 +12,8 @@ public partial class ScheduledTasksWindow
         Margin = new Thickness(0, 4, 0, 0),
         TextWrapping = TextWrapping.Wrap,
     };
+    private readonly DependencyPropertyDescriptor? _statusTextDescriptor =
+        DependencyPropertyDescriptor.FromProperty(TextBlock.TextProperty, typeof(TextBlock));
 
     private TextBlock FooterText => _footerText;
 
@@ -18,6 +21,7 @@ public partial class ScheduledTasksWindow
     {
         base.OnContentRendered(e);
         _localization.LanguageChanged += LocalizationOnLanguageChanged;
+        _statusTextDescriptor?.AddValueChanged(StatusText, StatusTextOnValueChanged);
         AttachFooterPresentation();
         RefreshLocalizedPresentation();
         RefreshOverlay();
@@ -26,6 +30,7 @@ public partial class ScheduledTasksWindow
     protected override void OnClosed(EventArgs e)
     {
         _localization.LanguageChanged -= LocalizationOnLanguageChanged;
+        _statusTextDescriptor?.RemoveValueChanged(StatusText, StatusTextOnValueChanged);
         base.OnClosed(e);
     }
 
@@ -39,6 +44,8 @@ public partial class ScheduledTasksWindow
         FooterText.SetResourceReference(TextBlock.ForegroundProperty, "MutedTextBrush");
         statusPanel.Children.Add(FooterText);
     }
+
+    private void StatusTextOnValueChanged(object? sender, EventArgs e) => RefreshOverlay();
 
     private void LocalizationOnLanguageChanged()
     {
