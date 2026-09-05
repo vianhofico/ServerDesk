@@ -20,6 +20,7 @@
     <system:String x:Key="Loc.Storage.Summary.BlockDevices">Block rows</system:String>
     <system:String x:Key="Loc.Storage.Summary.Mounted">Mounted block rows</system:String>
     <system:String x:Key="Loc.Storage.Summary.Visible">Visible</system:String>
+    <system:String x:Key="Loc.Storage.Summary.VisibleFormat">Visible: {0:N0} filesystem(s) · {1:N0} block row(s)</system:String>
     <system:String x:Key="Loc.Storage.Tab.Filesystems">Filesystems</system:String>
     <system:String x:Key="Loc.Storage.Tab.BlockDevices">Block devices</system:String>
     <system:String x:Key="Loc.Storage.Tab.Directory">Directory analyzer</system:String>
