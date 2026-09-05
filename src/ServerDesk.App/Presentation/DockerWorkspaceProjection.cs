@@ -42,12 +42,14 @@ public static class DockerWorkspaceProjection
         ArgumentNullException.ThrowIfNull(snapshot);
         ArgumentNullException.ThrowIfNull(visible);
 
+        var containers = snapshot.System?.Containers ?? snapshot.Containers.Count;
         var running = snapshot.System?.ContainersRunning ??
                       snapshot.Containers.Count(container => IsRunning(container));
+        var images = snapshot.System?.Images ?? snapshot.Images.Count;
         return new DockerWorkspaceSummary(
-            snapshot.Containers.Count,
-            Math.Clamp(running, 0, snapshot.Containers.Count),
-            snapshot.Images.Count,
+            containers,
+            Math.Clamp(running, 0, containers),
+            images,
             snapshot.Volumes.Count,
             snapshot.Networks.Count,
             visible.Containers.Count,
