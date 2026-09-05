@@ -20,18 +20,42 @@
     <ProjectReference Include="..\..\src\ServerDesk.Platform.Windows\ServerDesk.Platform.Windows.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Fixtures\Capabilities\**\*" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Never" />
-    <None Include="Fixtures\Dashboard\**\*" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Never" />
-    <None Include="Fixtures\Network\**\*" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Never" />
-    <None Include="Fixtures\Logs\**\*" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Never" />
-    <None Include="Fixtures\Docker\**\*" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Never" />
-    <None Include="Fixtures\Git\**\*" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Never" />
-    <None Include="Fixtures\ScheduledTasks\**\*" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Never" />
-    <None Include="Fixtures\Nginx\**\*" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Never" />
-    <None Include="Fixtures\Tls\**\*" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Never" />
-    <None Include="Fixtures\EnvironmentFiles\**\*" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Never" />
-    <None Include="Fixtures\Deployment\**\*" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Never" />
-    <None Include="Fixtures\Firewall\**\*" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Never" />
+    <None Include="Fixtures\Capabilities\**\*"
+          CopyToOutputDirectory="PreserveNewest"
+          CopyToPublishDirectory="Never" />
+    <None Include="Fixtures\Dashboard\**\*"
+          CopyToOutputDirectory="PreserveNewest"
+          CopyToPublishDirectory="Never" />
+    <None Include="Fixtures\Network\**\*"
+          CopyToOutputDirectory="PreserveNewest"
+          CopyToPublishDirectory="Never" />
+    <None Include="Fixtures\Logs\**\*"
+          CopyToOutputDirectory="PreserveNewest"
+          CopyToPublishDirectory="Never" />
+    <None Include="Fixtures\Docker\**\*"
+          CopyToOutputDirectory="PreserveNewest"
+          CopyToPublishDirectory="Never" />
+    <None Include="Fixtures\Git\**\*"
+          CopyToOutputDirectory="PreserveNewest"
+          CopyToPublishDirectory="Never" />
+    <None Include="Fixtures\ScheduledTasks\**\*"
+          CopyToOutputDirectory="PreserveNewest"
+          CopyToPublishDirectory="Never" />
+    <None Include="Fixtures\Nginx\**\*"
+          CopyToOutputDirectory="PreserveNewest"
+          CopyToPublishDirectory="Never" />
+    <None Include="Fixtures\Tls\**\*"
+          CopyToOutputDirectory="PreserveNewest"
+          CopyToPublishDirectory="Never" />
+    <None Include="Fixtures\EnvironmentFiles\**\*"
+          CopyToOutputDirectory="PreserveNewest"
+          CopyToPublishDirectory="Never" />
+    <None Include="Fixtures\Deployment\**\*"
+          CopyToOutputDirectory="PreserveNewest"
+          CopyToPublishDirectory="Never" />
+    <None Include="Fixtures\Firewall\**\*"
+          CopyToOutputDirectory="PreserveNewest"
+          CopyToPublishDirectory="Never" />
     <None Include="..\..\src\ServerDesk.Agent.Contracts\Protos\agent_control.proto"
           Link="Fixtures\Agent\agent_control.proto"
           CopyToOutputDirectory="PreserveNewest"
