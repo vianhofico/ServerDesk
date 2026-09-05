@@ -1,24 +1,39 @@
 <Window x:Class="ServerDesk.App.DockerInventoryWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Docker"
-        Width="1380"
-        Height="840"
-        MinWidth="1040"
-        MinHeight="640"
+        Title="{DynamicResource Loc.Docker.WindowTitle}"
+        Width="1420"
+        Height="880"
+        MinWidth="1080"
+        MinHeight="680"
         WindowStartupLocation="CenterOwner"
         Background="{DynamicResource WindowBackgroundBrush}"
         Foreground="{DynamicResource PrimaryTextBrush}"
         Loaded="WindowOnLoaded"
         Closed="WindowOnClosed">
     <Window.Resources>
-        <Style x:Key="SummaryValue" TargetType="TextBlock">
+        <Style x:Key="DockerSummaryLabel" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" />
+        </Style>
+        <Style x:Key="DockerSummaryValue" TargetType="TextBlock">
+            <Setter Property="Margin" Value="0,3,0,0" />
             <Setter Property="FontSize" Value="18" />
             <Setter Property="FontWeight" Value="SemiBold" />
         </Style>
-        <Style x:Key="SummaryLabel" TargetType="TextBlock">
+        <Style x:Key="DockerDetailLabel" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="11" />
             <Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" />
-            <Setter Property="Margin" Value="0,3,0,0" />
+        </Style>
+        <Style x:Key="DockerDetailValue" TargetType="TextBlock">
+            <Setter Property="Margin" Value="0,2,0,10" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+        </Style>
+        <Style x:Key="DockerTechnicalValue"
+               TargetType="TextBlock"
+               BasedOn="{StaticResource DockerDetailValue}">
+            <Setter Property="FontFamily" Value="Cascadia Mono, Consolas" />
+            <Setter Property="FontSize" Value="12" />
         </Style>
     </Window.Resources>
 
@@ -32,167 +47,363 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <Grid>
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
-            </Grid.ColumnDefinitions>
-            <StackPanel>
-                <TextBlock x:Name="TitleText" FontSize="26" FontWeight="SemiBold" />
-                <TextBlock x:Name="EndpointText" Margin="0,5,0,0"
-                           Foreground="{DynamicResource MutedTextBrush}" />
-            </StackPanel>
-            <Border Grid.Column="1" Style="{StaticResource CommandBarSurface}" VerticalAlignment="Top">
-                <StackPanel Orientation="Horizontal">
-                    <Button Content="Refresh" Click="RefreshOnClick" Style="{StaticResource SecondaryButton}" />
-                    <Button x:Name="DiagnosticsButton"
-                            Content="Container diagnostics"
-                            Click="DiagnosticsOnClick"
-                            Style="{StaticResource SecondaryButton}"
-                            Margin="6,0,0,0"
-                            IsEnabled="False"
-                            ToolTip="Open inspect, stats and logs for the selected container." />
-                    <Button Content="Cancel"
-                            Click="CancelOnClick"
-                            Style="{StaticResource GhostButton}"
-                            Margin="6,0,0,0" />
+        <Border Grid.Row="0" Style="{StaticResource SurfaceCard}" Padding="18">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel>
+                    <TextBlock Text="{DynamicResource Loc.Docker.Header.Title}"
+                               FontSize="27"
+                               FontWeight="SemiBold" />
+                    <TextBlock Text="{DynamicResource Loc.Docker.Header.Subtitle}"
+                               Margin="0,3,0,10"
+                               Foreground="{DynamicResource MutedTextBrush}" />
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock x:Name="ServerNameText" FontWeight="SemiBold" />
+                        <TextBlock Text="  ·  " Foreground="{DynamicResource MutedTextBrush}" />
+                        <TextBlock x:Name="EndpointText"
+                                   Style="{StaticResource TechnicalText}"
+                                   Foreground="{DynamicResource MutedTextBrush}" />
+                    </StackPanel>
                 </StackPanel>
-            </Border>
-        </Grid>
 
-        <Grid Grid.Row="1" Margin="0,16,0,0">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="*" />
-            </Grid.ColumnDefinitions>
-            <TextBlock Text="Search" VerticalAlignment="Center"
-                       Foreground="{DynamicResource MutedTextBrush}" />
-            <TextBox x:Name="SearchBox"
-                     Grid.Column="1"
-                     Margin="10,0,0,0"
-                     Style="{StaticResource OperationalSearchTextBox}"
-                     TextChanged="SearchBoxOnTextChanged"
-                     ToolTip="Filter the currently loaded Docker inventory locally." />
-        </Grid>
-
-        <Border Grid.Row="2" Margin="0,12,0,0" Padding="10" CornerRadius="7"
-                Background="{DynamicResource SurfaceSecondaryBrush}">
-            <StackPanel>
-                <TextBlock x:Name="StatusText" TextWrapping="Wrap" />
-                <TextBlock x:Name="RuntimeDetailText" Margin="0,4,0,0" TextWrapping="Wrap"
-                           Foreground="{DynamicResource MutedTextBrush}" />
-            </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Border Padding="12,8"
+                            CornerRadius="8"
+                            Background="{DynamicResource SurfaceSecondaryBrush}">
+                        <StackPanel>
+                            <TextBlock Text="{DynamicResource Loc.Docker.Header.Environment}"
+                                       Style="{StaticResource DockerSummaryLabel}" />
+                            <TextBlock x:Name="EnvironmentValueText"
+                                       Margin="0,2,0,0"
+                                       FontWeight="SemiBold" />
+                        </StackPanel>
+                    </Border>
+                    <Border Margin="8,0,0,0"
+                            Padding="12,8"
+                            CornerRadius="8"
+                            Background="{DynamicResource AccentSoftBrush}">
+                        <StackPanel>
+                            <TextBlock Text="{DynamicResource Loc.Docker.Header.Connection}"
+                                       Style="{StaticResource DockerSummaryLabel}" />
+                            <TextBlock x:Name="ConnectionValueText"
+                                       Margin="0,2,0,0"
+                                       FontWeight="SemiBold" />
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </Grid>
         </Border>
 
-        <Grid Grid.Row="3" Margin="0,12,0,10">
+        <Border Grid.Row="1"
+                Margin="0,12,0,0"
+                Style="{StaticResource CommandBarSurface}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel Orientation="Horizontal">
+                    <Button x:Name="RefreshButton"
+                            Content="{DynamicResource Loc.Docker.Command.Refresh}"
+                            Click="RefreshOnClick"
+                            Style="{StaticResource SecondaryButton}" />
+                    <Button x:Name="CancelButton"
+                            Margin="6,0,0,0"
+                            Content="{DynamicResource Loc.Docker.Command.Cancel}"
+                            Click="CancelOnClick"
+                            Style="{StaticResource GhostButton}"
+                            IsEnabled="False" />
+                </StackPanel>
+
+                <StackPanel Grid.Column="1" Margin="16,0" VerticalAlignment="Center">
+                    <TextBlock Text="{DynamicResource Loc.Docker.Command.Target}"
+                               FontSize="11"
+                               Foreground="{DynamicResource MutedTextBrush}" />
+                    <TextBlock x:Name="TargetValueText"
+                               Margin="0,2,0,0"
+                               FontFamily="Cascadia Mono, Consolas"
+                               Text="{DynamicResource Loc.Docker.Command.NoTarget}" />
+                </StackPanel>
+
+                <Button x:Name="DiagnosticsButton"
+                        Grid.Column="2"
+                        Content="{DynamicResource Loc.Docker.Command.Diagnostics}"
+                        Click="DiagnosticsOnClick"
+                        Style="{StaticResource SecondaryButton}"
+                        IsEnabled="False"
+                        ToolTip="{DynamicResource Loc.Docker.Command.DiagnosticsTooltip}" />
+            </Grid>
+        </Border>
+
+        <Grid Grid.Row="2" Margin="0,10,0,0">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="1.4*" />
                 <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="1.2*" />
+                <ColumnDefinition Width="340" />
             </Grid.ColumnDefinitions>
-            <Border Grid.Column="0" Margin="0,0,8,0" Padding="12" CornerRadius="7"
-                    Background="{DynamicResource SurfaceSecondaryBrush}">
+            <Border x:Name="StatusCard"
+                    Style="{StaticResource InlineInfoCard}"
+                    Margin="0,0,10,0">
                 <StackPanel>
-                    <TextBlock x:Name="EngineValue" Style="{StaticResource SummaryValue}" Text="—" />
-                    <TextBlock Text="Engine / API" Style="{StaticResource SummaryLabel}" />
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="{DynamicResource Loc.Docker.Runtime.Title}"
+                                   FontWeight="SemiBold" />
+                        <TextBlock Text="  ·  " Foreground="{DynamicResource MutedTextBrush}" />
+                        <TextBlock x:Name="RuntimeStatusValueText" FontWeight="SemiBold" />
+                    </StackPanel>
+                    <TextBlock x:Name="StatusText" Margin="0,4,0,0" TextWrapping="Wrap" />
+                    <TextBlock x:Name="RuntimeDetailText"
+                               Margin="0,4,0,0"
+                               TextWrapping="Wrap"
+                               Foreground="{DynamicResource MutedTextBrush}" />
+                    <TextBlock Text="{DynamicResource Loc.Docker.Runtime.Channel}"
+                               Margin="0,4,0,0"
+                               FontSize="11"
+                               Foreground="{DynamicResource MutedTextBrush}" />
                 </StackPanel>
             </Border>
-            <Border Grid.Column="1" Margin="0,0,8,0" Padding="12" CornerRadius="7"
-                    Background="{DynamicResource SurfaceSecondaryBrush}">
+
+            <Grid Grid.Column="1" VerticalAlignment="Top">
+                <TextBox x:Name="SearchBox"
+                         Style="{StaticResource OperationalSearchTextBox}"
+                         Padding="10,6,38,6"
+                         TextChanged="SearchBoxOnTextChanged"
+                         ToolTip="{DynamicResource Loc.Docker.Search.Tooltip}"
+                         AutomationProperties.Name="{DynamicResource Loc.Docker.Search.Label}" />
+                <Button x:Name="ClearSearchButton"
+                        Width="32"
+                        Height="30"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Top"
+                        Margin="0,3,3,0"
+                        Padding="0"
+                        Content="×"
+                        ToolTip="{DynamicResource Loc.Docker.Search.Clear}"
+                        Click="ClearSearchOnClick"
+                        Style="{StaticResource GhostButton}"
+                        Visibility="Collapsed"
+                        AutomationProperties.Name="{DynamicResource Loc.Docker.Search.Clear}" />
+            </Grid>
+        </Grid>
+
+        <Grid Grid.Row="3" Margin="0,10,0,10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="1.35*" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="1.15*" />
+            </Grid.ColumnDefinitions>
+            <Border Grid.Column="0" Style="{StaticResource SurfaceCard}" Padding="12" Margin="0,0,8,0">
                 <StackPanel>
-                    <TextBlock x:Name="ContainerValue" Style="{StaticResource SummaryValue}" Text="—" />
-                    <TextBlock Text="Containers" Style="{StaticResource SummaryLabel}" />
+                    <TextBlock Text="{DynamicResource Loc.Docker.Summary.Engine}" Style="{StaticResource DockerSummaryLabel}" />
+                    <TextBlock x:Name="EngineValue" Text="—" Style="{StaticResource DockerSummaryValue}" />
                 </StackPanel>
             </Border>
-            <Border Grid.Column="2" Margin="0,0,8,0" Padding="12" CornerRadius="7"
-                    Background="{DynamicResource SurfaceSecondaryBrush}">
+            <Border Grid.Column="1" Style="{StaticResource SurfaceCard}" Padding="12" Margin="0,0,8,0">
                 <StackPanel>
-                    <TextBlock x:Name="ImageValue" Style="{StaticResource SummaryValue}" Text="—" />
-                    <TextBlock Text="Images" Style="{StaticResource SummaryLabel}" />
+                    <TextBlock Text="{DynamicResource Loc.Docker.Summary.Containers}" Style="{StaticResource DockerSummaryLabel}" />
+                    <TextBlock x:Name="ContainerValue" Text="—" Style="{StaticResource DockerSummaryValue}" />
                 </StackPanel>
             </Border>
-            <Border Grid.Column="3" Margin="0,0,8,0" Padding="12" CornerRadius="7"
-                    Background="{DynamicResource SurfaceSecondaryBrush}">
+            <Border Grid.Column="2" Style="{StaticResource SurfaceCard}" Padding="12" Margin="0,0,8,0">
                 <StackPanel>
-                    <TextBlock x:Name="VolumeValue" Style="{StaticResource SummaryValue}" Text="—" />
-                    <TextBlock Text="Volumes" Style="{StaticResource SummaryLabel}" />
+                    <TextBlock Text="{DynamicResource Loc.Docker.Summary.Images}" Style="{StaticResource DockerSummaryLabel}" />
+                    <TextBlock x:Name="ImageValue" Text="—" Style="{StaticResource DockerSummaryValue}" />
                 </StackPanel>
             </Border>
-            <Border Grid.Column="4" Margin="0,0,8,0" Padding="12" CornerRadius="7"
-                    Background="{DynamicResource SurfaceSecondaryBrush}">
+            <Border Grid.Column="3" Style="{StaticResource SurfaceCard}" Padding="12" Margin="0,0,8,0">
                 <StackPanel>
-                    <TextBlock x:Name="NetworkValue" Style="{StaticResource SummaryValue}" Text="—" />
-                    <TextBlock Text="Networks" Style="{StaticResource SummaryLabel}" />
+                    <TextBlock Text="{DynamicResource Loc.Docker.Summary.Volumes}" Style="{StaticResource DockerSummaryLabel}" />
+                    <TextBlock x:Name="VolumeValue" Text="—" Style="{StaticResource DockerSummaryValue}" />
                 </StackPanel>
             </Border>
-            <Border Grid.Column="5" Padding="12" CornerRadius="7"
-                    Background="{DynamicResource SurfaceSecondaryBrush}">
+            <Border Grid.Column="4" Style="{StaticResource SurfaceCard}" Padding="12" Margin="0,0,8,0">
                 <StackPanel>
-                    <TextBlock x:Name="HostValue" Style="{StaticResource SummaryValue}" Text="—" />
-                    <TextBlock Text="Docker host" Style="{StaticResource SummaryLabel}" />
+                    <TextBlock Text="{DynamicResource Loc.Docker.Summary.Networks}" Style="{StaticResource DockerSummaryLabel}" />
+                    <TextBlock x:Name="NetworkValue" Text="—" Style="{StaticResource DockerSummaryValue}" />
+                </StackPanel>
+            </Border>
+            <Border Grid.Column="5" Style="{StaticResource SurfaceCard}" Padding="12">
+                <StackPanel>
+                    <TextBlock Text="{DynamicResource Loc.Docker.Summary.Host}" Style="{StaticResource DockerSummaryLabel}" />
+                    <TextBlock x:Name="HostValue" Text="—" Style="{StaticResource DockerSummaryValue}" />
                 </StackPanel>
             </Border>
         </Grid>
 
-        <TabControl Grid.Row="4" x:Name="InventoryTabs">
-            <TabItem Header="Containers">
-                <DataGrid x:Name="ContainerGrid"
-                          Style="{StaticResource OperationalDataGrid}"
-                          SelectionChanged="ContainerGridOnSelectionChanged"
-                          MouseDoubleClick="ContainerGridOnMouseDoubleClick">
-                    <DataGrid.Columns>
-                        <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="1.2*" />
-                        <DataGridTextColumn Header="State" Binding="{Binding State}" Width="0.8*" />
-                        <DataGridTextColumn Header="Image" Binding="{Binding Image}" Width="1.5*" />
-                        <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="1.4*" />
-                        <DataGridTextColumn Header="Ports" Binding="{Binding Ports}" Width="1.4*" />
-                        <DataGridTextColumn Header="Networks" Binding="{Binding Networks}" Width="1.1*" />
-                        <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="1.3*" />
-                    </DataGrid.Columns>
-                </DataGrid>
-            </TabItem>
-            <TabItem Header="Images">
-                <DataGrid x:Name="ImageGrid" Style="{StaticResource OperationalDataGrid}">
-                    <DataGrid.Columns>
-                        <DataGridTextColumn Header="Repository" Binding="{Binding Repository}" Width="1.5*" />
-                        <DataGridTextColumn Header="Tag" Binding="{Binding Tag}" Width="0.8*" />
-                        <DataGridTextColumn Header="Size" Binding="{Binding Size}" Width="0.8*" />
-                        <DataGridTextColumn Header="Created" Binding="{Binding CreatedAt}" Width="1.5*" />
-                        <DataGridTextColumn Header="Digest" Binding="{Binding Digest}" Width="1.6*" />
-                        <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="1.5*" />
-                    </DataGrid.Columns>
-                </DataGrid>
-            </TabItem>
-            <TabItem Header="Volumes">
-                <DataGrid x:Name="VolumeGrid" Style="{StaticResource OperationalDataGrid}">
-                    <DataGrid.Columns>
-                        <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="1.5*" />
-                        <DataGridTextColumn Header="Driver" Binding="{Binding Driver}" Width="0.8*" />
-                        <DataGridTextColumn Header="Scope" Binding="{Binding Scope}" Width="0.8*" />
-                        <DataGridTextColumn Header="Mountpoint" Binding="{Binding Mountpoint}" Width="2.2*" />
-                        <DataGridTextColumn Header="Labels" Binding="{Binding Labels}" Width="1.5*" />
-                    </DataGrid.Columns>
-                </DataGrid>
-            </TabItem>
-            <TabItem Header="Networks">
-                <DataGrid x:Name="NetworkGrid" Style="{StaticResource OperationalDataGrid}">
-                    <DataGrid.Columns>
-                        <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="1.4*" />
-                        <DataGridTextColumn Header="Driver" Binding="{Binding Driver}" Width="0.9*" />
-                        <DataGridTextColumn Header="Scope" Binding="{Binding Scope}" Width="0.8*" />
-                        <DataGridTextColumn Header="IPv6" Binding="{Binding Ipv6}" Width="0.7*" />
-                        <DataGridTextColumn Header="Internal" Binding="{Binding Internal}" Width="0.7*" />
-                        <DataGridTextColumn Header="Labels" Binding="{Binding Labels}" Width="1.5*" />
-                        <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="1.5*" />
-                    </DataGrid.Columns>
-                </DataGrid>
-            </TabItem>
-        </TabControl>
+        <Border Grid.Row="4" Style="{StaticResource SurfaceCard}" CornerRadius="8" ClipToBounds="True">
+            <TabControl x:Name="InventoryTabs" SelectionChanged="InventoryTabsOnSelectionChanged">
+                <TabItem Header="{DynamicResource Loc.Docker.Tab.Containers}">
+                    <Grid Margin="10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="3.2*" />
+                            <ColumnDefinition Width="1.3*" />
+                        </Grid.ColumnDefinitions>
+                        <Grid>
+                            <DataGrid x:Name="ContainerGrid"
+                                      Style="{StaticResource OperationalDataGrid}"
+                                      BorderThickness="0"
+                                      SelectionChanged="ContainerGridOnSelectionChanged"
+                                      MouseDoubleClick="ContainerGridOnMouseDoubleClick">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="{DynamicResource Loc.Docker.Column.Name}" Binding="{Binding Name}" Width="1.15*" />
+                                    <DataGridTextColumn Header="{DynamicResource Loc.Docker.Column.State}" Binding="{Binding State}" Width="0.75*" />
+                                    <DataGridTextColumn Header="{DynamicResource Loc.Docker.Column.Image}" Binding="{Binding Image}" Width="1.4*" />
+                                    <DataGridTextColumn Header="{DynamicResource Loc.Docker.Column.Status}" Binding="{Binding Status}" Width="1.35*" />
+                                    <DataGridTextColumn Header="{DynamicResource Loc.Docker.Column.Ports}" Binding="{Binding Ports}" Width="1.35*">
+                                        <DataGridTextColumn.ElementStyle>
+                                            <Style TargetType="TextBlock" BasedOn="{StaticResource TechnicalText}" />
+                                        </DataGridTextColumn.ElementStyle>
+                                    </DataGridTextColumn>
+                                    <DataGridTextColumn Header="{DynamicResource Loc.Docker.Column.Networks}" Binding="{Binding Networks}" Width="1.05*">
+                                        <DataGridTextColumn.ElementStyle>
+                                            <Style TargetType="TextBlock" BasedOn="{StaticResource TechnicalText}" />
+                                        </DataGridTextColumn.ElementStyle>
+                                    </DataGridTextColumn>
+                                    <DataGridTextColumn Header="{DynamicResource Loc.Docker.Column.Id}" Binding="{Binding Id}" Width="1.45*">
+                                        <DataGridTextColumn.ElementStyle>
+                                            <Style TargetType="TextBlock" BasedOn="{StaticResource TechnicalText}" />
+                                        </DataGridTextColumn.ElementStyle>
+                                    </DataGridTextColumn>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                            <Border x:Name="ContainerStateOverlay"
+                                    Background="{DynamicResource SurfaceBrush}"
+                                    Visibility="Visible"
+                                    IsHitTestVisible="False">
+                                <StackPanel MaxWidth="500" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    <TextBlock x:Name="ContainerStateTitle" FontSize="20" FontWeight="SemiBold" TextAlignment="Center" />
+                                    <TextBlock x:Name="ContainerStateDetail" Margin="0,7,0,0" Foreground="{DynamicResource MutedTextBrush}" TextAlignment="Center" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </Border>
+                        </Grid>
 
-        <TextBlock Grid.Row="5" x:Name="FooterText" Margin="0,10,0,0"
+                        <Border Grid.Column="1" Margin="14,0,0,0" Style="{StaticResource DetailsPane}">
+                            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                <StackPanel>
+                                    <TextBlock Text="{DynamicResource Loc.Docker.Details.Title}" FontSize="17" FontWeight="SemiBold" />
+                                    <TextBlock x:Name="ContainerDetailsHintText"
+                                               Margin="0,10,0,0"
+                                               Text="{DynamicResource Loc.Docker.Details.Hint}"
+                                               Foreground="{DynamicResource MutedTextBrush}"
+                                               TextWrapping="Wrap" />
+                                    <StackPanel x:Name="ContainerDetailsContent" Margin="0,14,0,0" Visibility="Collapsed">
+                                        <TextBlock Text="{DynamicResource Loc.Docker.Details.Name}" Style="{StaticResource DockerDetailLabel}" />
+                                        <TextBlock x:Name="DetailNameText" Style="{StaticResource DockerDetailValue}" />
+                                        <TextBlock Text="{DynamicResource Loc.Docker.Details.State}" Style="{StaticResource DockerDetailLabel}" />
+                                        <TextBlock x:Name="DetailStateText" Style="{StaticResource DockerDetailValue}" />
+                                        <TextBlock Text="{DynamicResource Loc.Docker.Details.Image}" Style="{StaticResource DockerDetailLabel}" />
+                                        <TextBlock x:Name="DetailImageText" Style="{StaticResource DockerTechnicalValue}" />
+                                        <TextBlock Text="{DynamicResource Loc.Docker.Details.Status}" Style="{StaticResource DockerDetailLabel}" />
+                                        <TextBlock x:Name="DetailStatusText" Style="{StaticResource DockerDetailValue}" />
+                                        <TextBlock Text="{DynamicResource Loc.Docker.Details.Ports}" Style="{StaticResource DockerDetailLabel}" />
+                                        <TextBlock x:Name="DetailPortsText" Style="{StaticResource DockerTechnicalValue}" />
+                                        <TextBlock Text="{DynamicResource Loc.Docker.Details.Networks}" Style="{StaticResource DockerDetailLabel}" />
+                                        <TextBlock x:Name="DetailNetworksText" Style="{StaticResource DockerTechnicalValue}" />
+                                        <TextBlock Text="{DynamicResource Loc.Docker.Details.Mounts}" Style="{StaticResource DockerDetailLabel}" />
+                                        <TextBlock x:Name="DetailMountsText" Style="{StaticResource DockerTechnicalValue}" />
+                                        <TextBlock Text="{DynamicResource Loc.Docker.Details.Created}" Style="{StaticResource DockerDetailLabel}" />
+                                        <TextBlock x:Name="DetailCreatedText" Style="{StaticResource DockerTechnicalValue}" />
+                                        <TextBlock Text="{DynamicResource Loc.Docker.Details.Size}" Style="{StaticResource DockerDetailLabel}" />
+                                        <TextBlock x:Name="DetailSizeText" Style="{StaticResource DockerTechnicalValue}" />
+                                        <TextBlock Text="{DynamicResource Loc.Docker.Details.Id}" Style="{StaticResource DockerDetailLabel}" />
+                                        <TextBlock x:Name="DetailIdText" Style="{StaticResource DockerTechnicalValue}" Margin="0,2,0,0" />
+                                    </StackPanel>
+                                </StackPanel>
+                            </ScrollViewer>
+                        </Border>
+                    </Grid>
+                </TabItem>
+
+                <TabItem Header="{DynamicResource Loc.Docker.Tab.Images}">
+                    <Grid Margin="10">
+                        <DataGrid x:Name="ImageGrid" Style="{StaticResource OperationalDataGrid}" BorderThickness="0">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="{DynamicResource Loc.Docker.Column.Repository}" Binding="{Binding Repository}" Width="1.5*" />
+                                <DataGridTextColumn Header="{DynamicResource Loc.Docker.Column.Tag}" Binding="{Binding Tag}" Width="0.8*" />
+                                <DataGridTextColumn Header="{DynamicResource Loc.Docker.Column.Size}" Binding="{Binding Size}" Width="0.8*">
+                                    <DataGridTextColumn.ElementStyle><Style TargetType="TextBlock" BasedOn="{StaticResource TechnicalText}" /></DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                                <DataGridTextColumn Header="{DynamicResource Loc.Docker.Column.Created}" Binding="{Binding CreatedAt}" Width="1.5*">
+                                    <DataGridTextColumn.ElementStyle><Style TargetType="TextBlock" BasedOn="{StaticResource TechnicalText}" /></DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                                <DataGridTextColumn Header="{DynamicResource Loc.Docker.Column.Digest}" Binding="{Binding Digest}" Width="1.7*">
+                                    <DataGridTextColumn.ElementStyle><Style TargetType="TextBlock" BasedOn="{StaticResource TechnicalText}" /></DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                                <DataGridTextColumn Header="{DynamicResource Loc.Docker.Column.Id}" Binding="{Binding Id}" Width="1.5*">
+                                    <DataGridTextColumn.ElementStyle><Style TargetType="TextBlock" BasedOn="{StaticResource TechnicalText}" /></DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                        <Border x:Name="ImageStateOverlay" Background="{DynamicResource SurfaceBrush}" Visibility="Visible" IsHitTestVisible="False">
+                            <StackPanel MaxWidth="500" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <TextBlock x:Name="ImageStateTitle" FontSize="20" FontWeight="SemiBold" TextAlignment="Center" />
+                                <TextBlock x:Name="ImageStateDetail" Margin="0,7,0,0" Foreground="{DynamicResource MutedTextBrush}" TextAlignment="Center" TextWrapping="Wrap" />
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+                </TabItem>
+
+                <TabItem Header="{DynamicResource Loc.Docker.Tab.Volumes}">
+                    <Grid Margin="10">
+                        <DataGrid x:Name="VolumeGrid" Style="{StaticResource OperationalDataGrid}" BorderThickness="0">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="{DynamicResource Loc.Docker.Column.Name}" Binding="{Binding Name}" Width="1.5*" />
+                                <DataGridTextColumn Header="{DynamicResource Loc.Docker.Column.Driver}" Binding="{Binding Driver}" Width="0.8*" />
+                                <DataGridTextColumn Header="{DynamicResource Loc.Docker.Column.Scope}" Binding="{Binding Scope}" Width="0.8*" />
+                                <DataGridTextColumn Header="{DynamicResource Loc.Docker.Column.Mountpoint}" Binding="{Binding Mountpoint}" Width="2.2*">
+                                    <DataGridTextColumn.ElementStyle><Style TargetType="TextBlock" BasedOn="{StaticResource TechnicalText}" /></DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                                <DataGridTextColumn Header="{DynamicResource Loc.Docker.Column.Labels}" Binding="{Binding Labels}" Width="1.5*">
+                                    <DataGridTextColumn.ElementStyle><Style TargetType="TextBlock" BasedOn="{StaticResource TechnicalText}" /></DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                        <Border x:Name="VolumeStateOverlay" Background="{DynamicResource SurfaceBrush}" Visibility="Visible" IsHitTestVisible="False">
+                            <StackPanel MaxWidth="500" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <TextBlock x:Name="VolumeStateTitle" FontSize="20" FontWeight="SemiBold" TextAlignment="Center" />
+                                <TextBlock x:Name="VolumeStateDetail" Margin="0,7,0,0" Foreground="{DynamicResource MutedTextBrush}" TextAlignment="Center" TextWrapping="Wrap" />
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+                </TabItem>
+
+                <TabItem Header="{DynamicResource Loc.Docker.Tab.Networks}">
+                    <Grid Margin="10">
+                        <DataGrid x:Name="NetworkGrid" Style="{StaticResource OperationalDataGrid}" BorderThickness="0">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="{DynamicResource Loc.Docker.Column.Name}" Binding="{Binding Name}" Width="1.4*" />
+                                <DataGridTextColumn Header="{DynamicResource Loc.Docker.Column.Driver}" Binding="{Binding Driver}" Width="0.9*" />
+                                <DataGridTextColumn Header="{DynamicResource Loc.Docker.Column.Scope}" Binding="{Binding Scope}" Width="0.8*" />
+                                <DataGridTextColumn Header="{DynamicResource Loc.Docker.Column.Ipv6}" Binding="{Binding Ipv6}" Width="0.7*" />
+                                <DataGridTextColumn Header="{DynamicResource Loc.Docker.Column.Internal}" Binding="{Binding Internal}" Width="0.7*" />
+                                <DataGridTextColumn Header="{DynamicResource Loc.Docker.Column.Labels}" Binding="{Binding Labels}" Width="1.5*">
+                                    <DataGridTextColumn.ElementStyle><Style TargetType="TextBlock" BasedOn="{StaticResource TechnicalText}" /></DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                                <DataGridTextColumn Header="{DynamicResource Loc.Docker.Column.Id}" Binding="{Binding Id}" Width="1.5*">
+                                    <DataGridTextColumn.ElementStyle><Style TargetType="TextBlock" BasedOn="{StaticResource TechnicalText}" /></DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                        <Border x:Name="NetworkStateOverlay" Background="{DynamicResource SurfaceBrush}" Visibility="Visible" IsHitTestVisible="False">
+                            <StackPanel MaxWidth="500" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <TextBlock x:Name="NetworkStateTitle" FontSize="20" FontWeight="SemiBold" TextAlignment="Center" />
+                                <TextBlock x:Name="NetworkStateDetail" Margin="0,7,0,0" Foreground="{DynamicResource MutedTextBrush}" TextAlignment="Center" TextWrapping="Wrap" />
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+                </TabItem>
+            </TabControl>
+        </Border>
+
+        <TextBlock Grid.Row="5"
+                   x:Name="FooterText"
+                   Margin="0,10,0,0"
                    Foreground="{DynamicResource MutedTextBrush}" />
     </Grid>
 </Window>
