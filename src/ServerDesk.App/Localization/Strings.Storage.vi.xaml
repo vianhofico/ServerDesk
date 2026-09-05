@@ -20,6 +20,7 @@
     <system:String x:Key="Loc.Storage.Summary.BlockDevices">Dòng block device</system:String>
     <system:String x:Key="Loc.Storage.Summary.Mounted">Block đã mount</system:String>
     <system:String x:Key="Loc.Storage.Summary.Visible">Đang hiển thị</system:String>
+    <system:String x:Key="Loc.Storage.Summary.VisibleFormat">Đang hiển thị: {0:N0} filesystem · {1:N0} dòng block device</system:String>
     <system:String x:Key="Loc.Storage.Tab.Filesystems">Filesystem</system:String>
     <system:String x:Key="Loc.Storage.Tab.BlockDevices">Block device</system:String>
     <system:String x:Key="Loc.Storage.Tab.Directory">Phân tích thư mục</system:String>
