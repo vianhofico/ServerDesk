@@ -26,8 +26,8 @@ public sealed class ScheduledTasksPresentationTests
         Assert.Contains("Loc.TasksWorkspace.Header.Connection", english.Keys);
         Assert.Contains("Loc.TasksWorkspace.Search.Clear", english.Keys);
         Assert.Contains("Loc.TasksWorkspace.Overlay.SearchTitle", english.Keys);
+        Assert.Contains("Loc.TasksWorkspace.Overlay.CancelledTitle", english.Keys);
         Assert.Contains("Loc.TasksWorkspace.Details.Command", english.Keys);
-        Assert.Contains("Loc.TasksWorkspace.Status.MutationCancelled", english.Keys);
     }
 
     [Fact]
