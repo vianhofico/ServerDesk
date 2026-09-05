@@ -55,6 +55,7 @@
     <system:String x:Key="Loc.Processes.Status.Loaded">Đã tải {0:N0} tiến trình.</system:String>
     <system:String x:Key="Loc.Processes.Status.RefreshCancelled">Đã dừng làm mới danh sách tiến trình.</system:String>
     <system:String x:Key="Loc.Processes.Status.SelectFirst">Hãy chọn một tiến trình trước.</system:String>
+    <system:String x:Key="Loc.Processes.Status.ProtectedPid">ServerDesk không gửi signal tới PID 1 hoặc PID không dương.</system:String>
     <system:String x:Key="Loc.Processes.Status.Terminating">Đang gửi SIGTERM tới PID {0}…</system:String>
     <system:String x:Key="Loc.Processes.Status.ForceKilling">Đang gửi SIGKILL tới PID {0}…</system:String>
     <system:String x:Key="Loc.Processes.Status.Verify">{0} Đang làm mới để xác minh trạng thái hiện tại…</system:String>
@@ -72,6 +73,9 @@
     <system:String x:Key="Loc.Processes.Overlay.EmptyDetail">Hãy làm mới khi máy chủ có tiến trình có thể theo dõi.</system:String>
     <system:String x:Key="Loc.Processes.Overlay.SearchTitle">Không có tiến trình phù hợp</system:String>
     <system:String x:Key="Loc.Processes.Overlay.SearchDetail">Xóa bộ lọc cục bộ hoặc thử PID, người dùng, lệnh hay tham số khác.</system:String>
+    <system:String x:Key="Loc.Processes.Overlay.DisconnectedTitle">Máy chủ chưa kết nối</system:String>
+    <system:String x:Key="Loc.Processes.Overlay.ErrorTitle">Không thể tải tiến trình</system:String>
+    <system:String x:Key="Loc.Processes.Overlay.CancelledTitle">Đã hủy thao tác tiến trình</system:String>
 
     <system:String x:Key="Loc.Processes.Footer.None">Chưa tải dữ liệu tiến trình.</system:String>
     <system:String x:Key="Loc.Processes.Footer.All">{0:N0} tiến trình.</system:String>
