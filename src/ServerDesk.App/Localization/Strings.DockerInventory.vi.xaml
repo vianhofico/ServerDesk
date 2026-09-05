@@ -30,6 +30,9 @@
     <system:String x:Key="Loc.Docker.Runtime.PermissionDenied">Cần quyền truy cập</system:String>
     <system:String x:Key="Loc.Docker.Runtime.Unsupported">Không được hỗ trợ</system:String>
     <system:String x:Key="Loc.Docker.Runtime.Unknown">Không xác định</system:String>
+    <system:String x:Key="Loc.Docker.Runtime.CliDetail">CLI: {0}</system:String>
+    <system:String x:Key="Loc.Docker.Runtime.HostDetail">Hệ điều hành host: {0} · {1} · {2:N0} CPU · {3} RAM</system:String>
+    <system:String x:Key="Loc.Docker.Runtime.StorageDetail">Storage driver: {0}</system:String>
 
     <system:String x:Key="Loc.Docker.Summary.Engine">Engine / API</system:String>
     <system:String x:Key="Loc.Docker.Summary.Containers">Container đang chạy / tổng</system:String>
