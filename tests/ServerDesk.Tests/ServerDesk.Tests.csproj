@@ -84,5 +84,9 @@
           Link="Fixtures\Presentation\DockerInventoryWindow.xaml"
           CopyToOutputDirectory="PreserveNewest"
           CopyToPublishDirectory="Never" />
+    <None Include="..\..\src\ServerDesk.App\ScheduledTasksWindow.xaml"
+          Link="Fixtures\Presentation\ScheduledTasksWindow.xaml"
+          CopyToOutputDirectory="PreserveNewest"
+          CopyToPublishDirectory="Never" />
   </ItemGroup>
 </Project>

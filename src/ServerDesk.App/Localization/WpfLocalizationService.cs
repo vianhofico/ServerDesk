@@ -30,6 +30,7 @@ public sealed class WpfLocalizationService : ILocalizationService
         "Services",
         "DockerInventory",
         "Tasks",
+        "TasksWorkspace",
         "Nginx",
         "Tls",
         "Env",

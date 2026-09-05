@@ -1,23 +1,51 @@
+using System.ComponentModel;
+using System.Windows;
+using System.Windows.Controls;
 using ServerDesk.Application.ScheduledTasks;
 
 namespace ServerDesk.App;
 
 public partial class ScheduledTasksWindow
 {
+    private readonly TextBlock _footerText = new()
+    {
+        Margin = new Thickness(0, 4, 0, 0),
+        TextWrapping = TextWrapping.Wrap,
+    };
+    private readonly DependencyPropertyDescriptor? _statusTextDescriptor =
+        DependencyPropertyDescriptor.FromProperty(TextBlock.TextProperty, typeof(TextBlock));
+
+    private TextBlock FooterText => _footerText;
+
     protected override void OnContentRendered(EventArgs e)
     {
         base.OnContentRendered(e);
         _localization.LanguageChanged += LocalizationOnLanguageChanged;
-        TaskGrid.SelectionChanged += TaskGridLocalizationOnSelectionChanged;
+        _statusTextDescriptor?.AddValueChanged(StatusText, StatusTextOnValueChanged);
+        AttachFooterPresentation();
         RefreshLocalizedPresentation();
+        RefreshOverlay();
     }
 
     protected override void OnClosed(EventArgs e)
     {
         _localization.LanguageChanged -= LocalizationOnLanguageChanged;
-        TaskGrid.SelectionChanged -= TaskGridLocalizationOnSelectionChanged;
+        _statusTextDescriptor?.RemoveValueChanged(StatusText, StatusTextOnValueChanged);
         base.OnClosed(e);
     }
+
+    private void AttachFooterPresentation()
+    {
+        if (StatusCard.Child is not StackPanel statusPanel || statusPanel.Children.Contains(FooterText))
+        {
+            return;
+        }
+
+        FooterText.SetResourceReference(TextBlock.ForegroundProperty, "MutedTextBrush");
+        statusPanel.Children.Add(FooterText);
+    }
+
+    private void StatusTextOnValueChanged(object? sender, EventArgs e) => RefreshOverlay();
 
     private void LocalizationOnLanguageChanged()
     {
@@ -30,12 +58,9 @@ public partial class ScheduledTasksWindow
         RefreshLocalizedPresentation();
     }
 
-    private void TaskGridLocalizationOnSelectionChanged(object? sender, System.Windows.Controls.SelectionChangedEventArgs e) =>
-        RefreshSelectedTaskPresentation();
-
     private void RefreshLocalizedPresentation()
     {
-        TitleText.Text = _localization.Format("Loc.Tasks.Title", _profile.Name);
+        Title = _localization.Get("Loc.Tasks.WindowTitle");
         TaskGrid.Items.Refresh();
 
         if (_snapshot is not null)
@@ -48,39 +73,43 @@ public partial class ScheduledTasksWindow
             {
                 CapabilityText.Text += " · " + string.Join(" · ", _snapshot.Warnings);
             }
-
-            StatusText.Text = _snapshot.Tasks.Count == 0
-                ? _localization.Get("Loc.Tasks.Empty")
-                : _localization.Format("Loc.Tasks.Loaded", _snapshot.Tasks.Count);
-        }
-        else
-        {
-            StatusText.Text = _initiallyConnected
-                ? _localization.Get("Loc.Tasks.Initial")
-                : _localization.Get("Loc.Tasks.Disconnected");
         }
 
+        RefreshFooterPresentation();
         RefreshSelectedTaskPresentation();
+        RefreshOverlay();
+    }
+
+    private void RefreshFooterPresentation()
+    {
+        if (!_hasLoadedSnapshot)
+        {
+            FooterText.SetResourceReference(TextBlock.TextProperty, "Loc.TasksWorkspace.Footer.None");
+            return;
+        }
+
+        var query = SearchBox.Text;
+        var visibleCount = TaskGrid.Items.Count;
+        FooterText.Text = string.IsNullOrWhiteSpace(query)
+            ? _localization.Format("Loc.TasksWorkspace.Footer.All", visibleCount)
+            : _localization.Format(
+                "Loc.TasksWorkspace.Footer.Filtered",
+                visibleCount,
+                _allTasks.Count,
+                query.Trim());
     }
 
     private void RefreshSelectedTaskPresentation()
     {
-        if (TaskGrid.SelectedItem is ScheduledTaskInfo task)
+        if (TaskGrid.SelectedItem is not ScheduledTaskInfo task)
         {
-            SelectedTitleText.Text = task.Name;
-            SelectedDetailText.Text = _localization.Format(
-                "Loc.Tasks.DetailFormat",
-                LocalizedKind(task.Kind),
-                task.Schedule,
-                LocalizedBoolean(task.Enabled),
-                LocalizedBoolean(task.Active),
-                task.LastRun ?? "—",
-                task.NextRun ?? "—");
+            return;
         }
-        else
-        {
-            SelectedTitleText.Text = _localization.Get("Loc.Tasks.SelectTask");
-        }
+
+        DetailKindText.Text = LocalizedKind(task.Kind);
+        DetailEnabledText.Text = LocalizedBoolean(task.Enabled);
+        DetailActiveText.Text = LocalizedBoolean(task.Active);
+        DetailEditableText.Text = LocalizedBoolean(task.Kind == ScheduledTaskKind.Cron && task.IsSimpleEditable);
     }
 
     private string LocalizedKind(ScheduledTaskKind kind) =>
