@@ -43,6 +43,25 @@ public sealed class DockerWorkspaceProjectionTests
     }
 
     [Fact]
+    public void SummarizePreservesDockerInfoTotalsWhenInventoryRowsArePartial()
+    {
+        var snapshot = Snapshot() with
+        {
+            Containers = [],
+            Images = [],
+        };
+        var visible = DockerWorkspaceProjection.Filter(snapshot, string.Empty);
+
+        var summary = DockerWorkspaceProjection.Summarize(snapshot, visible);
+
+        Assert.Equal(2, summary.Containers);
+        Assert.Equal(1, summary.RunningContainers);
+        Assert.Equal(1, summary.Images);
+        Assert.Equal(0, summary.VisibleContainers);
+        Assert.Equal(0, summary.VisibleImages);
+    }
+
+    [Fact]
     public void SummarizeFallsBackToContainerStateWhenSystemSummaryIsUnavailable()
     {
         var snapshot = Snapshot() with { System = null };
