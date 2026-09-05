@@ -55,6 +55,7 @@
     <system:String x:Key="Loc.Processes.Status.Loaded">{0:N0} process(es) loaded.</system:String>
     <system:String x:Key="Loc.Processes.Status.RefreshCancelled">Process refresh stopped.</system:String>
     <system:String x:Key="Loc.Processes.Status.SelectFirst">Select a process first.</system:String>
+    <system:String x:Key="Loc.Processes.Status.ProtectedPid">ServerDesk does not signal PID 1 or non-positive process identifiers.</system:String>
     <system:String x:Key="Loc.Processes.Status.Terminating">Sending SIGTERM to PID {0}…</system:String>
     <system:String x:Key="Loc.Processes.Status.ForceKilling">Sending SIGKILL to PID {0}…</system:String>
     <system:String x:Key="Loc.Processes.Status.Verify">{0} Refreshing to verify current state…</system:String>
@@ -72,6 +73,9 @@
     <system:String x:Key="Loc.Processes.Overlay.EmptyDetail">Refresh after the server has visible processes to inspect.</system:String>
     <system:String x:Key="Loc.Processes.Overlay.SearchTitle">No matching processes</system:String>
     <system:String x:Key="Loc.Processes.Overlay.SearchDetail">Clear the local search or try another PID, user, command or argument.</system:String>
+    <system:String x:Key="Loc.Processes.Overlay.DisconnectedTitle">Server disconnected</system:String>
+    <system:String x:Key="Loc.Processes.Overlay.ErrorTitle">Unable to load processes</system:String>
+    <system:String x:Key="Loc.Processes.Overlay.CancelledTitle">Process operation cancelled</system:String>
 
     <system:String x:Key="Loc.Processes.Footer.None">No process data loaded.</system:String>
     <system:String x:Key="Loc.Processes.Footer.All">{0:N0} process(es).</system:String>
