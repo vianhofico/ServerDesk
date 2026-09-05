@@ -1,3 +1,4 @@
+using System.Windows;
 using System.Windows.Controls;
 using ServerDesk.Application.ScheduledTasks;
 
@@ -5,10 +6,19 @@ namespace ServerDesk.App;
 
 public partial class ScheduledTasksWindow
 {
+    private readonly TextBlock _footerText = new()
+    {
+        Margin = new Thickness(0, 4, 0, 0),
+        TextWrapping = TextWrapping.Wrap,
+    };
+
+    private TextBlock FooterText => _footerText;
+
     protected override void OnContentRendered(EventArgs e)
     {
         base.OnContentRendered(e);
         _localization.LanguageChanged += LocalizationOnLanguageChanged;
+        AttachFooterPresentation();
         RefreshLocalizedPresentation();
         RefreshOverlay();
     }
@@ -17,6 +27,17 @@ public partial class ScheduledTasksWindow
     {
         _localization.LanguageChanged -= LocalizationOnLanguageChanged;
         base.OnClosed(e);
+    }
+
+    private void AttachFooterPresentation()
+    {
+        if (StatusCard.Child is not StackPanel statusPanel || statusPanel.Children.Contains(FooterText))
+        {
+            return;
+        }
+
+        FooterText.SetResourceReference(TextBlock.ForegroundProperty, "MutedTextBrush");
+        statusPanel.Children.Add(FooterText);
     }
 
     private void LocalizationOnLanguageChanged()
