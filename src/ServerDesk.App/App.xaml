@@ -14,6 +14,7 @@
                 <ResourceDictionary Source="/ServerDesk.App;component/Localization/Strings.Services.en.xaml" />
                 <ResourceDictionary Source="/ServerDesk.App;component/Localization/Strings.DockerInventory.en.xaml" />
                 <ResourceDictionary Source="/ServerDesk.App;component/Localization/Strings.Tasks.en.xaml" />
+                <ResourceDictionary Source="/ServerDesk.App;component/Localization/Strings.TasksWorkspace.en.xaml" />
                 <ResourceDictionary Source="/ServerDesk.App;component/Localization/Strings.Nginx.en.xaml" />
             </ResourceDictionary.MergedDictionaries>
 
