@@ -206,7 +206,10 @@ public partial class StorageWindow : Window
         MountedValueText.Text = summary.MountedBlockDevices.ToString("N0", CultureInfo.CurrentCulture);
         VisibleValueText.Text = query.Length == 0
             ? string.Empty
-            : $"{Resource("Loc.Storage.Summary.Visible")}: {summary.VisibleFilesystems:N0} FS · {summary.VisibleBlockDevices:N0} block";
+            : FormatResource(
+                "Loc.Storage.Summary.VisibleFormat",
+                summary.VisibleFilesystems,
+                summary.VisibleBlockDevices);
 
         if (_inventoryOverrideText is not null)
         {
