@@ -28,6 +28,7 @@ public sealed class WpfLocalizationService : ILocalizationService
         "Explorer",
         "Processes",
         "Services",
+        "DockerInventory",
         "Tasks",
         "Nginx",
         "Tls",

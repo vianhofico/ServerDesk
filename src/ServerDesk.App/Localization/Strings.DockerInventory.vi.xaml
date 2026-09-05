@@ -1,0 +1,115 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:system="clr-namespace:System;assembly=System.Runtime">
+    <system:String x:Key="Loc.Docker.WindowTitle">Docker</system:String>
+    <system:String x:Key="Loc.Docker.Header.Title">Docker</system:String>
+    <system:String x:Key="Loc.Docker.Header.Subtitle">Theo dõi sức khỏe Docker runtime và kho tài nguyên qua kênh lệnh SSH hiện có</system:String>
+    <system:String x:Key="Loc.Docker.Header.Environment">Môi trường</system:String>
+    <system:String x:Key="Loc.Docker.Header.Connection">Kết nối</system:String>
+    <system:String x:Key="Loc.Docker.Header.Connected">Đã kết nối</system:String>
+    <system:String x:Key="Loc.Docker.Header.Disconnected">Chưa kết nối</system:String>
+    <system:String x:Key="Loc.Docker.Header.Unlabeled">Chưa gắn nhãn</system:String>
+
+    <system:String x:Key="Loc.Docker.Command.Refresh">Làm mới</system:String>
+    <system:String x:Key="Loc.Docker.Command.Cancel">Hủy</system:String>
+    <system:String x:Key="Loc.Docker.Command.Diagnostics">Chẩn đoán container</system:String>
+    <system:String x:Key="Loc.Docker.Command.Target">Container đã chọn</system:String>
+    <system:String x:Key="Loc.Docker.Command.NoTarget">Chưa chọn container</system:String>
+    <system:String x:Key="Loc.Docker.Command.TargetValue">{0}</system:String>
+    <system:String x:Key="Loc.Docker.Command.DiagnosticsTooltip">Mở inspect, stats, logs, thao tác vòng đời có xác nhận và exec cho container đã chọn.</system:String>
+
+    <system:String x:Key="Loc.Docker.Search.Label">Tìm trong kho Docker</system:String>
+    <system:String x:Key="Loc.Docker.Search.Tooltip">Lọc cục bộ containers, images, volumes và networks đã tải.</system:String>
+    <system:String x:Key="Loc.Docker.Search.Clear">Xóa tìm kiếm</system:String>
+
+    <system:String x:Key="Loc.Docker.Runtime.Title">Runtime</system:String>
+    <system:String x:Key="Loc.Docker.Runtime.Channel">Docker CLI từ xa qua SSH; Docker socket không bao giờ bị lộ hoặc chuyển tiếp.</system:String>
+    <system:String x:Key="Loc.Docker.Runtime.Available">Khả dụng</system:String>
+    <system:String x:Key="Loc.Docker.Runtime.CliUnavailable">Không có CLI</system:String>
+    <system:String x:Key="Loc.Docker.Runtime.DaemonUnavailable">Daemon không khả dụng</system:String>
+    <system:String x:Key="Loc.Docker.Runtime.PermissionDenied">Cần quyền truy cập</system:String>
+    <system:String x:Key="Loc.Docker.Runtime.Unsupported">Không được hỗ trợ</system:String>
+    <system:String x:Key="Loc.Docker.Runtime.Unknown">Không xác định</system:String>
+    <system:String x:Key="Loc.Docker.Runtime.CliDetail">CLI: {0}</system:String>
+    <system:String x:Key="Loc.Docker.Runtime.HostDetail">Hệ điều hành host: {0} · {1} · {2:N0} CPU · {3} RAM</system:String>
+    <system:String x:Key="Loc.Docker.Runtime.StorageDetail">Storage driver: {0}</system:String>
+
+    <system:String x:Key="Loc.Docker.Summary.Engine">Engine / API</system:String>
+    <system:String x:Key="Loc.Docker.Summary.Containers">Container đang chạy / tổng</system:String>
+    <system:String x:Key="Loc.Docker.Summary.Images">Images</system:String>
+    <system:String x:Key="Loc.Docker.Summary.Volumes">Volumes</system:String>
+    <system:String x:Key="Loc.Docker.Summary.Networks">Networks</system:String>
+    <system:String x:Key="Loc.Docker.Summary.Host">Docker host</system:String>
+
+    <system:String x:Key="Loc.Docker.Tab.Containers">Containers</system:String>
+    <system:String x:Key="Loc.Docker.Tab.Images">Images</system:String>
+    <system:String x:Key="Loc.Docker.Tab.Volumes">Volumes</system:String>
+    <system:String x:Key="Loc.Docker.Tab.Networks">Networks</system:String>
+
+    <system:String x:Key="Loc.Docker.Column.Name">Tên</system:String>
+    <system:String x:Key="Loc.Docker.Column.State">Trạng thái</system:String>
+    <system:String x:Key="Loc.Docker.Column.Image">Image</system:String>
+    <system:String x:Key="Loc.Docker.Column.Status">Tình trạng</system:String>
+    <system:String x:Key="Loc.Docker.Column.Ports">Ports</system:String>
+    <system:String x:Key="Loc.Docker.Column.Networks">Networks</system:String>
+    <system:String x:Key="Loc.Docker.Column.Id">ID</system:String>
+    <system:String x:Key="Loc.Docker.Column.Repository">Repository</system:String>
+    <system:String x:Key="Loc.Docker.Column.Tag">Tag</system:String>
+    <system:String x:Key="Loc.Docker.Column.Size">Kích thước</system:String>
+    <system:String x:Key="Loc.Docker.Column.Created">Được tạo</system:String>
+    <system:String x:Key="Loc.Docker.Column.Digest">Digest</system:String>
+    <system:String x:Key="Loc.Docker.Column.Driver">Driver</system:String>
+    <system:String x:Key="Loc.Docker.Column.Scope">Phạm vi</system:String>
+    <system:String x:Key="Loc.Docker.Column.Mountpoint">Mountpoint</system:String>
+    <system:String x:Key="Loc.Docker.Column.Labels">Labels</system:String>
+    <system:String x:Key="Loc.Docker.Column.Ipv6">IPv6</system:String>
+    <system:String x:Key="Loc.Docker.Column.Internal">Internal</system:String>
+
+    <system:String x:Key="Loc.Docker.Details.Title">Chi tiết container</system:String>
+    <system:String x:Key="Loc.Docker.Details.Hint">Chọn một container để xem dữ liệu inventory đã tải. Mở chẩn đoán để xem inspect, stats, logs và quản lý trực tiếp.</system:String>
+    <system:String x:Key="Loc.Docker.Details.Name">Tên</system:String>
+    <system:String x:Key="Loc.Docker.Details.State">Trạng thái</system:String>
+    <system:String x:Key="Loc.Docker.Details.Image">Image</system:String>
+    <system:String x:Key="Loc.Docker.Details.Status">Tình trạng</system:String>
+    <system:String x:Key="Loc.Docker.Details.Ports">Ports</system:String>
+    <system:String x:Key="Loc.Docker.Details.Networks">Networks</system:String>
+    <system:String x:Key="Loc.Docker.Details.Mounts">Mounts</system:String>
+    <system:String x:Key="Loc.Docker.Details.Created">Được tạo</system:String>
+    <system:String x:Key="Loc.Docker.Details.Size">Kích thước</system:String>
+    <system:String x:Key="Loc.Docker.Details.Id">Container ID</system:String>
+
+    <system:String x:Key="Loc.Docker.Status.ReadyInitial">Sẵn sàng phát hiện quyền truy cập Docker runtime và tải inventory.</system:String>
+    <system:String x:Key="Loc.Docker.Status.DisconnectedInitial">Hãy kết nối máy chủ trước khi kiểm tra Docker.</system:String>
+    <system:String x:Key="Loc.Docker.Status.Loading">Đang phát hiện quyền truy cập Docker runtime và đọc inventory có cấu trúc…</system:String>
+    <system:String x:Key="Loc.Docker.Status.Loaded">Docker inventory có {0:N0} dòng tài nguyên.</system:String>
+    <system:String x:Key="Loc.Docker.Status.Partial">Docker khả dụng nhưng {0:N0} lần đọc inventory thất bại. {1}</system:String>
+    <system:String x:Key="Loc.Docker.Status.Empty">Docker khả dụng nhưng không trả về container, image, volume hoặc network nào.</system:String>
+    <system:String x:Key="Loc.Docker.Status.Cancelled">Đã dừng kiểm tra Docker.</system:String>
+    <system:String x:Key="Loc.Docker.Status.SelectFirst">Hãy chọn một container trước.</system:String>
+    <system:String x:Key="Loc.Docker.Status.NoSnapshot">Kiểm tra Docker không trả về snapshot chuẩn hóa.</system:String>
+    <system:String x:Key="Loc.Docker.Status.Error">Lỗi có thể phục hồi: {0}</system:String>
+    <system:String x:Key="Loc.Docker.Status.ErrorTyped">Lỗi có thể phục hồi ({0}): {1}</system:String>
+    <system:String x:Key="Loc.Docker.Status.Disconnected">Mất kết nối: {0}</system:String>
+    <system:String x:Key="Loc.Docker.Status.Permission">Cần quyền truy cập: {0}</system:String>
+    <system:String x:Key="Loc.Docker.Status.Capability">Không có khả năng hỗ trợ: {0}</system:String>
+    <system:String x:Key="Loc.Docker.Status.Unsupported">Không được hỗ trợ: {0}</system:String>
+    <system:String x:Key="Loc.Docker.Status.Malformed">Đầu ra Docker không hợp lệ/chỉ có một phần: {0}</system:String>
+    <system:String x:Key="Loc.Docker.Status.CliUnavailable">Không tìm thấy Docker CLI trên máy chủ này.</system:String>
+    <system:String x:Key="Loc.Docker.Status.DaemonUnavailable">Có Docker CLI nhưng Docker daemon không khả dụng.</system:String>
+    <system:String x:Key="Loc.Docker.Status.RuntimePermission">Docker tồn tại nhưng người dùng SSH hiện tại không có quyền truy cập Docker daemon.</system:String>
+    <system:String x:Key="Loc.Docker.Status.RuntimeUnsupported">Phiên bản Docker client/daemon không thể giao tiếp an toàn.</system:String>
+    <system:String x:Key="Loc.Docker.Status.RuntimeUnknown">Không thể xác định khả năng sử dụng Docker runtime.</system:String>
+
+    <system:String x:Key="Loc.Docker.Overlay.LoadingTitle">Đang tải Docker inventory…</system:String>
+    <system:String x:Key="Loc.Docker.Overlay.EmptyTitle">Không có tài nguyên trong mục này</system:String>
+    <system:String x:Key="Loc.Docker.Overlay.EmptyDetail">Docker snapshot đã tải không có tài nguyên cho tab này.</system:String>
+    <system:String x:Key="Loc.Docker.Overlay.SearchTitle">Không có tài nguyên phù hợp</system:String>
+    <system:String x:Key="Loc.Docker.Overlay.SearchDetail">Xóa bộ lọc cục bộ hoặc thử tên Docker, ID, image, trạng thái, label hay network khác.</system:String>
+    <system:String x:Key="Loc.Docker.Overlay.DisconnectedTitle">Máy chủ đã mất kết nối</system:String>
+    <system:String x:Key="Loc.Docker.Overlay.RuntimeTitle">Docker runtime không khả dụng</system:String>
+    <system:String x:Key="Loc.Docker.Overlay.ErrorTitle">Không thể tải Docker inventory</system:String>
+    <system:String x:Key="Loc.Docker.Overlay.CancelledTitle">Đã hủy kiểm tra Docker</system:String>
+
+    <system:String x:Key="Loc.Docker.Footer.None">Chưa tải Docker inventory.</system:String>
+    <system:String x:Key="Loc.Docker.Footer.Visible">Đang hiển thị: {0:N0} container, {1:N0} image, {2:N0} volume, {3:N0} network.</system:String>
+</ResourceDictionary>
