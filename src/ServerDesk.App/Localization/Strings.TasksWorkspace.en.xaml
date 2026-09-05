@@ -1,0 +1,57 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:system="clr-namespace:System;assembly=System.Runtime">
+    <system:String x:Key="Loc.TasksWorkspace.Header.Title">Scheduled Tasks</system:String>
+    <system:String x:Key="Loc.TasksWorkspace.Header.Subtitle">Inspect and manage cron jobs and systemd timers with verified remote state</system:String>
+    <system:String x:Key="Loc.TasksWorkspace.Header.Environment">Environment</system:String>
+    <system:String x:Key="Loc.TasksWorkspace.Header.Connection">Connection</system:String>
+    <system:String x:Key="Loc.TasksWorkspace.Header.Connected">Connected</system:String>
+    <system:String x:Key="Loc.TasksWorkspace.Header.Disconnected">Disconnected</system:String>
+    <system:String x:Key="Loc.TasksWorkspace.Header.Unlabeled">Unlabeled</system:String>
+
+    <system:String x:Key="Loc.TasksWorkspace.Command.Cancel">Cancel</system:String>
+    <system:String x:Key="Loc.TasksWorkspace.Command.Target">Selected task</system:String>
+    <system:String x:Key="Loc.TasksWorkspace.Command.NoTarget">No task selected</system:String>
+    <system:String x:Key="Loc.TasksWorkspace.Command.TargetValue">{0}</system:String>
+
+    <system:String x:Key="Loc.TasksWorkspace.Search.Label">Search scheduled tasks</system:String>
+    <system:String x:Key="Loc.TasksWorkspace.Search.Clear">Clear search</system:String>
+
+    <system:String x:Key="Loc.TasksWorkspace.Summary.Total">Tasks</system:String>
+    <system:String x:Key="Loc.TasksWorkspace.Summary.Visible">Visible</system:String>
+    <system:String x:Key="Loc.TasksWorkspace.Summary.Cron">Cron</system:String>
+    <system:String x:Key="Loc.TasksWorkspace.Summary.Systemd">systemd timers</system:String>
+    <system:String x:Key="Loc.TasksWorkspace.Summary.Enabled">Enabled</system:String>
+    <system:String x:Key="Loc.TasksWorkspace.Summary.CronCapability">crontab</system:String>
+    <system:String x:Key="Loc.TasksWorkspace.Summary.SystemdCapability">systemd</system:String>
+    <system:String x:Key="Loc.TasksWorkspace.Summary.Available">Available</system:String>
+    <system:String x:Key="Loc.TasksWorkspace.Summary.Unavailable">Unavailable</system:String>
+
+    <system:String x:Key="Loc.TasksWorkspace.Details.Title">Task details</system:String>
+    <system:String x:Key="Loc.TasksWorkspace.Details.Hint">Select a task to inspect its scheduler, state, timing and source context.</system:String>
+    <system:String x:Key="Loc.TasksWorkspace.Details.Kind">Scheduler</system:String>
+    <system:String x:Key="Loc.TasksWorkspace.Details.Name">Name</system:String>
+    <system:String x:Key="Loc.TasksWorkspace.Details.Schedule">Schedule</system:String>
+    <system:String x:Key="Loc.TasksWorkspace.Details.Command">Command / unit</system:String>
+    <system:String x:Key="Loc.TasksWorkspace.Details.Enabled">Enabled</system:String>
+    <system:String x:Key="Loc.TasksWorkspace.Details.Active">Active</system:String>
+    <system:String x:Key="Loc.TasksWorkspace.Details.LastRun">Last run</system:String>
+    <system:String x:Key="Loc.TasksWorkspace.Details.NextRun">Next run</system:String>
+    <system:String x:Key="Loc.TasksWorkspace.Details.Source">Source</system:String>
+    <system:String x:Key="Loc.TasksWorkspace.Details.Editable">Simple editor</system:String>
+
+    <system:String x:Key="Loc.TasksWorkspace.Editor.AdvancedHint">Use the simple editor only for standard five-field cron entries. Use Raw crontab for directives, environment assignments and syntax ServerDesk does not model.</system:String>
+
+    <system:String x:Key="Loc.TasksWorkspace.Overlay.LoadingTitle">Loading scheduled tasks…</system:String>
+    <system:String x:Key="Loc.TasksWorkspace.Overlay.EmptyTitle">No scheduled tasks</system:String>
+    <system:String x:Key="Loc.TasksWorkspace.Overlay.EmptyDetail">No cron entries or systemd timers were returned by the available adapters.</system:String>
+    <system:String x:Key="Loc.TasksWorkspace.Overlay.SearchTitle">No matching tasks</system:String>
+    <system:String x:Key="Loc.TasksWorkspace.Overlay.SearchDetail">Clear the local search or try another name, schedule, command, unit or scheduler type.</system:String>
+    <system:String x:Key="Loc.TasksWorkspace.Overlay.DisconnectedTitle">Server disconnected</system:String>
+    <system:String x:Key="Loc.TasksWorkspace.Overlay.ErrorTitle">Unable to load scheduled tasks</system:String>
+    <system:String x:Key="Loc.TasksWorkspace.Overlay.CancelledTitle">Scheduled-task operation cancelled</system:String>
+
+    <system:String x:Key="Loc.TasksWorkspace.Footer.None">No scheduled-task snapshot is loaded.</system:String>
+    <system:String x:Key="Loc.TasksWorkspace.Footer.All">{0:N0} task(s).</system:String>
+    <system:String x:Key="Loc.TasksWorkspace.Footer.Filtered">{0:N0} of {1:N0} task(s) match '{2}'.</system:String>
+</ResourceDictionary>
