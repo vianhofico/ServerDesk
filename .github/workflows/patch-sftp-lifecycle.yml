@@ -1,0 +1,402 @@
+name: Patch SFTP lifecycle
+
+on:
+  push:
+    branches:
+      - fix/187-sftp-dispose-race
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Apply SFTP lifecycle patch
+        shell: pwsh
+        run: |
+          $script = @'
+          from pathlib import Path
+
+          path = Path('src/ServerDesk.Infrastructure.Ssh/SftpRemoteFileSystem.cs')
+          text = path.read_text(encoding='utf-8')
+
+          old_fields = '''    private readonly SemaphoreSlim _connectionGate = new(1, 1);
+              private SftpClient? _client;
+              private SftpConnectionResources? _connectionResources;
+              private bool _disposed;'''.replace('              ', '    ')
+          new_fields = '''    private readonly SemaphoreSlim _connectionGate = new(1, 1);
+              private readonly object _lifecycleSync = new();
+              private readonly CancellationTokenSource _disposeCancellation = new();
+              private readonly TaskCompletionSource _operationsDrained =
+                  new(TaskCreationOptions.RunContinuationsAsynchronously);
+              private SftpClient? _client;
+              private SftpConnectionResources? _connectionResources;
+              private int _activeOperations;
+              private bool _disposed;
+              private Task? _disposeTask;'''.replace('              ', '    ')
+          if old_fields not in text:
+              raise SystemExit('Expected SFTP lifecycle fields were not found.')
+          text = text.replace(old_fields, new_fields, 1)
+
+          old_connect = '''    public async ValueTask ConnectAsync(CancellationToken cancellationToken = default)
+              {
+                  ThrowIfDisposed();
+                  await _connectionGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+                  try
+                  {
+                      if (_client?.IsConnected == true)
+                      {
+                          return;
+                      }
+          '''.replace('              ', '    ')
+          new_connect = '''    public async ValueTask ConnectAsync(CancellationToken cancellationToken = default)
+              {
+                  using var operation = await EnterOperationAsync(cancellationToken).ConfigureAwait(false);
+                  cancellationToken = operation.Token;
+                  cancellationToken.ThrowIfCancellationRequested();
+                  if (_client?.IsConnected == true)
+                  {
+                      return;
+                  }
+          '''.replace('              ', '    ')
+          if old_connect not in text:
+              raise SystemExit('Expected ConnectAsync prefix was not found.')
+          text = text.replace(old_connect, new_connect, 1)
+
+          old_connect_tail = '''            }
+              }
+              finally
+              {
+                  _connectionGate.Release();
+              }
+          }
+
+              public async ValueTask DisconnectAsync'''.replace('              ', '    ')
+          new_connect_tail = '''            }
+          }
+
+              public async ValueTask DisconnectAsync'''.replace('              ', '    ')
+          if old_connect_tail not in text:
+              raise SystemExit('Expected ConnectAsync gate tail was not found.')
+          text = text.replace(old_connect_tail, new_connect_tail, 1)
+
+          old_disconnect = '''    public async ValueTask DisconnectAsync(CancellationToken cancellationToken = default)
+              {
+                  ThrowIfDisposed();
+                  await _connectionGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+                  try
+                  {
+                      if (_client is null)
+                      {
+                          return;
+                      }
+          '''.replace('              ', '    ')
+          new_disconnect = '''    public async ValueTask DisconnectAsync(CancellationToken cancellationToken = default)
+              {
+                  using var operation = await EnterOperationAsync(cancellationToken).ConfigureAwait(false);
+                  cancellationToken = operation.Token;
+                  cancellationToken.ThrowIfCancellationRequested();
+                  if (_client is null)
+                  {
+                      return;
+                  }
+          '''.replace('              ', '    ')
+          if old_disconnect not in text:
+              raise SystemExit('Expected DisconnectAsync prefix was not found.')
+          text = text.replace(old_disconnect, new_disconnect, 1)
+
+          old_disconnect_tail = '''            }
+              }
+              finally
+              {
+                  _connectionGate.Release();
+              }
+          }
+
+              public async ValueTask<IReadOnlyList<RemoteFileEntry>> ListAsync'''.replace('              ', '    ')
+          new_disconnect_tail = '''            }
+          }
+
+              public async ValueTask<IReadOnlyList<RemoteFileEntry>> ListAsync'''.replace('              ', '    ')
+          if old_disconnect_tail not in text:
+              raise SystemExit('Expected DisconnectAsync gate tail was not found.')
+          text = text.replace(old_disconnect_tail, new_disconnect_tail, 1)
+
+          client_line = '        var client = GetConnectedClient();'
+          if text.count(client_line) != 9:
+              raise SystemExit(f'Expected 9 SFTP client operation entries, found {text.count(client_line)}.')
+          text = text.replace(
+              client_line,
+              '        using var operation = await EnterOperationAsync(cancellationToken).ConfigureAwait(false);\n'
+              '        cancellationToken = operation.Token;\n'
+              '        cancellationToken.ThrowIfCancellationRequested();\n'
+              '        var client = GetConnectedClient();')
+
+          old_dispose = '''    public async ValueTask DisposeAsync()
+              {
+                  if (_disposed)
+                  {
+                      return;
+                  }
+
+                  _disposed = true;
+                  await _connectionGate.WaitAsync(CancellationToken.None).ConfigureAwait(false);
+                  try
+                  {
+                      DisposeConnection();
+                  }
+                  finally
+                  {
+                      _connectionGate.Release();
+                      _connectionGate.Dispose();
+                  }
+              }
+          '''.replace('              ', '    ')
+          new_dispose = '''    public ValueTask DisposeAsync()
+              {
+                  lock (_lifecycleSync)
+                  {
+                      if (_disposeTask is not null)
+                      {
+                          return new ValueTask(_disposeTask);
+                      }
+
+                      _disposed = true;
+                      var drainTask = _activeOperations == 0
+                          ? Task.CompletedTask
+                          : _operationsDrained.Task;
+                      _disposeTask = DisposeCoreAsync(drainTask);
+                      return new ValueTask(_disposeTask);
+                  }
+              }
+
+              private async Task DisposeCoreAsync(Task drainTask)
+              {
+                  await _disposeCancellation.CancelAsync().ConfigureAwait(false);
+                  await drainTask.ConfigureAwait(false);
+                  try
+                  {
+                      DisposeConnection();
+                  }
+                  finally
+                  {
+                      _connectionGate.Dispose();
+                      _disposeCancellation.Dispose();
+                  }
+              }
+          '''.replace('              ', '    ')
+          if old_dispose not in text:
+              raise SystemExit('Expected DisposeAsync block was not found.')
+          text = text.replace(old_dispose, new_dispose, 1)
+
+          marker = '''    private SftpClient GetConnectedClient()
+              {
+                  ThrowIfDisposed();'''.replace('              ', '    ')
+          helper = '''    private async ValueTask<OperationLease> EnterOperationAsync(CancellationToken cancellationToken)
+              {
+                  CancellationTokenSource operationCancellation;
+                  lock (_lifecycleSync)
+                  {
+                      ObjectDisposedException.ThrowIf(_disposed, this);
+                      operationCancellation = CancellationTokenSource.CreateLinkedTokenSource(
+                          cancellationToken,
+                          _disposeCancellation.Token);
+                      _activeOperations++;
+                  }
+
+                  try
+                  {
+                      await _connectionGate.WaitAsync(operationCancellation.Token).ConfigureAwait(false);
+                      return new OperationLease(this, operationCancellation);
+                  }
+                  catch
+                  {
+                      operationCancellation.Dispose();
+                      EndOperation();
+                      throw;
+                  }
+              }
+
+              private void EndOperation()
+              {
+                  lock (_lifecycleSync)
+                  {
+                      _activeOperations--;
+                      if (_disposed && _activeOperations == 0)
+                      {
+                          _operationsDrained.TrySetResult();
+                      }
+                  }
+              }
+
+              private sealed class OperationLease : IDisposable
+              {
+                  private readonly SftpRemoteFileSystem _owner;
+                  private readonly CancellationTokenSource _cancellation;
+                  private int _disposed;
+
+                  public OperationLease(
+                      SftpRemoteFileSystem owner,
+                      CancellationTokenSource cancellation)
+                  {
+                      _owner = owner;
+                      _cancellation = cancellation;
+                  }
+
+                  public CancellationToken Token => _cancellation.Token;
+
+                  public void Dispose()
+                  {
+                      if (Interlocked.Exchange(ref _disposed, 1) != 0)
+                      {
+                          return;
+                      }
+
+                      try
+                      {
+                          _owner._connectionGate.Release();
+                      }
+                      finally
+                      {
+                          _cancellation.Dispose();
+                          _owner.EndOperation();
+                      }
+                  }
+              }
+
+              private SftpClient GetConnectedClient()
+              {'''.replace('              ', '    ')
+          if marker not in text:
+              raise SystemExit('Expected GetConnectedClient marker was not found.')
+          text = text.replace(marker, helper, 1)
+
+          old_throw = '''    private void ThrowIfDisposed()
+              {
+                  ObjectDisposedException.ThrowIf(_disposed, this);
+              }
+          '''.replace('              ', '    ')
+          if old_throw not in text:
+              raise SystemExit('Expected ThrowIfDisposed helper was not found.')
+          text = text.replace(old_throw, '', 1)
+
+          path.write_text(text, encoding='utf-8')
+          '@
+          $script | python -
+
+      - name: Add SFTP disposal integration regression
+        shell: pwsh
+        run: |
+          $script = @'
+          from pathlib import Path
+
+          path = Path('tests/ServerDesk.Ssh.IntegrationTests/SftpIntegrationTests.cs')
+          text = path.read_text(encoding='utf-8')
+
+          marker = '''    [Fact]
+              public async Task PermissionDeniedAndDisconnectedChannelsMapToTypedErrors()'''.replace('              ', '    ')
+          test = '''    [Fact]
+              public async Task DisposeCancelsActiveUploadBeforeTearingDownChannel()
+              {
+                  const long totalBytes = 32L * 1024 * 1024;
+                  var cancellationToken = TestContext.Current.CancellationToken;
+                  var root = UniqueRoot();
+                  var file = root.Combine("dispose-during-upload.bin");
+                  var fileSystem = CreateFileSystem();
+                  await fileSystem.ConnectAsync(cancellationToken);
+                  await fileSystem.CreateDirectoryAsync(root, cancellationToken);
+
+                  try
+                  {
+                      await using var source = new PatternReadStream(totalBytes, TimeSpan.FromMilliseconds(15));
+                      var progress = new SignalingProgress();
+                      var uploadTask = fileSystem.UploadAsync(
+                              source,
+                              file,
+                              totalBytes,
+                              progress: progress,
+                              cancellationToken: cancellationToken)
+                          .AsTask();
+
+                      await progress.Started.WaitAsync(TimeSpan.FromSeconds(4), cancellationToken);
+                      var disposeTask = fileSystem.DisposeAsync().AsTask();
+
+                      await Assert.ThrowsAnyAsync<OperationCanceledException>(() => uploadTask);
+                      await disposeTask;
+
+                      Assert.False(fileSystem.IsConnected);
+                      await Assert.ThrowsAsync<ObjectDisposedException>(() =>
+                          fileSystem.ListAsync(root, cancellationToken).AsTask());
+                      await fileSystem.DisposeAsync();
+                  }
+                  finally
+                  {
+                      await fileSystem.DisposeAsync();
+                  }
+
+                  await using var verifier = CreateFileSystem();
+                  await verifier.ConnectAsync(cancellationToken);
+                  try
+                  {
+                      var listed = await verifier.ListAsync(root, cancellationToken);
+                      Assert.DoesNotContain(listed, entry => entry.Name == file.Name);
+                      Assert.DoesNotContain(
+                          listed,
+                          entry => entry.Name.StartsWith(".serverdesk-upload-", StringComparison.Ordinal));
+                  }
+                  finally
+                  {
+                      await TryDeleteDirectoryAsync(verifier, root, cancellationToken);
+                  }
+              }
+
+              [Fact]
+              public async Task PermissionDeniedAndDisconnectedChannelsMapToTypedErrors()'''.replace('              ', '    ')
+          if marker not in text:
+              raise SystemExit('Expected integration-test insertion point was not found.')
+          text = text.replace(marker, test, 1)
+
+          helper_marker = '''    private sealed class RecordingProgress : IProgress<RemoteTransferProgress>
+              {'''.replace('              ', '    ')
+          helper = '''    private sealed class SignalingProgress : IProgress<RemoteTransferProgress>
+              {
+                  private readonly TaskCompletionSource _started =
+                      new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+                  public Task Started => _started.Task;
+
+                  public void Report(RemoteTransferProgress value)
+                  {
+                      if (value.BytesTransferred > 0)
+                      {
+                          _started.TrySetResult();
+                      }
+                  }
+              }
+
+              private sealed class RecordingProgress : IProgress<RemoteTransferProgress>
+              {'''.replace('              ', '    ')
+          if helper_marker not in text:
+              raise SystemExit('Expected progress-helper insertion point was not found.')
+          text = text.replace(helper_marker, helper, 1)
+
+          path.write_text(text, encoding='utf-8')
+          '@
+          $script | python -
+
+      - name: Commit lifecycle fix and test
+        shell: pwsh
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/ServerDesk.Infrastructure.Ssh/SftpRemoteFileSystem.cs
+          git diff --cached --check
+          git commit -m "fix(sftp): serialize operations across connection teardown"
+          git add tests/ServerDesk.Ssh.IntegrationTests/SftpIntegrationTests.cs
+          git diff --cached --check
+          git commit -m "test(sftp): cover disposal during active upload"
+          git push
