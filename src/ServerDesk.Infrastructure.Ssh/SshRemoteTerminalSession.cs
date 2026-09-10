@@ -46,11 +46,17 @@ internal sealed class SshRemoteTerminalSession : IRemoteTerminalSession
     private readonly SshSessionOptions _options;
     private readonly SemaphoreSlim _stateGate = new(1, 1);
     private readonly SemaphoreSlim _writeGate = new(1, 1);
+    private readonly object _lifecycleSync = new();
+    private readonly CancellationTokenSource _disposeCancellation = new();
+    private readonly TaskCompletionSource _operationsDrained =
+        new(TaskCreationOptions.RunContinuationsAsynchronously);
     private SshClientLease? _lease;
     private ShellStream? _shellStream;
     private CancellationTokenSource? _lifetimeCancellation;
     private Task? _readerTask;
+    private int _activeOperations;
     private bool _disposed;
+    private Task? _disposeTask;
 
     public SshRemoteTerminalSession(
         ServerProfile profile,
@@ -73,11 +79,17 @@ internal sealed class SshRemoteTerminalSession : IRemoteTerminalSession
 
     public event Action<string>? OutputReceived;
 
-    public async ValueTask ConnectAsync(
+    public ValueTask ConnectAsync(
         TerminalSize initialSize,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default) =>
+        RunOperationAsync(
+            token => ConnectCoreAsync(initialSize, token),
+            cancellationToken);
+
+    private async ValueTask ConnectCoreAsync(
+        TerminalSize initialSize,
+        CancellationToken cancellationToken)
     {
-        ThrowIfDisposed();
         await _stateGate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
@@ -150,12 +162,20 @@ internal sealed class SshRemoteTerminalSession : IRemoteTerminalSession
         }
     }
 
-    public async ValueTask SendAsync(
+    public ValueTask SendAsync(
         string input,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(input);
-        ThrowIfDisposed();
+        return RunOperationAsync(
+            token => SendCoreAsync(input, token),
+            cancellationToken);
+    }
+
+    private async ValueTask SendCoreAsync(
+        string input,
+        CancellationToken cancellationToken)
+    {
         var shellStream = GetConnectedShell();
         if (input.Length == 0)
         {
@@ -183,11 +203,17 @@ internal sealed class SshRemoteTerminalSession : IRemoteTerminalSession
         }
     }
 
-    public async ValueTask ResizeAsync(
+    public ValueTask ResizeAsync(
         TerminalSize size,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default) =>
+        RunOperationAsync(
+            token => ResizeCoreAsync(size, token),
+            cancellationToken);
+
+    private async ValueTask ResizeCoreAsync(
+        TerminalSize size,
+        CancellationToken cancellationToken)
     {
-        ThrowIfDisposed();
         var shellStream = GetConnectedShell();
         await _writeGate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
@@ -213,9 +239,11 @@ internal sealed class SshRemoteTerminalSession : IRemoteTerminalSession
         }
     }
 
-    public async ValueTask DisconnectAsync(CancellationToken cancellationToken = default)
+    public ValueTask DisconnectAsync(CancellationToken cancellationToken = default) =>
+        RunOperationAsync(DisconnectCoreAsync, cancellationToken);
+
+    private async ValueTask DisconnectCoreAsync(CancellationToken cancellationToken)
     {
-        ThrowIfDisposed();
         await _stateGate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
@@ -260,15 +288,28 @@ internal sealed class SshRemoteTerminalSession : IRemoteTerminalSession
         }
     }
 
-    public async ValueTask DisposeAsync()
+    public ValueTask DisposeAsync()
     {
-        if (_disposed)
+        lock (_lifecycleSync)
         {
-            return;
-        }
+            if (_disposeTask is not null)
+            {
+                return new ValueTask(_disposeTask);
+            }
 
-        _disposed = true;
-        await _stateGate.WaitAsync(CancellationToken.None).ConfigureAwait(false);
+            _disposed = true;
+            var drainTask = _activeOperations == 0
+                ? Task.CompletedTask
+                : _operationsDrained.Task;
+            _disposeTask = DisposeCoreAsync(drainTask);
+            return new ValueTask(_disposeTask);
+        }
+    }
+
+    private async Task DisposeCoreAsync(Task drainTask)
+    {
+        await _disposeCancellation.CancelAsync().ConfigureAwait(false);
+        await drainTask.ConfigureAwait(false);
         try
         {
             await DisposeConnectionAsync().ConfigureAwait(false);
@@ -276,9 +317,48 @@ internal sealed class SshRemoteTerminalSession : IRemoteTerminalSession
         }
         finally
         {
-            _stateGate.Release();
             _stateGate.Dispose();
             _writeGate.Dispose();
+            _disposeCancellation.Dispose();
+        }
+    }
+
+    private async ValueTask RunOperationAsync(
+        Func<CancellationToken, ValueTask> operation,
+        CancellationToken cancellationToken)
+    {
+        BeginOperation();
+        try
+        {
+            using var operationCancellation = CancellationTokenSource.CreateLinkedTokenSource(
+                cancellationToken,
+                _disposeCancellation.Token);
+            await operation(operationCancellation.Token).ConfigureAwait(false);
+        }
+        finally
+        {
+            EndOperation();
+        }
+    }
+
+    private void BeginOperation()
+    {
+        lock (_lifecycleSync)
+        {
+            ObjectDisposedException.ThrowIf(_disposed, this);
+            _activeOperations++;
+        }
+    }
+
+    private void EndOperation()
+    {
+        lock (_lifecycleSync)
+        {
+            _activeOperations--;
+            if (_disposed && _activeOperations == 0)
+            {
+                _operationsDrained.TrySetResult();
+            }
         }
     }
 
@@ -457,8 +537,5 @@ internal sealed class SshRemoteTerminalSession : IRemoteTerminalSession
         StateChanged?.Invoke(state);
     }
 
-    private void ThrowIfDisposed()
-    {
-        ObjectDisposedException.ThrowIf(_disposed, this);
-    }
+
 }
