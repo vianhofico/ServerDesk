@@ -493,12 +493,6 @@
                         <StackPanel MaxWidth="520"
                                     HorizontalAlignment="Center"
                                     VerticalAlignment="Center">
-                            <ProgressBar x:Name="GridStateProgress"
-                                         Width="110"
-                                         Height="4"
-                                         Margin="0,0,0,16"
-                                         IsIndeterminate="True"
-                                         Visibility="Collapsed" />
                             <Border Width="48"
                                     Height="48"
                                     Margin="0,0,0,14"
@@ -550,8 +544,7 @@
                     </Grid>
 
                     <TextBlock Margin="0,16,0,0"
-                               Text="{DynamicResource Loc.Explorer.Details.Empty}"
-                               Style="{StaticResource SecondaryBodyText}">
+                               Text="{DynamicResource Loc.Explorer.Details.Empty}">
                         <TextBlock.Style>
                             <Style TargetType="TextBlock" BasedOn="{StaticResource SecondaryBodyText}">
                                 <Setter Property="Visibility" Value="Collapsed" />
