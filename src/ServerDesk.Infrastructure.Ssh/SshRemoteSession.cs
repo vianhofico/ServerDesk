@@ -628,11 +628,17 @@ internal sealed class SshRemoteSession : IRemoteSession
     private readonly SshClientFactory _clientFactory;
     private readonly SshSessionOptions _options;
     private readonly SemaphoreSlim _stateGate = new(1, 1);
+    private readonly object _lifecycleSync = new();
+    private readonly CancellationTokenSource _disposeCancellation = new();
+    private readonly TaskCompletionSource _operationsDrained =
+        new(TaskCreationOptions.RunContinuationsAsynchronously);
     private SshClientLease? _lease;
     private CancellationTokenSource? _monitorCancellation;
     private Task? _monitorTask;
+    private int _activeOperations;
     private bool _hasAttemptedConnection;
-    private bool _disposed;
+    private volatile bool _disposed;
+    private Task? _disposeTask;
 
     public SshRemoteSession(
         ServerProfile profile,
@@ -659,7 +665,8 @@ internal sealed class SshRemoteSession : IRemoteSession
 
     public async ValueTask ConnectAsync(CancellationToken cancellationToken = default)
     {
-        ThrowIfDisposed();
+        using var operation = EnterOperation(cancellationToken);
+        cancellationToken = operation.Token;
         var gateEntered = false;
         try
         {
@@ -700,6 +707,7 @@ internal sealed class SshRemoteSession : IRemoteSession
                 _lease.Client.ErrorOccurred += ClientOnErrorOccurred;
 
                 await _lease.Client.ConnectAsync(timeoutCancellation.Token).ConfigureAwait(false);
+                cancellationToken.ThrowIfCancellationRequested();
                 if (!_lease.Client.IsConnected)
                 {
                     throw new SshConnectionException("SSH.NET completed connection establishment without an active session.");
@@ -746,7 +754,9 @@ internal sealed class SshRemoteSession : IRemoteSession
 
     public async ValueTask DisconnectAsync(CancellationToken cancellationToken = default)
     {
-        ThrowIfDisposed();
+        using var operation = EnterOperation(cancellationToken);
+        cancellationToken = operation.Token;
+        cancellationToken.ThrowIfCancellationRequested();
         await _stateGate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
@@ -809,16 +819,29 @@ internal sealed class SshRemoteSession : IRemoteSession
         }
     }
 
-    public async ValueTask DisposeAsync()
+    public ValueTask DisposeAsync()
     {
-        if (_disposed)
+        lock (_lifecycleSync)
         {
-            return;
-        }
+            if (_disposeTask is not null)
+            {
+                return new ValueTask(_disposeTask);
+            }
 
-        _disposed = true;
-        StopConnectionMonitor();
-        await _stateGate.WaitAsync(CancellationToken.None).ConfigureAwait(false);
+            _disposed = true;
+            StopConnectionMonitor();
+            var drainTask = _activeOperations == 0
+                ? Task.CompletedTask
+                : _operationsDrained.Task;
+            _disposeTask = DisposeCoreAsync(drainTask);
+            return new ValueTask(_disposeTask);
+        }
+    }
+
+    private async Task DisposeCoreAsync(Task drainTask)
+    {
+        await _disposeCancellation.CancelAsync().ConfigureAwait(false);
+        await drainTask.ConfigureAwait(false);
         try
         {
             DisposeCurrentLease();
@@ -826,14 +849,14 @@ internal sealed class SshRemoteSession : IRemoteSession
         }
         finally
         {
-            _stateGate.Release();
             _stateGate.Dispose();
+            _disposeCancellation.Dispose();
         }
     }
 
     private void ClientOnErrorOccurred(object? sender, ExceptionEventArgs eventArgs)
     {
-        if (State != RemoteSessionState.Connected)
+        if (_disposed || State != RemoteSessionState.Connected)
         {
             return;
         }
@@ -848,9 +871,17 @@ internal sealed class SshRemoteSession : IRemoteSession
 
     private void StartConnectionMonitor(SshClient client)
     {
-        StopConnectionMonitor();
-        _monitorCancellation = new CancellationTokenSource();
-        _monitorTask = MonitorConnectionAsync(client, _monitorCancellation.Token);
+        lock (_lifecycleSync)
+        {
+            if (_disposed)
+            {
+                return;
+            }
+
+            StopConnectionMonitor();
+            _monitorCancellation = new CancellationTokenSource();
+            _monitorTask = MonitorConnectionAsync(client, _monitorCancellation.Token);
+        }
     }
 
     private async Task MonitorConnectionAsync(SshClient client, CancellationToken cancellationToken)
@@ -860,13 +891,18 @@ internal sealed class SshRemoteSession : IRemoteSession
             while (!cancellationToken.IsCancellationRequested)
             {
                 await Task.Delay(_options.ConnectionMonitorInterval, cancellationToken).ConfigureAwait(false);
-                if (State != RemoteSessionState.Connected)
+                if (_disposed || State != RemoteSessionState.Connected)
                 {
                     return;
                 }
 
                 if (!client.IsConnected)
                 {
+                    if (_disposed || cancellationToken.IsCancellationRequested)
+                    {
+                        return;
+                    }
+
                     LastError = new RemoteError(
                         RemoteErrorCode.NetworkInterrupted,
                         "The SSH connection was closed by the server or network.");
@@ -883,7 +919,7 @@ internal sealed class SshRemoteSession : IRemoteSession
         }
         catch (Exception exception)
         {
-            if (State == RemoteSessionState.Connected)
+            if (!_disposed && State == RemoteSessionState.Connected)
             {
                 LastError = SshRemoteErrorMapper.Map(
                     exception,
@@ -916,6 +952,59 @@ internal sealed class SshRemoteSession : IRemoteSession
         _lease = null;
     }
 
+    private OperationLease EnterOperation(CancellationToken cancellationToken)
+    {
+        lock (_lifecycleSync)
+        {
+            ObjectDisposedException.ThrowIf(_disposed, this);
+            var operationCancellation = CancellationTokenSource.CreateLinkedTokenSource(
+                cancellationToken,
+                _disposeCancellation.Token);
+            _activeOperations++;
+            return new OperationLease(this, operationCancellation);
+        }
+    }
+
+    private void EndOperation()
+    {
+        lock (_lifecycleSync)
+        {
+            _activeOperations--;
+            if (_disposed && _activeOperations == 0)
+            {
+                _operationsDrained.TrySetResult();
+            }
+        }
+    }
+
+    private sealed class OperationLease : IDisposable
+    {
+        private readonly SshRemoteSession _owner;
+        private readonly CancellationTokenSource _cancellation;
+        private int _disposed;
+
+        public OperationLease(
+            SshRemoteSession owner,
+            CancellationTokenSource cancellation)
+        {
+            _owner = owner;
+            _cancellation = cancellation;
+        }
+
+        public CancellationToken Token => _cancellation.Token;
+
+        public void Dispose()
+        {
+            if (Interlocked.Exchange(ref _disposed, 1) != 0)
+            {
+                return;
+            }
+
+            _cancellation.Dispose();
+            _owner.EndOperation();
+        }
+    }
+
     private void Transition(RemoteSessionState state)
     {
         if (State == state)
@@ -929,11 +1018,6 @@ internal sealed class SshRemoteSession : IRemoteSession
 
     private static RemoteError CreateCancellationError() =>
         new(RemoteErrorCode.OperationCancelled, "SSH connection operation was cancelled.");
-
-    private void ThrowIfDisposed()
-    {
-        ObjectDisposedException.ThrowIf(_disposed, this);
-    }
 }
 
 internal static class SshRemoteErrorMapper
