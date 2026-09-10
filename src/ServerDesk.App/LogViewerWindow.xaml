@@ -1,32 +1,20 @@
 <Window x:Class="ServerDesk.App.LogViewerWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Logs"
-        Width="1360"
-        Height="820"
-        MinWidth="1040"
-        MinHeight="620"
+        xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+        Title="{DynamicResource Loc.Logs.WindowTitle}"
+        Width="1420"
+        Height="900"
+        MinWidth="1080"
+        MinHeight="680"
         WindowStartupLocation="CenterOwner"
         Background="{DynamicResource WindowBackgroundBrush}"
         Foreground="{DynamicResource PrimaryTextBrush}"
         Loaded="WindowOnLoaded"
         Closed="WindowOnClosed">
-    <Window.Resources>
-        <Style x:Key="LogButton" TargetType="Button">
-            <Setter Property="Padding" Value="11,7" />
-            <Setter Property="MinHeight" Value="34" />
-            <Setter Property="Margin" Value="7,0,0,0" />
-            <Setter Property="Cursor" Value="Hand" />
-        </Style>
-        <Style x:Key="FilterLabel" TargetType="TextBlock">
-            <Setter Property="VerticalAlignment" Value="Center" />
-            <Setter Property="Margin" Value="10,0,6,0" />
-            <Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" />
-        </Style>
-    </Window.Resources>
-
-    <Grid Margin="20">
+    <Grid>
         <Grid.RowDefinitions>
+            <RowDefinition Height="76" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
@@ -35,98 +23,377 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <Grid>
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
-            </Grid.ColumnDefinitions>
-            <StackPanel>
-                <TextBlock x:Name="TitleText" FontSize="26" FontWeight="SemiBold" />
-                <TextBlock x:Name="EndpointText" Margin="0,5,0,0" Foreground="{DynamicResource MutedTextBrush}" />
-            </StackPanel>
-            <WrapPanel Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Top">
-                <Button Content="Refresh" Click="RefreshOnClick" Style="{StaticResource LogButton}" Margin="0" />
-                <Button Content="Follow" Click="FollowOnClick" Style="{StaticResource LogButton}" />
-                <Button Content="Pause" Click="PauseOnClick" Style="{StaticResource LogButton}" />
-                <Button Content="Resume" Click="ResumeOnClick" Style="{StaticResource LogButton}" />
-                <Button Content="Cancel" Click="CancelOnClick" Style="{StaticResource LogButton}" />
-                <Button Content="Export" Click="ExportOnClick" Style="{StaticResource LogButton}" />
-            </WrapPanel>
-        </Grid>
+        <Border Grid.Row="0"
+                Background="{DynamicResource SurfaceBrush}"
+                BorderBrush="{DynamicResource BorderBrush}"
+                BorderThickness="0,0,0,1">
+            <Grid Margin="24,0,28,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
 
-        <Grid Grid.Row="1" Margin="0,16,0,0">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="140" />
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="240" />
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="*" />
-            </Grid.ColumnDefinitions>
-            <TextBlock Text="Source" VerticalAlignment="Center" Foreground="{DynamicResource MutedTextBrush}" />
-            <ComboBox x:Name="SourceBox" Grid.Column="1" Margin="8,0,0,0"
-                      SelectionChanged="SourceBoxOnSelectionChanged" />
-            <TextBlock Grid.Column="2" Text="Journal unit" Style="{StaticResource FilterLabel}" />
-            <TextBox x:Name="JournalUnitBox" Grid.Column="3"
-                     ToolTip="Optional systemd .service filter passed as a tokenized journalctl argument." />
-            <TextBlock Grid.Column="4" Text="Remote file" Style="{StaticResource FilterLabel}" />
-            <TextBox x:Name="FilePathBox" Grid.Column="5"
-                     ToolTip="Absolute remote text log path, for example /var/log/nginx/error.log." />
-        </Grid>
+                <StackPanel VerticalAlignment="Center">
+                    <TextBlock Text="{DynamicResource Loc.Logs.Header.Title}"
+                               Style="{StaticResource PageTitleText}" />
+                    <TextBlock Margin="0,2,0,3"
+                               Text="{DynamicResource Loc.Logs.Header.Subtitle}"
+                               Style="{StaticResource CaptionText}" />
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock x:Name="ServerNameText"
+                                   FontSize="11"
+                                   FontWeight="SemiBold" />
+                        <TextBlock Text="  ·  "
+                                   Foreground="{DynamicResource MutedTextBrush}" />
+                        <TextBlock x:Name="EndpointText"
+                                   Style="{StaticResource TechnicalText}"
+                                   Foreground="{DynamicResource MutedTextBrush}" />
+                    </StackPanel>
+                </StackPanel>
 
-        <Grid Grid.Row="2" Margin="0,12,0,0">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="2*" />
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="150" />
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="1.2*" />
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="1.2*" />
-            </Grid.ColumnDefinitions>
-            <TextBlock Text="Search" VerticalAlignment="Center" Foreground="{DynamicResource MutedTextBrush}" />
-            <TextBox x:Name="SearchBox" Grid.Column="1" Margin="8,0,0,0" TextChanged="FilterOnChanged" />
-            <TextBlock Grid.Column="2" Text="Severity" Style="{StaticResource FilterLabel}" />
-            <ComboBox x:Name="SeverityBox" Grid.Column="3" SelectionChanged="FilterOnSelectionChanged" />
-            <TextBlock Grid.Column="4" Text="Identifier" Style="{StaticResource FilterLabel}" />
-            <TextBox x:Name="IdentifierFilterBox" Grid.Column="5" TextChanged="FilterOnChanged" />
-            <TextBlock Grid.Column="6" Text="Unit" Style="{StaticResource FilterLabel}" />
-            <TextBox x:Name="UnitFilterBox" Grid.Column="7" TextChanged="FilterOnChanged" />
-        </Grid>
-
-        <Border Grid.Row="3" Margin="0,12,0,10" Padding="10" CornerRadius="7"
-                Background="{DynamicResource SurfaceSecondaryBrush}">
-            <TextBlock x:Name="StatusText" TextWrapping="Wrap" />
+                <StackPanel Grid.Column="1"
+                            Orientation="Horizontal"
+                            VerticalAlignment="Center">
+                    <Border Style="{StaticResource StatusPill}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="{DynamicResource Loc.Logs.Header.Environment}"
+                                       Style="{StaticResource CaptionText}" />
+                            <TextBlock Text=" · " Foreground="{DynamicResource MutedTextBrush}" />
+                            <TextBlock x:Name="EnvironmentValueText"
+                                       FontSize="11"
+                                       FontWeight="SemiBold" />
+                        </StackPanel>
+                    </Border>
+                    <Border Margin="8,0,0,0" Style="{StaticResource AccentStatusPill}">
+                        <StackPanel Orientation="Horizontal">
+                            <Ellipse Width="6"
+                                     Height="6"
+                                     Margin="0,0,7,0"
+                                     Fill="{DynamicResource AccentBrush}"
+                                     VerticalAlignment="Center" />
+                            <TextBlock x:Name="ConnectionValueText"
+                                       FontSize="11"
+                                       FontWeight="SemiBold" />
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </Grid>
         </Border>
 
-        <DataGrid x:Name="LogGrid"
-                  Grid.Row="4"
-                  AutoGenerateColumns="False"
-                  IsReadOnly="True"
-                  CanUserAddRows="False"
-                  CanUserDeleteRows="False"
-                  SelectionMode="Single"
-                  HeadersVisibility="Column"
-                  GridLinesVisibility="Horizontal"
-                  EnableRowVirtualization="True"
-                  EnableColumnVirtualization="True"
-                  VirtualizingPanel.IsVirtualizing="True"
-                  VirtualizingPanel.VirtualizationMode="Recycling"
-                  ScrollViewer.CanContentScroll="True"
-                  CanUserSortColumns="True">
-            <DataGrid.Columns>
-                <DataGridTextColumn Header="Time" Binding="{Binding Timestamp}" Width="1.35*" />
-                <DataGridTextColumn Header="Severity" Binding="{Binding Severity}" Width="0.8*" />
-                <DataGridTextColumn Header="Source" Binding="{Binding Source}" Width="0.75*" />
-                <DataGridTextColumn Header="Unit" Binding="{Binding SystemdUnit}" Width="1.35*" />
-                <DataGridTextColumn Header="Identifier" Binding="{Binding Identifier}" Width="1.1*" />
-                <DataGridTextColumn Header="PID" Binding="{Binding ProcessId}" Width="0.65*" />
-                <DataGridTextColumn Header="Message" Binding="{Binding Message}" Width="4*" />
-            </DataGrid.Columns>
-        </DataGrid>
+        <Border Grid.Row="1"
+                Margin="20,14,20,0"
+                Style="{StaticResource CommandBarSurface}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
 
-        <TextBlock x:Name="FooterText" Grid.Row="5" Margin="0,10,0,0"
-                   Foreground="{DynamicResource MutedTextBrush}" />
+                <WrapPanel>
+                    <Button x:Name="RefreshButton"
+                            Click="RefreshOnClick"
+                            Style="{StaticResource PrimaryButton}"
+                            AutomationProperties.Name="{DynamicResource Loc.Logs.Command.Refresh}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE72C;"
+                                       Margin="0,0,7,0"
+                                       FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                       FontSize="13"
+                                       Foreground="White" />
+                            <TextBlock Text="{DynamicResource Loc.Logs.Command.Refresh}" Foreground="White" />
+                        </StackPanel>
+                    </Button>
+                    <Button x:Name="FollowButton"
+                            Margin="8,0,0,0"
+                            Click="FollowOnClick"
+                            Style="{StaticResource SecondaryButton}"
+                            AutomationProperties.Name="{DynamicResource Loc.Logs.Command.Follow}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE768;"
+                                       Margin="0,0,7,0"
+                                       FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                       FontSize="12" />
+                            <TextBlock Text="{DynamicResource Loc.Logs.Command.Follow}" />
+                        </StackPanel>
+                    </Button>
+                    <Separator Style="{StaticResource ToolbarSeparator}" />
+                    <Button x:Name="PauseButton"
+                            Click="PauseOnClick"
+                            Style="{StaticResource GhostButton}"
+                            AutomationProperties.Name="{DynamicResource Loc.Logs.Command.Pause}">
+                        <TextBlock Text="{DynamicResource Loc.Logs.Command.Pause}" />
+                    </Button>
+                    <Button x:Name="ResumeButton"
+                            Margin="4,0,0,0"
+                            Click="ResumeOnClick"
+                            Style="{StaticResource GhostButton}"
+                            AutomationProperties.Name="{DynamicResource Loc.Logs.Command.Resume}">
+                        <TextBlock Text="{DynamicResource Loc.Logs.Command.Resume}" />
+                    </Button>
+                    <Button x:Name="CancelButton"
+                            Margin="4,0,0,0"
+                            Click="CancelOnClick"
+                            Style="{StaticResource GhostButton}"
+                            AutomationProperties.Name="{DynamicResource Loc.Logs.Command.Cancel}">
+                        <TextBlock Text="{DynamicResource Loc.Logs.Command.Cancel}" />
+                    </Button>
+                </WrapPanel>
+
+                <Button x:Name="ExportButton"
+                        Grid.Column="2"
+                        Click="ExportOnClick"
+                        Style="{StaticResource SecondaryButton}"
+                        AutomationProperties.Name="{DynamicResource Loc.Logs.Command.Export}">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE74E;"
+                                   Margin="0,0,7,0"
+                                   FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                   FontSize="12" />
+                        <TextBlock Text="{DynamicResource Loc.Logs.Command.Export}" />
+                    </StackPanel>
+                </Button>
+            </Grid>
+        </Border>
+
+        <Grid Grid.Row="2" Margin="20,10,20,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="0.95*" />
+                <ColumnDefinition Width="12" />
+                <ColumnDefinition Width="1.55*" />
+            </Grid.ColumnDefinitions>
+
+            <Border Grid.Column="0" Style="{StaticResource SectionSurface}">
+                <StackPanel>
+                    <TextBlock Text="{DynamicResource Loc.Logs.Source.Title}" Style="{StaticResource SectionTitleText}" />
+                    <TextBlock Margin="0,3,0,12"
+                               Text="{DynamicResource Loc.Logs.Source.Subtitle}"
+                               Style="{StaticResource CaptionText}"
+                               TextWrapping="Wrap" />
+
+                    <TextBlock Text="{DynamicResource Loc.Logs.Source.Label}" Style="{StaticResource FormLabelText}" />
+                    <ComboBox x:Name="SourceBox"
+                              Margin="0,4,0,10"
+                              SelectionChanged="SourceBoxOnSelectionChanged"
+                              AutomationProperties.Name="{DynamicResource Loc.Logs.Source.Label}" />
+
+                    <TextBlock Text="{DynamicResource Loc.Logs.Source.JournalUnit}" Style="{StaticResource FormLabelText}" />
+                    <TextBox x:Name="JournalUnitBox"
+                             Margin="0,4,0,10"
+                             Style="{StaticResource FieldTextBox}"
+                             ToolTip="{DynamicResource Loc.Logs.Source.JournalUnit.Tooltip}"
+                             AutomationProperties.Name="{DynamicResource Loc.Logs.Source.JournalUnit}" />
+
+                    <TextBlock Text="{DynamicResource Loc.Logs.Source.RemoteFile}" Style="{StaticResource FormLabelText}" />
+                    <TextBox x:Name="FilePathBox"
+                             Margin="0,4,0,0"
+                             Style="{StaticResource FieldTextBox}"
+                             FontFamily="Cascadia Mono, Consolas"
+                             ToolTip="{DynamicResource Loc.Logs.Source.RemoteFile.Tooltip}"
+                             AutomationProperties.Name="{DynamicResource Loc.Logs.Source.RemoteFile}" />
+                </StackPanel>
+            </Border>
+
+            <Border Grid.Column="2" Style="{StaticResource SectionSurface}">
+                <StackPanel>
+                    <TextBlock Text="{DynamicResource Loc.Logs.Filter.Title}" Style="{StaticResource SectionTitleText}" />
+                    <TextBlock Margin="0,3,0,12"
+                               Text="{DynamicResource Loc.Logs.Filter.Subtitle}"
+                               Style="{StaticResource CaptionText}"
+                               TextWrapping="Wrap" />
+
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="12" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+
+                        <StackPanel Grid.Row="0" Grid.Column="0">
+                            <TextBlock Text="{DynamicResource Loc.Logs.Filter.Search}" Style="{StaticResource FormLabelText}" />
+                            <Grid Margin="0,4,0,0">
+                                <TextBox x:Name="SearchBox"
+                                         Style="{StaticResource OperationalSearchTextBox}"
+                                         Padding="34,6,36,6"
+                                         TextChanged="FilterOnChanged"
+                                         ToolTip="{DynamicResource Loc.Logs.Filter.Search.Tooltip}"
+                                         AutomationProperties.Name="{DynamicResource Loc.Logs.Filter.Search}" />
+                                <TextBlock Text="&#xE721;"
+                                           Margin="11,0,0,0"
+                                           HorizontalAlignment="Left"
+                                           VerticalAlignment="Center"
+                                           IsHitTestVisible="False"
+                                           FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                           FontSize="13"
+                                           Foreground="{DynamicResource MutedTextBrush}" />
+                                <Button x:Name="ClearSearchButton"
+                                        Width="32"
+                                        Height="30"
+                                        Margin="0,0,3,0"
+                                        Padding="0"
+                                        HorizontalAlignment="Right"
+                                        VerticalAlignment="Center"
+                                        ToolTip="{DynamicResource Loc.Network.Search.Clear}"
+                                        Click="ClearSearchOnClick"
+                                        Style="{StaticResource GhostButton}"
+                                        Visibility="Collapsed"
+                                        AutomationProperties.Name="{DynamicResource Loc.Network.Search.Clear}">
+                                    <TextBlock Text="&#xE711;"
+                                               FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                               FontSize="11" />
+                                </Button>
+                            </Grid>
+                        </StackPanel>
+
+                        <StackPanel Grid.Row="0" Grid.Column="2">
+                            <TextBlock Text="{DynamicResource Loc.Logs.Filter.Severity}" Style="{StaticResource FormLabelText}" />
+                            <ComboBox x:Name="SeverityBox"
+                                      Margin="0,4,0,0"
+                                      SelectionChanged="FilterOnSelectionChanged"
+                                      AutomationProperties.Name="{DynamicResource Loc.Logs.Filter.Severity}" />
+                        </StackPanel>
+
+                        <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,12,0,0">
+                            <TextBlock Text="{DynamicResource Loc.Logs.Filter.Identifier}" Style="{StaticResource FormLabelText}" />
+                            <TextBox x:Name="IdentifierFilterBox"
+                                     Margin="0,4,0,0"
+                                     Style="{StaticResource FieldTextBox}"
+                                     TextChanged="FilterOnChanged"
+                                     AutomationProperties.Name="{DynamicResource Loc.Logs.Filter.Identifier}" />
+                        </StackPanel>
+
+                        <StackPanel Grid.Row="1" Grid.Column="2" Margin="0,12,0,0">
+                            <TextBlock Text="{DynamicResource Loc.Logs.Filter.Unit}" Style="{StaticResource FormLabelText}" />
+                            <TextBox x:Name="UnitFilterBox"
+                                     Margin="0,4,0,0"
+                                     Style="{StaticResource FieldTextBox}"
+                                     TextChanged="FilterOnChanged"
+                                     AutomationProperties.Name="{DynamicResource Loc.Logs.Filter.Unit}" />
+                        </StackPanel>
+                    </Grid>
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <Grid Grid.Row="3" Margin="20,10,20,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="8" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="8" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Border Grid.Column="0" Style="{StaticResource MetricTile}">
+                <StackPanel>
+                    <TextBlock Text="{DynamicResource Loc.Logs.Summary.Visible}" Style="{StaticResource EyebrowText}" />
+                    <TextBlock x:Name="VisibleCountText" Margin="0,4,0,0" Text="0" FontSize="22" FontWeight="SemiBold" />
+                </StackPanel>
+            </Border>
+            <Border Grid.Column="2" Style="{StaticResource MetricTile}">
+                <StackPanel>
+                    <TextBlock Text="{DynamicResource Loc.Logs.Summary.Retained}" Style="{StaticResource EyebrowText}" />
+                    <TextBlock x:Name="RetainedCountText" Margin="0,4,0,0" Text="0" FontSize="22" FontWeight="SemiBold" />
+                </StackPanel>
+            </Border>
+            <Border Grid.Column="4" Style="{StaticResource MetricTile}">
+                <StackPanel>
+                    <TextBlock Text="{DynamicResource Loc.Logs.Summary.RetentionLimit}" Style="{StaticResource EyebrowText}" />
+                    <TextBlock x:Name="RetentionLimitText" Margin="0,4,0,0" Text="0" FontSize="22" FontWeight="SemiBold" />
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <Border Grid.Row="4"
+                Margin="20,10,20,10"
+                Style="{StaticResource InlineInfoCard}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Border Style="{StaticResource StatusPill}" Padding="7,2" VerticalAlignment="Top">
+                    <TextBlock x:Name="StatusStateText" FontSize="11" FontWeight="SemiBold" />
+                </Border>
+                <TextBlock x:Name="StatusText"
+                           Grid.Column="1"
+                           Margin="10,2,0,0"
+                           TextWrapping="Wrap" />
+            </Grid>
+        </Border>
+
+        <ui:Card Grid.Row="5"
+                 Margin="20,0,20,0"
+                 Padding="0"
+                 ClipToBounds="True">
+            <DataGrid x:Name="LogGrid"
+                      Style="{StaticResource OperationalDataGrid}"
+                      BorderThickness="0">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="{DynamicResource Loc.Logs.Column.Time}"
+                                        Binding="{Binding Timestamp}"
+                                        Width="1.35*">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock" BasedOn="{StaticResource TechnicalText}" />
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
+                    <DataGridTemplateColumn Header="{DynamicResource Loc.Logs.Column.Severity}"
+                                            SortMemberPath="Severity"
+                                            Width="0.9*">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <Ellipse Width="7" Height="7" Margin="0,0,7,0">
+                                        <Ellipse.Style>
+                                            <Style TargetType="Ellipse">
+                                                <Setter Property="Fill" Value="{DynamicResource MutedTextBrush}" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding Severity}" Value="Emergency">
+                                                        <Setter Property="Fill" Value="{DynamicResource DangerBrush}" />
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding Severity}" Value="Alert">
+                                                        <Setter Property="Fill" Value="{DynamicResource DangerBrush}" />
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding Severity}" Value="Critical">
+                                                        <Setter Property="Fill" Value="{DynamicResource DangerBrush}" />
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding Severity}" Value="Error">
+                                                        <Setter Property="Fill" Value="{DynamicResource DangerBrush}" />
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding Severity}" Value="Warning">
+                                                        <Setter Property="Fill" Value="{DynamicResource AccentBrush}" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Ellipse.Style>
+                                    </Ellipse>
+                                    <TextBlock Text="{Binding Severity}" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                    <DataGridTextColumn Header="{DynamicResource Loc.Logs.Column.Source}" Binding="{Binding Source}" Width="0.75*" />
+                    <DataGridTextColumn Header="{DynamicResource Loc.Logs.Column.Unit}" Binding="{Binding SystemdUnit}" Width="1.35*" />
+                    <DataGridTextColumn Header="{DynamicResource Loc.Logs.Column.Identifier}" Binding="{Binding Identifier}" Width="1.1*" />
+                    <DataGridTextColumn Header="{DynamicResource Loc.Logs.Column.Pid}"
+                                        Binding="{Binding ProcessId}"
+                                        Width="0.65*">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock" BasedOn="{StaticResource TechnicalText}" />
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
+                    <DataGridTextColumn Header="{DynamicResource Loc.Logs.Column.Message}" Binding="{Binding Message}" Width="4*" />
+                </DataGrid.Columns>
+            </DataGrid>
+        </ui:Card>
+
+        <TextBlock x:Name="FooterText"
+                   Grid.Row="6"
+                   Margin="22,10,22,14"
+                   Style="{StaticResource CaptionText}"
+                   TextWrapping="Wrap" />
     </Grid>
 </Window>
