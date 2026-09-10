@@ -33,6 +33,12 @@ public sealed class LocalizationFoundationTests
     }
 
     [Fact]
+    public void ExplorerEnglishAndVietnameseResourcesHaveIdenticalKeys()
+    {
+        AssertResourceParity("Strings.Explorer.en.xaml", "Strings.Explorer.vi.xaml");
+    }
+
+    [Fact]
     public void ScheduledTaskEnglishAndVietnameseResourcesHaveIdenticalKeys()
     {
         AssertResourceParity("Strings.Tasks.en.xaml", "Strings.Tasks.vi.xaml");
