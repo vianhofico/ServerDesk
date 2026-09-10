@@ -137,7 +137,12 @@ public sealed class ServerCapabilityService : IServerCapabilityService, IAsyncDi
     private readonly ServerCapabilityOptions _options;
     private readonly ConcurrentDictionary<Guid, CacheEntry> _cache = new();
     private readonly ConcurrentDictionary<Guid, SemaphoreSlim> _locks = new();
+    private readonly object _lifecycleSync = new();
+    private readonly TaskCompletionSource _operationsDrained =
+        new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private int _activeOperations;
     private bool _disposed;
+    private Task? _disposeTask;
 
     public ServerCapabilityService(
         IRemoteCommandExecutorFactory executorFactory,
@@ -153,29 +158,36 @@ public sealed class ServerCapabilityService : IServerCapabilityService, IAsyncDi
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(profile);
-        ObjectDisposedException.ThrowIf(_disposed, this);
-        if (!forceRefresh && TryGetFresh(profile.Id, out var cached))
-        {
-            return cached;
-        }
-
-        var gate = _locks.GetOrAdd(profile.Id, _ => new SemaphoreSlim(1, 1));
-        await gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        BeginOperation();
         try
         {
-            if (!forceRefresh && TryGetFresh(profile.Id, out cached))
+            if (!forceRefresh && TryGetFresh(profile.Id, out var cached))
             {
                 return cached;
             }
 
-            await using var executor = _executorFactory.Create(profile);
-            var snapshot = await ScanAsync(profile, executor, cancellationToken).ConfigureAwait(false);
-            _cache[profile.Id] = new CacheEntry(snapshot, DateTimeOffset.UtcNow + _options.CacheDuration);
-            return snapshot;
+            var gate = _locks.GetOrAdd(profile.Id, _ => new SemaphoreSlim(1, 1));
+            await gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+            try
+            {
+                if (!forceRefresh && TryGetFresh(profile.Id, out cached))
+                {
+                    return cached;
+                }
+
+                await using var executor = _executorFactory.Create(profile);
+                var snapshot = await ScanAsync(profile, executor, cancellationToken).ConfigureAwait(false);
+                _cache[profile.Id] = new CacheEntry(snapshot, DateTimeOffset.UtcNow + _options.CacheDuration);
+                return snapshot;
+            }
+            finally
+            {
+                gate.Release();
+            }
         }
         finally
         {
-            gate.Release();
+            EndOperation();
         }
     }
 
@@ -186,12 +198,25 @@ public sealed class ServerCapabilityService : IServerCapabilityService, IAsyncDi
 
     public ValueTask DisposeAsync()
     {
-        if (_disposed)
+        lock (_lifecycleSync)
         {
-            return ValueTask.CompletedTask;
-        }
+            if (_disposeTask is not null)
+            {
+                return new ValueTask(_disposeTask);
+            }
 
-        _disposed = true;
+            _disposed = true;
+            var drainTask = _activeOperations == 0
+                ? Task.CompletedTask
+                : _operationsDrained.Task;
+            _disposeTask = DisposeCoreAsync(drainTask);
+            return new ValueTask(_disposeTask);
+        }
+    }
+
+    private async Task DisposeCoreAsync(Task drainTask)
+    {
+        await drainTask.ConfigureAwait(false);
         _cache.Clear();
         foreach (var gate in _locks.Values)
         {
@@ -199,7 +224,27 @@ public sealed class ServerCapabilityService : IServerCapabilityService, IAsyncDi
         }
 
         _locks.Clear();
-        return ValueTask.CompletedTask;
+    }
+
+    private void BeginOperation()
+    {
+        lock (_lifecycleSync)
+        {
+            ObjectDisposedException.ThrowIf(_disposed, this);
+            _activeOperations++;
+        }
+    }
+
+    private void EndOperation()
+    {
+        lock (_lifecycleSync)
+        {
+            _activeOperations--;
+            if (_disposed && _activeOperations == 0)
+            {
+                _operationsDrained.TrySetResult();
+            }
+        }
     }
 
     private bool TryGetFresh(Guid serverProfileId, out ServerCapabilitySnapshot snapshot)
