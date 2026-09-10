@@ -106,6 +106,42 @@ public sealed class OperationalUiPresentationTests
     }
 
     [Fact]
+    public void RemoteExplorerUsesFluentFileWorkspaceDetailsAndAccessibleCommands()
+    {
+        var content = File.ReadAllText(PresentationFixture("RemoteExplorerWindow.xaml"));
+
+        Assert.Contains("xmlns:ui=\"http://schemas.lepo.co/wpfui/2022/xaml\"", content, StringComparison.Ordinal);
+        Assert.Contains("PreviewKeyDown=\"WindowOnPreviewKeyDown\"", content, StringComparison.Ordinal);
+        Assert.Contains("<ui:Card", content, StringComparison.Ordinal);
+        Assert.Contains("Style=\"{StaticResource DetailsPane}\"", content, StringComparison.Ordinal);
+        Assert.Contains("Style=\"{StaticResource OperationalDataGrid}\"", content, StringComparison.Ordinal);
+        Assert.Contains("Style=\"{StaticResource OperationalSearchTextBox}\"", content, StringComparison.Ordinal);
+        Assert.Contains("Style=\"{StaticResource ToolbarSeparator}\"", content, StringComparison.Ordinal);
+        Assert.Contains("Style=\"{StaticResource ExplorerItemIcon}\"", content, StringComparison.Ordinal);
+        Assert.Contains("AutomationProperties.Name=\"{DynamicResource Loc.Explorer.Command.Upload}\"", content, StringComparison.Ordinal);
+        Assert.Contains("Loc.Explorer.Details.Title", content, StringComparison.Ordinal);
+        Assert.Contains("Loc.Explorer.Shortcuts", content, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void RemoteExplorerKeyboardShortcutsMapToExistingTypedUiActions()
+    {
+        var content = File.ReadAllText(PresentationFixture("RemoteExplorerWindow.Shortcuts.cs"));
+
+        Assert.Contains("ModifierKeys.Control && e.Key == Key.L", content, StringComparison.Ordinal);
+        Assert.Contains("ModifierKeys.Control && e.Key == Key.F", content, StringComparison.Ordinal);
+        Assert.Contains("ModifierKeys.Alt", content, StringComparison.Ordinal);
+        Assert.Contains("e.Key == Key.F5", content, StringComparison.Ordinal);
+        Assert.Contains("e.Key == Key.F2", content, StringComparison.Ordinal);
+        Assert.Contains("e.Key == Key.Delete", content, StringComparison.Ordinal);
+        Assert.Contains("RenameOnClick(sender, e)", content, StringComparison.Ordinal);
+        Assert.Contains("DeleteOnClick(sender, e)", content, StringComparison.Ordinal);
+        Assert.DoesNotContain("Process.Start", content, StringComparison.Ordinal);
+        Assert.DoesNotContain("cmd.exe", content, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("powershell", content, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void TouchedModulesDoNotReintroduceLocalButtonStyles()
     {
         Assert.DoesNotContain(
