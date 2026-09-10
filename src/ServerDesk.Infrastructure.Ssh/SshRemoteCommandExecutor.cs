@@ -43,8 +43,14 @@ internal sealed class SshRemoteCommandExecutor : IRemoteCommandExecutor
     private readonly SshClientFactory _clientFactory;
     private readonly SshSessionOptions _options;
     private readonly SemaphoreSlim _gate = new(1, 1);
+    private readonly object _lifecycleSync = new();
+    private readonly CancellationTokenSource _disposeCancellation = new();
+    private readonly TaskCompletionSource _operationsDrained =
+        new(TaskCreationOptions.RunContinuationsAsynchronously);
     private SshClientLease? _lease;
+    private int _activeOperations;
     private bool _disposed;
+    private Task? _disposeTask;
 
     public SshRemoteCommandExecutor(
         ServerProfile profile,
@@ -63,8 +69,10 @@ internal sealed class SshRemoteCommandExecutor : IRemoteCommandExecutor
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(command);
-        ThrowIfDisposed();
+        using var operation = EnterOperation(cancellationToken);
+        cancellationToken = operation.Token;
         ValidateCommand(command);
+        cancellationToken.ThrowIfCancellationRequested();
 
         await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
@@ -128,23 +136,89 @@ internal sealed class SshRemoteCommandExecutor : IRemoteCommandExecutor
         }
     }
 
-    public async ValueTask DisposeAsync()
+    public ValueTask DisposeAsync()
     {
-        if (_disposed)
+        lock (_lifecycleSync)
         {
-            return;
-        }
+            if (_disposeTask is not null)
+            {
+                return new ValueTask(_disposeTask);
+            }
 
-        _disposed = true;
-        await _gate.WaitAsync(CancellationToken.None).ConfigureAwait(false);
+            _disposed = true;
+            var drainTask = _activeOperations == 0
+                ? Task.CompletedTask
+                : _operationsDrained.Task;
+            _disposeTask = DisposeCoreAsync(drainTask);
+            return new ValueTask(_disposeTask);
+        }
+    }
+
+    private async Task DisposeCoreAsync(Task drainTask)
+    {
+        await _disposeCancellation.CancelAsync().ConfigureAwait(false);
+        await drainTask.ConfigureAwait(false);
         try
         {
             DisposeLease();
         }
         finally
         {
-            _gate.Release();
             _gate.Dispose();
+            _disposeCancellation.Dispose();
+        }
+    }
+
+    private OperationLease EnterOperation(CancellationToken cancellationToken)
+    {
+        lock (_lifecycleSync)
+        {
+            ObjectDisposedException.ThrowIf(_disposed, this);
+            var operationCancellation = CancellationTokenSource.CreateLinkedTokenSource(
+                cancellationToken,
+                _disposeCancellation.Token);
+            _activeOperations++;
+            return new OperationLease(this, operationCancellation);
+        }
+    }
+
+    private void EndOperation()
+    {
+        lock (_lifecycleSync)
+        {
+            _activeOperations--;
+            if (_disposed && _activeOperations == 0)
+            {
+                _operationsDrained.TrySetResult();
+            }
+        }
+    }
+
+    private sealed class OperationLease : IDisposable
+    {
+        private readonly SshRemoteCommandExecutor _owner;
+        private readonly CancellationTokenSource _cancellation;
+        private int _disposed;
+
+        public OperationLease(
+            SshRemoteCommandExecutor owner,
+            CancellationTokenSource cancellation)
+        {
+            _owner = owner;
+            _cancellation = cancellation;
+        }
+
+        public CancellationToken Token => _cancellation.Token;
+
+        public void Dispose()
+        {
+            if (Interlocked.Exchange(ref _disposed, 1) != 0)
+            {
+                return;
+            }
+
+            _cancellation.Dispose();
+            _owner.EndOperation();
         }
     }
 
@@ -243,10 +317,6 @@ internal sealed class SshRemoteCommandExecutor : IRemoteCommandExecutor
         };
     }
 
-    private void ThrowIfDisposed()
-    {
-        ObjectDisposedException.ThrowIf(_disposed, this);
-    }
 }
 
 internal sealed class RemoteCommandConnectionException : Exception
