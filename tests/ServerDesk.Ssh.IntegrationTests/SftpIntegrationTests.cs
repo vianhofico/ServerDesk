@@ -208,6 +208,61 @@ public sealed class SftpIntegrationTests
     }
 
     [Fact]
+    public async Task DisposeCancelsActiveUploadBeforeTearingDownChannel()
+    {
+        const long totalBytes = 32L * 1024 * 1024;
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var root = UniqueRoot();
+        var file = root.Combine("dispose-during-upload.bin");
+        var fileSystem = CreateFileSystem();
+        await fileSystem.ConnectAsync(cancellationToken);
+        await fileSystem.CreateDirectoryAsync(root, cancellationToken);
+
+        try
+        {
+            await using var source = new PatternReadStream(totalBytes, TimeSpan.FromMilliseconds(15));
+            var progress = new SignalingProgress();
+            var uploadTask = fileSystem.UploadAsync(
+                    source,
+                    file,
+                    totalBytes,
+                    progress: progress,
+                    cancellationToken: cancellationToken)
+                .AsTask();
+
+            await progress.Started.WaitAsync(TimeSpan.FromSeconds(4), cancellationToken);
+            var disposeTask = fileSystem.DisposeAsync().AsTask();
+
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => uploadTask);
+            await disposeTask;
+
+            Assert.False(fileSystem.IsConnected);
+            await Assert.ThrowsAsync<ObjectDisposedException>(() =>
+                fileSystem.ListAsync(root, cancellationToken).AsTask());
+            await fileSystem.DisposeAsync();
+        }
+        finally
+        {
+            await fileSystem.DisposeAsync();
+        }
+
+        await using var verifier = CreateFileSystem();
+        await verifier.ConnectAsync(cancellationToken);
+        try
+        {
+            var listed = await verifier.ListAsync(root, cancellationToken);
+            Assert.DoesNotContain(listed, entry => entry.Name == file.Name);
+            Assert.DoesNotContain(
+                listed,
+                entry => entry.Name.StartsWith(".serverdesk-upload-", StringComparison.Ordinal));
+        }
+        finally
+        {
+            await TryDeleteDirectoryAsync(verifier, root, cancellationToken);
+        }
+    }
+
+    [Fact]
     public async Task PermissionDeniedAndDisconnectedChannelsMapToTypedErrors()
     {
         var cancellationToken = TestContext.Current.CancellationToken;
@@ -347,6 +402,22 @@ public sealed class SftpIntegrationTests
             InteractiveAuthenticationChallenge challenge,
             CancellationToken cancellationToken = default) =>
             throw new InvalidOperationException("Password SFTP fixture must not request interactive authentication.");
+    }
+
+    private sealed class SignalingProgress : IProgress<RemoteTransferProgress>
+    {
+        private readonly TaskCompletionSource _started =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public Task Started => _started.Task;
+
+        public void Report(RemoteTransferProgress value)
+        {
+            if (value.BytesTransferred > 0)
+            {
+                _started.TrySetResult();
+            }
+        }
     }
 
     private sealed class RecordingProgress : IProgress<RemoteTransferProgress>
