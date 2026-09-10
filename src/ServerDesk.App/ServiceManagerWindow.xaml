@@ -1,6 +1,7 @@
 <Window x:Class="ServerDesk.App.ServiceManagerWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
         Title="{DynamicResource Loc.Services.WindowTitle}"
         Width="1380"
         Height="840"
@@ -11,35 +12,9 @@
         Foreground="{DynamicResource PrimaryTextBrush}"
         Loaded="WindowOnLoaded"
         Closed="WindowOnClosed">
-    <Window.Resources>
-        <Style x:Key="ServiceSummaryLabel" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="11" />
-            <Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" />
-        </Style>
-        <Style x:Key="ServiceSummaryValue" TargetType="TextBlock">
-            <Setter Property="Margin" Value="0,3,0,0" />
-            <Setter Property="FontSize" Value="19" />
-            <Setter Property="FontWeight" Value="SemiBold" />
-        </Style>
-        <Style x:Key="ServiceDetailLabel" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="11" />
-            <Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" />
-        </Style>
-        <Style x:Key="ServiceDetailValue" TargetType="TextBlock">
-            <Setter Property="Margin" Value="0,2,0,10" />
-            <Setter Property="TextWrapping" Value="Wrap" />
-        </Style>
-        <Style x:Key="ServiceTechnicalValue"
-               TargetType="TextBlock"
-               BasedOn="{StaticResource ServiceDetailValue}">
-            <Setter Property="FontFamily" Value="Cascadia Mono, Consolas" />
-            <Setter Property="FontSize" Value="12" />
-        </Style>
-    </Window.Resources>
-
-    <Grid Margin="20">
+    <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
+            <RowDefinition Height="76" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
@@ -47,195 +22,431 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <Border Grid.Row="0" Style="{StaticResource SurfaceCard}" Padding="18">
-            <Grid>
+        <!-- Persistent server context. -->
+        <Border Grid.Row="0"
+                Background="{DynamicResource SurfaceBrush}"
+                BorderBrush="{DynamicResource BorderBrush}"
+                BorderThickness="0,0,0,1">
+            <Grid Margin="24,0,28,0">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
-                <StackPanel>
+
+                <StackPanel VerticalAlignment="Center">
                     <TextBlock Text="{DynamicResource Loc.Services.Header.Title}"
-                               FontSize="27"
-                               FontWeight="SemiBold" />
-                    <TextBlock Text="{DynamicResource Loc.Services.Header.Subtitle}"
-                               Margin="0,3,0,10"
-                               Foreground="{DynamicResource MutedTextBrush}" />
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock x:Name="ServerNameText" FontWeight="SemiBold" />
-                        <TextBlock Text="  ·  " Foreground="{DynamicResource MutedTextBrush}" />
+                               Style="{StaticResource PageTitleText}" />
+                    <StackPanel Margin="0,3,0,0" Orientation="Horizontal">
+                        <TextBlock x:Name="ServerNameText"
+                                   FontSize="11"
+                                   FontWeight="SemiBold" />
+                        <TextBlock Text="  ·  "
+                                   Foreground="{DynamicResource MutedTextBrush}" />
                         <TextBlock x:Name="EndpointText"
                                    Style="{StaticResource TechnicalText}"
                                    Foreground="{DynamicResource MutedTextBrush}" />
                     </StackPanel>
                 </StackPanel>
 
-                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                    <Border Padding="12,8" CornerRadius="8" Background="{DynamicResource SurfaceSecondaryBrush}">
-                        <StackPanel>
-                            <TextBlock Text="{DynamicResource Loc.Services.Header.Environment}" Style="{StaticResource ServiceSummaryLabel}" />
-                            <TextBlock x:Name="EnvironmentValueText" Margin="0,2,0,0" FontWeight="SemiBold" />
+                <StackPanel Grid.Column="1"
+                            Orientation="Horizontal"
+                            VerticalAlignment="Center">
+                    <Border Style="{StaticResource StatusPill}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="{DynamicResource Loc.Services.Header.Environment}"
+                                       Style="{StaticResource CaptionText}" />
+                            <TextBlock Text=" · "
+                                       Foreground="{DynamicResource MutedTextBrush}" />
+                            <TextBlock x:Name="EnvironmentValueText"
+                                       FontSize="11"
+                                       FontWeight="SemiBold" />
                         </StackPanel>
                     </Border>
-                    <Border Margin="8,0,0,0" Padding="12,8" CornerRadius="8" Background="{DynamicResource AccentSoftBrush}">
-                        <StackPanel>
-                            <TextBlock Text="{DynamicResource Loc.Services.Header.Connection}" Style="{StaticResource ServiceSummaryLabel}" />
-                            <TextBlock x:Name="ConnectionValueText" Margin="0,2,0,0" FontWeight="SemiBold" />
+                    <Border Margin="8,0,0,0"
+                            Style="{StaticResource AccentStatusPill}">
+                        <StackPanel Orientation="Horizontal">
+                            <Ellipse Width="6"
+                                     Height="6"
+                                     Margin="0,0,6,0"
+                                     Fill="{DynamicResource AccentBrush}"
+                                     VerticalAlignment="Center" />
+                            <TextBlock x:Name="ConnectionValueText"
+                                       FontSize="11"
+                                       FontWeight="SemiBold" />
                         </StackPanel>
                     </Border>
                 </StackPanel>
             </Grid>
         </Border>
 
-        <Border Grid.Row="1" Margin="0,12,0,0" Style="{StaticResource CommandBarSurface}">
+        <!-- Command hierarchy: inspection first, service mutations second. -->
+        <Border Grid.Row="1"
+                Margin="20,14,20,0"
+                Style="{StaticResource CommandBarSurface}">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
-                <StackPanel Orientation="Horizontal">
-                    <Button x:Name="RefreshButton" Content="{DynamicResource Loc.Services.Command.Refresh}" Click="RefreshOnClick" Style="{StaticResource SecondaryButton}" />
-                    <Button x:Name="CancelButton" Margin="6,0,0,0" Content="{DynamicResource Loc.Services.Command.Cancel}" Click="CancelOnClick" Style="{StaticResource GhostButton}" IsEnabled="False" />
-                    <Button x:Name="DetailsButton" Margin="12,0,0,0" Content="{DynamicResource Loc.Services.Command.Details}" Click="DetailsOnClick" Style="{StaticResource SecondaryButton}" IsEnabled="False" />
-                    <Button x:Name="LogsButton" Margin="6,0,0,0" Content="{DynamicResource Loc.Services.Command.Logs}" Click="LogsOnClick" Style="{StaticResource GhostButton}" IsEnabled="False" ToolTip="{DynamicResource Loc.Services.Command.LogsTooltip}" />
+
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button x:Name="RefreshButton"
+                            Click="RefreshOnClick"
+                            Style="{StaticResource SecondaryButton}"
+                            AutomationProperties.Name="{DynamicResource Loc.Services.Command.Refresh}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE72C;"
+                                       Margin="0,0,7,0"
+                                       FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                       FontSize="13" />
+                            <TextBlock Text="{DynamicResource Loc.Services.Command.Refresh}" />
+                        </StackPanel>
+                    </Button>
+                    <Button x:Name="DetailsButton"
+                            Margin="8,0,0,0"
+                            Content="{DynamicResource Loc.Services.Command.Details}"
+                            Click="DetailsOnClick"
+                            Style="{StaticResource SecondaryButton}"
+                            IsEnabled="False" />
+                    <Button x:Name="LogsButton"
+                            Margin="6,0,0,0"
+                            Content="{DynamicResource Loc.Services.Command.Logs}"
+                            Click="LogsOnClick"
+                            Style="{StaticResource GhostButton}"
+                            IsEnabled="False"
+                            ToolTip="{DynamicResource Loc.Services.Command.LogsTooltip}" />
+                    <Button x:Name="CancelButton"
+                            Margin="6,0,0,0"
+                            Content="{DynamicResource Loc.Services.Command.Cancel}"
+                            Click="CancelOnClick"
+                            Style="{StaticResource GhostButton}"
+                            IsEnabled="False" />
                 </StackPanel>
 
-                <StackPanel Grid.Column="1" Margin="16,0" VerticalAlignment="Center">
-                    <TextBlock Text="{DynamicResource Loc.Services.Command.Target}" FontSize="11" Foreground="{DynamicResource MutedTextBrush}" />
-                    <TextBlock x:Name="TargetValueText" Margin="0,2,0,0" FontFamily="Cascadia Mono, Consolas" Text="{DynamicResource Loc.Services.Command.NoTarget}" TextTrimming="CharacterEllipsis" />
+                <StackPanel Grid.Column="1"
+                            Margin="18,0"
+                            VerticalAlignment="Center">
+                    <TextBlock Text="{DynamicResource Loc.Services.Command.Target}"
+                               Style="{StaticResource EyebrowText}" />
+                    <TextBlock x:Name="TargetValueText"
+                               Margin="0,2,0,0"
+                               FontFamily="Cascadia Mono, Consolas"
+                               FontSize="11"
+                               Text="{DynamicResource Loc.Services.Command.NoTarget}"
+                               TextTrimming="CharacterEllipsis" />
                 </StackPanel>
 
-                <WrapPanel Grid.Column="2" HorizontalAlignment="Right">
-                    <Button x:Name="StartButton" Content="{DynamicResource Loc.Services.Command.Start}" Click="StartOnClick" Style="{StaticResource SecondaryButton}" IsEnabled="False" />
-                    <Button x:Name="RestartButton" Margin="6,0,0,0" Content="{DynamicResource Loc.Services.Command.Restart}" Click="RestartOnClick" Style="{StaticResource SecondaryButton}" IsEnabled="False" />
-                    <Button x:Name="ReloadButton" Margin="6,0,0,0" Content="{DynamicResource Loc.Services.Command.Reload}" Click="ReloadOnClick" Style="{StaticResource SecondaryButton}" IsEnabled="False" />
-                    <Button x:Name="EnableButton" Margin="6,0,0,0" Content="{DynamicResource Loc.Services.Command.Enable}" Click="EnableOnClick" Style="{StaticResource SecondaryButton}" IsEnabled="False" />
-                    <Button x:Name="StopButton" Margin="12,0,0,0" Content="{DynamicResource Loc.Services.Command.Stop}" Click="StopOnClick" Style="{StaticResource DangerButton}" IsEnabled="False" />
-                    <Button x:Name="DisableButton" Margin="6,0,0,0" Content="{DynamicResource Loc.Services.Command.Disable}" Click="DisableOnClick" Style="{StaticResource DangerButton}" IsEnabled="False" />
+                <WrapPanel Grid.Column="2"
+                           HorizontalAlignment="Right"
+                           VerticalAlignment="Center">
+                    <Button x:Name="StartButton"
+                            Content="{DynamicResource Loc.Services.Command.Start}"
+                            Click="StartOnClick"
+                            Style="{StaticResource SecondaryButton}"
+                            IsEnabled="False" />
+                    <Button x:Name="RestartButton"
+                            Margin="6,0,0,0"
+                            Content="{DynamicResource Loc.Services.Command.Restart}"
+                            Click="RestartOnClick"
+                            Style="{StaticResource SecondaryButton}"
+                            IsEnabled="False" />
+                    <Button x:Name="ReloadButton"
+                            Margin="6,0,0,0"
+                            Content="{DynamicResource Loc.Services.Command.Reload}"
+                            Click="ReloadOnClick"
+                            Style="{StaticResource SecondaryButton}"
+                            IsEnabled="False" />
+                    <Button x:Name="EnableButton"
+                            Margin="6,0,0,0"
+                            Content="{DynamicResource Loc.Services.Command.Enable}"
+                            Click="EnableOnClick"
+                            Style="{StaticResource SecondaryButton}"
+                            IsEnabled="False" />
+                    <Separator Style="{StaticResource ToolbarSeparator}" />
+                    <Button x:Name="StopButton"
+                            Content="{DynamicResource Loc.Services.Command.Stop}"
+                            Click="StopOnClick"
+                            Style="{StaticResource DangerButton}"
+                            IsEnabled="False" />
+                    <Button x:Name="DisableButton"
+                            Margin="6,0,0,0"
+                            Content="{DynamicResource Loc.Services.Command.Disable}"
+                            Click="DisableOnClick"
+                            Style="{StaticResource DangerButton}"
+                            IsEnabled="False" />
                 </WrapPanel>
             </Grid>
         </Border>
 
-        <Grid Grid.Row="2" Margin="0,10,0,0">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="*" />
-            </Grid.ColumnDefinitions>
-            <Border Grid.Column="0" Style="{StaticResource SurfaceCard}" Padding="12" Margin="0,0,8,0">
+        <!-- Snapshot summary. -->
+        <UniformGrid Grid.Row="2"
+                     Columns="4"
+                     Margin="20,10,20,0">
+            <Border Style="{StaticResource MetricTile}" Margin="0,0,8,0">
                 <StackPanel>
-                    <TextBlock Text="{DynamicResource Loc.Services.Summary.Services}" Style="{StaticResource ServiceSummaryLabel}" />
-                    <TextBlock x:Name="TotalServicesValue" Text="0" Style="{StaticResource ServiceSummaryValue}" />
+                    <TextBlock Text="{DynamicResource Loc.Services.Summary.Services}"
+                               Style="{StaticResource CaptionText}" />
+                    <TextBlock x:Name="TotalServicesValue"
+                               Margin="0,4,0,0"
+                               Text="0"
+                               FontSize="20"
+                               FontWeight="SemiBold" />
                 </StackPanel>
             </Border>
-            <Border Grid.Column="1" Style="{StaticResource SurfaceCard}" Padding="12" Margin="0,0,8,0">
+            <Border Style="{StaticResource MetricTile}" Margin="0,0,8,0">
                 <StackPanel>
-                    <TextBlock Text="{DynamicResource Loc.Services.Summary.Visible}" Style="{StaticResource ServiceSummaryLabel}" />
-                    <TextBlock x:Name="VisibleServicesValue" Text="0" Style="{StaticResource ServiceSummaryValue}" />
+                    <TextBlock Text="{DynamicResource Loc.Services.Summary.Visible}"
+                               Style="{StaticResource CaptionText}" />
+                    <TextBlock x:Name="VisibleServicesValue"
+                               Margin="0,4,0,0"
+                               Text="0"
+                               FontSize="20"
+                               FontWeight="SemiBold" />
                 </StackPanel>
             </Border>
-            <Border Grid.Column="2" Style="{StaticResource SurfaceCard}" Padding="12" Margin="0,0,8,0">
+            <Border Style="{StaticResource MetricTile}" Margin="0,0,8,0">
                 <StackPanel>
-                    <TextBlock Text="{DynamicResource Loc.Services.Summary.Active}" Style="{StaticResource ServiceSummaryLabel}" />
-                    <TextBlock x:Name="ActiveServicesValue" Text="0" Style="{StaticResource ServiceSummaryValue}" />
+                    <TextBlock Text="{DynamicResource Loc.Services.Summary.Active}"
+                               Style="{StaticResource CaptionText}" />
+                    <TextBlock x:Name="ActiveServicesValue"
+                               Margin="0,4,0,0"
+                               Text="0"
+                               FontSize="20"
+                               FontWeight="SemiBold" />
                 </StackPanel>
             </Border>
-            <Border Grid.Column="3" Style="{StaticResource SurfaceCard}" Padding="12">
+            <Border Style="{StaticResource MetricTile}">
                 <StackPanel>
-                    <TextBlock Text="{DynamicResource Loc.Services.Summary.Enabled}" Style="{StaticResource ServiceSummaryLabel}" />
-                    <TextBlock x:Name="EnabledServicesValue" Text="0" Style="{StaticResource ServiceSummaryValue}" />
+                    <TextBlock Text="{DynamicResource Loc.Services.Summary.Enabled}"
+                               Style="{StaticResource CaptionText}" />
+                    <TextBlock x:Name="EnabledServicesValue"
+                               Margin="0,4,0,0"
+                               Text="0"
+                               FontSize="20"
+                               FontWeight="SemiBold" />
                 </StackPanel>
             </Border>
-        </Grid>
+        </UniformGrid>
 
-        <Grid Grid.Row="3" Margin="0,10,0,10">
+        <!-- State and local filter. -->
+        <Grid Grid.Row="3" Margin="20,10,20,10">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="10" />
                 <ColumnDefinition Width="340" />
             </Grid.ColumnDefinitions>
-            <Border x:Name="StatusCard" Style="{StaticResource InlineInfoCard}" Margin="0,0,10,0">
-                <TextBlock x:Name="StatusText" TextWrapping="Wrap" VerticalAlignment="Center" />
+
+            <Border x:Name="StatusCard"
+                    Style="{StaticResource InlineInfoCard}">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="22" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="&#xE946;"
+                               FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                               Foreground="{DynamicResource AccentBrush}"
+                               VerticalAlignment="Top" />
+                    <TextBlock x:Name="StatusText"
+                               Grid.Column="1"
+                               TextWrapping="Wrap"
+                               VerticalAlignment="Center" />
+                </Grid>
             </Border>
-            <Grid Grid.Column="1">
+
+            <Grid Grid.Column="2">
                 <TextBox x:Name="SearchBox"
                          Style="{StaticResource OperationalSearchTextBox}"
-                         Padding="10,6,38,6"
+                         Padding="34,6,38,6"
                          TextChanged="SearchBoxOnTextChanged"
                          ToolTip="{DynamicResource Loc.Services.Search.Tooltip}"
                          AutomationProperties.Name="{DynamicResource Loc.Services.Search.Label}" />
+                <TextBlock Text="&#xE721;"
+                           Margin="11,0,0,0"
+                           HorizontalAlignment="Left"
+                           VerticalAlignment="Center"
+                           IsHitTestVisible="False"
+                           FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                           FontSize="13"
+                           Foreground="{DynamicResource MutedTextBrush}" />
                 <Button x:Name="ClearSearchButton"
-                        Width="32" Height="30"
-                        HorizontalAlignment="Right" VerticalAlignment="Center"
-                        Margin="0,0,3,0" Padding="0" Content="×"
+                        Width="32"
+                        Height="30"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Center"
+                        Margin="0,0,3,0"
+                        Padding="0"
                         ToolTip="{DynamicResource Loc.Services.Search.Clear}"
                         Click="ClearSearchOnClick"
                         Style="{StaticResource GhostButton}"
                         Visibility="Collapsed"
-                        AutomationProperties.Name="{DynamicResource Loc.Services.Search.Clear}" />
+                        AutomationProperties.Name="{DynamicResource Loc.Services.Search.Clear}">
+                    <TextBlock Text="&#xE711;"
+                               FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                               FontSize="11" />
+                </Button>
             </Grid>
         </Grid>
 
-        <Grid Grid.Row="4">
+        <!-- Primary list and selection details. -->
+        <Grid Grid.Row="4" Margin="20,0,20,0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="3.1*" />
-                <ColumnDefinition Width="1.4*" />
+                <ColumnDefinition Width="14" />
+                <ColumnDefinition Width="1.35*" />
             </Grid.ColumnDefinitions>
-            <Border Style="{StaticResource SurfaceCard}" CornerRadius="8" ClipToBounds="True">
+
+            <ui:Card Padding="0" ClipToBounds="True">
                 <Grid>
                     <DataGrid x:Name="ServiceGrid"
                               Style="{StaticResource OperationalDataGrid}"
                               BorderThickness="0"
                               SelectionChanged="ServiceGridOnSelectionChanged">
                         <DataGrid.Columns>
-                            <DataGridTextColumn Header="{DynamicResource Loc.Services.Column.Unit}" Binding="{Binding Unit}" Width="1.7*">
-                                <DataGridTextColumn.ElementStyle><Style TargetType="TextBlock" BasedOn="{StaticResource TechnicalText}" /></DataGridTextColumn.ElementStyle>
+                            <DataGridTextColumn Header="{DynamicResource Loc.Services.Column.Unit}"
+                                                Binding="{Binding Unit}"
+                                                Width="1.7*"
+                                                MinWidth="170">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock" BasedOn="{StaticResource TechnicalText}" />
+                                </DataGridTextColumn.ElementStyle>
                             </DataGridTextColumn>
-                            <DataGridTextColumn Header="{DynamicResource Loc.Services.Column.Description}" Binding="{Binding Description}" Width="2.4*" />
-                            <DataGridTextColumn Header="{DynamicResource Loc.Services.Column.Load}" Binding="{Binding LoadState}" Width="0.75*" />
-                            <DataGridTextColumn Header="{DynamicResource Loc.Services.Column.Active}" Binding="{Binding ActiveState}" Width="0.85*" />
-                            <DataGridTextColumn Header="{DynamicResource Loc.Services.Column.Sub}" Binding="{Binding SubState}" Width="0.85*" />
-                            <DataGridTextColumn Header="{DynamicResource Loc.Services.Column.Enabled}" Binding="{Binding EnabledState}" Width="1*" />
+                            <DataGridTextColumn Header="{DynamicResource Loc.Services.Column.Description}"
+                                                Binding="{Binding Description}"
+                                                Width="2.4*"
+                                                MinWidth="220" />
+                            <DataGridTextColumn Header="{DynamicResource Loc.Services.Column.Load}"
+                                                Binding="{Binding LoadState}"
+                                                Width="0.75*"
+                                                MinWidth="78" />
+                            <DataGridTemplateColumn Header="{DynamicResource Loc.Services.Column.Active}"
+                                                    Width="0.95*"
+                                                    MinWidth="92"
+                                                    SortMemberPath="ActiveState">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal">
+                                            <Ellipse Width="7"
+                                                     Height="7"
+                                                     Margin="0,0,7,0"
+                                                     VerticalAlignment="Center">
+                                                <Ellipse.Style>
+                                                    <Style TargetType="Ellipse">
+                                                        <Setter Property="Fill" Value="{DynamicResource MutedTextBrush}" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding ActiveState}" Value="active">
+                                                                <Setter Property="Fill" Value="{DynamicResource AccentBrush}" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Ellipse.Style>
+                                            </Ellipse>
+                                            <TextBlock Text="{Binding ActiveState}" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTextColumn Header="{DynamicResource Loc.Services.Column.Sub}"
+                                                Binding="{Binding SubState}"
+                                                Width="0.85*"
+                                                MinWidth="82" />
+                            <DataGridTextColumn Header="{DynamicResource Loc.Services.Column.Enabled}"
+                                                Binding="{Binding EnabledState}"
+                                                Width="1*"
+                                                MinWidth="94" />
                         </DataGrid.Columns>
                     </DataGrid>
 
-                    <Border x:Name="GridStateOverlay" Background="{DynamicResource SurfaceBrush}" Visibility="Visible" IsHitTestVisible="False">
-                        <StackPanel MaxWidth="500" HorizontalAlignment="Center" VerticalAlignment="Center">
-                            <TextBlock x:Name="GridStateTitle" FontSize="20" FontWeight="SemiBold" TextAlignment="Center" />
-                            <TextBlock x:Name="GridStateDetail" Margin="0,7,0,0" Foreground="{DynamicResource MutedTextBrush}" TextAlignment="Center" TextWrapping="Wrap" />
+                    <Border x:Name="GridStateOverlay"
+                            Background="{DynamicResource SurfaceBrush}"
+                            Visibility="Visible"
+                            IsHitTestVisible="False">
+                        <StackPanel MaxWidth="500"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center">
+                            <Border Width="48"
+                                    Height="48"
+                                    Margin="0,0,0,14"
+                                    CornerRadius="14"
+                                    Background="{DynamicResource SurfaceSecondaryBrush}"
+                                    HorizontalAlignment="Center">
+                                <TextBlock Text="&#xE8F1;"
+                                           FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                           FontSize="18"
+                                           Foreground="{DynamicResource MutedTextBrush}"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center" />
+                            </Border>
+                            <TextBlock x:Name="GridStateTitle"
+                                       Style="{StaticResource SectionTitleText}"
+                                       TextAlignment="Center" />
+                            <TextBlock x:Name="GridStateDetail"
+                                       Margin="0,7,0,0"
+                                       Style="{StaticResource SecondaryBodyText}"
+                                       TextAlignment="Center" />
                         </StackPanel>
                     </Border>
                 </Grid>
-            </Border>
+            </ui:Card>
 
-            <Border Grid.Column="1" Margin="14,0,0,0" Style="{StaticResource DetailsPane}">
+            <Border Grid.Column="2" Style="{StaticResource DetailsPane}">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel>
-                        <TextBlock Text="{DynamicResource Loc.Services.Details.Title}" FontSize="17" FontWeight="SemiBold" />
-                        <TextBlock x:Name="DetailsHintText" Margin="0,10,0,0" Text="{DynamicResource Loc.Services.Details.Hint}" Foreground="{DynamicResource MutedTextBrush}" TextWrapping="Wrap" />
-                        <StackPanel x:Name="DetailsContent" Margin="0,14,0,0" Visibility="Collapsed">
-                            <TextBlock Text="{DynamicResource Loc.Services.Details.Unit}" Style="{StaticResource ServiceDetailLabel}" />
-                            <TextBlock x:Name="DetailUnitText" Style="{StaticResource ServiceTechnicalValue}" />
-                            <TextBlock Text="{DynamicResource Loc.Services.Details.Description}" Style="{StaticResource ServiceDetailLabel}" />
-                            <TextBlock x:Name="DetailDescriptionText" Style="{StaticResource ServiceDetailValue}" />
-                            <TextBlock Text="{DynamicResource Loc.Services.Details.Load}" Style="{StaticResource ServiceDetailLabel}" />
-                            <TextBlock x:Name="DetailLoadText" Style="{StaticResource ServiceTechnicalValue}" />
-                            <TextBlock Text="{DynamicResource Loc.Services.Details.Active}" Style="{StaticResource ServiceDetailLabel}" />
-                            <TextBlock x:Name="DetailActiveText" Style="{StaticResource ServiceTechnicalValue}" />
-                            <TextBlock Text="{DynamicResource Loc.Services.Details.Sub}" Style="{StaticResource ServiceDetailLabel}" />
-                            <TextBlock x:Name="DetailSubText" Style="{StaticResource ServiceTechnicalValue}" />
-                            <TextBlock Text="{DynamicResource Loc.Services.Details.Enabled}" Style="{StaticResource ServiceDetailLabel}" />
-                            <TextBlock x:Name="DetailEnabledText" Style="{StaticResource ServiceTechnicalValue}" />
-                            <TextBlock Text="{DynamicResource Loc.Services.Details.MainPid}" Style="{StaticResource ServiceDetailLabel}" />
-                            <TextBlock x:Name="DetailMainPidText" Style="{StaticResource ServiceTechnicalValue}" />
-                            <TextBlock Text="{DynamicResource Loc.Services.Details.Status}" Style="{StaticResource ServiceDetailLabel}" />
-                            <TextBlock x:Name="DetailStatusText" Style="{StaticResource ServiceTechnicalValue}" Margin="0,2,0,0" />
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Border Width="34"
+                                    Height="34"
+                                    CornerRadius="9"
+                                    Background="{DynamicResource AccentSoftBrush}">
+                                <TextBlock Text="&#xE946;"
+                                           FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                           FontSize="14"
+                                           Foreground="{DynamicResource AccentBrush}"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center" />
+                            </Border>
+                            <TextBlock Grid.Column="1"
+                                       Margin="10,0,0,0"
+                                       Text="{DynamicResource Loc.Services.Details.Title}"
+                                       Style="{StaticResource SectionTitleText}"
+                                       VerticalAlignment="Center" />
+                        </Grid>
+                        <TextBlock x:Name="DetailsHintText"
+                                   Margin="0,12,0,0"
+                                   Text="{DynamicResource Loc.Services.Details.Hint}"
+                                   Style="{StaticResource SecondaryBodyText}" />
+                        <StackPanel x:Name="DetailsContent"
+                                    Margin="0,16,0,0"
+                                    Visibility="Collapsed">
+                            <TextBlock Text="{DynamicResource Loc.Services.Details.Unit}" Style="{StaticResource EyebrowText}" />
+                            <TextBlock x:Name="DetailUnitText" Margin="0,3,0,12" Style="{StaticResource TechnicalText}" />
+                            <TextBlock Text="{DynamicResource Loc.Services.Details.Description}" Style="{StaticResource EyebrowText}" />
+                            <TextBlock x:Name="DetailDescriptionText" Margin="0,3,0,12" TextWrapping="Wrap" />
+                            <TextBlock Text="{DynamicResource Loc.Services.Details.Load}" Style="{StaticResource EyebrowText}" />
+                            <TextBlock x:Name="DetailLoadText" Margin="0,3,0,12" Style="{StaticResource TechnicalText}" />
+                            <TextBlock Text="{DynamicResource Loc.Services.Details.Active}" Style="{StaticResource EyebrowText}" />
+                            <TextBlock x:Name="DetailActiveText" Margin="0,3,0,12" Style="{StaticResource TechnicalText}" />
+                            <TextBlock Text="{DynamicResource Loc.Services.Details.Sub}" Style="{StaticResource EyebrowText}" />
+                            <TextBlock x:Name="DetailSubText" Margin="0,3,0,12" Style="{StaticResource TechnicalText}" />
+                            <TextBlock Text="{DynamicResource Loc.Services.Details.Enabled}" Style="{StaticResource EyebrowText}" />
+                            <TextBlock x:Name="DetailEnabledText" Margin="0,3,0,12" Style="{StaticResource TechnicalText}" />
+                            <TextBlock Text="{DynamicResource Loc.Services.Details.MainPid}" Style="{StaticResource EyebrowText}" />
+                            <TextBlock x:Name="DetailMainPidText" Margin="0,3,0,12" Style="{StaticResource TechnicalText}" />
+                            <TextBlock Text="{DynamicResource Loc.Services.Details.Status}" Style="{StaticResource EyebrowText}" />
+                            <TextBlock x:Name="DetailStatusText" Margin="0,3,0,0" Style="{StaticResource TechnicalText}" TextWrapping="Wrap" />
                         </StackPanel>
                     </StackPanel>
                 </ScrollViewer>
             </Border>
         </Grid>
 
-        <TextBlock x:Name="FooterText" Grid.Row="5" Margin="0,10,0,0" Foreground="{DynamicResource MutedTextBrush}" />
+        <TextBlock x:Name="FooterText"
+                   Grid.Row="5"
+                   Margin="24,10,24,14"
+                   Style="{StaticResource CaptionText}" />
     </Grid>
 </Window>
