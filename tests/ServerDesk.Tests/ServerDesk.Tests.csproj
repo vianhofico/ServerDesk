@@ -84,6 +84,10 @@
           Link="Fixtures\Presentation\RemoteExplorerWindow.xaml"
           CopyToOutputDirectory="PreserveNewest"
           CopyToPublishDirectory="Never" />
+    <None Include="..\..\src\ServerDesk.App\RemoteExplorerWindow.Shortcuts.cs"
+          Link="Fixtures\Presentation\RemoteExplorerWindow.Shortcuts.cs"
+          CopyToOutputDirectory="PreserveNewest"
+          CopyToPublishDirectory="Never" />
     <None Include="..\..\src\ServerDesk.App\ProcessManagerWindow.xaml"
           Link="Fixtures\Presentation\ProcessManagerWindow.xaml"
           CopyToOutputDirectory="PreserveNewest"
