@@ -29,7 +29,7 @@ Roadmap M0–M8 đã được triển khai và certify trong repository. V1 bao 
 - [Hướng dẫn sử dụng chi tiết theo từng phân hệ](docs/USER_GUIDE.vi.md)
 - [Ma trận hỗ trợ/certification](docs/SUPPORT_MATRIX.vi.md)
 - [Hướng dẫn cài trên Windows](docs/INSTALL.vi.md)
-- [Release notes mới nhất](docs/releases/v1.0.3.vi.md)
+- [Release notes mới nhất](docs/releases/v1.0.4.vi.md)
 
 ## Cài trên Windows
 
@@ -99,7 +99,7 @@ Dành cho người dùng:
 2. [`docs/USER_GUIDE.vi.md`](docs/USER_GUIDE.vi.md) — cách sử dụng từng phân hệ.
 3. [`docs/CURRENT_SCOPE.vi.md`](docs/CURRENT_SCOPE.vi.md) — capability đã làm, conditional, unsupported và out-of-scope.
 4. [`docs/SUPPORT_MATRIX.vi.md`](docs/SUPPORT_MATRIX.vi.md) — platform/engine/version được certify chính xác.
-5. [`docs/releases/v1.0.3.vi.md`](docs/releases/v1.0.3.vi.md) — release notes bản Windows installer mới nhất.
+5. [`docs/releases/v1.0.4.vi.md`](docs/releases/v1.0.4.vi.md) — release notes bản Windows installer mới nhất.
 
 Dành cho contributor/coding agent:
 
