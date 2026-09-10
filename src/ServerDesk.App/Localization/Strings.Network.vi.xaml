@@ -1,0 +1,69 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:system="clr-namespace:System;assembly=System.Runtime">
+    <system:String x:Key="Loc.Network.WindowTitle">Chẩn đoán mạng</system:String>
+    <system:String x:Key="Loc.Network.Header.Title">Mạng</system:String>
+    <system:String x:Key="Loc.Network.Header.Subtitle">Giao diện mạng, bộ đếm lưu lượng và cổng đang lắng nghe</system:String>
+    <system:String x:Key="Loc.Network.Header.Environment">Môi trường</system:String>
+    <system:String x:Key="Loc.Network.Header.Connection">Kết nối</system:String>
+    <system:String x:Key="Loc.Network.Header.Unlabeled">Chưa gắn nhãn</system:String>
+    <system:String x:Key="Loc.Network.Connection.Connected">Đã kết nối</system:String>
+    <system:String x:Key="Loc.Network.Connection.Disconnected">Đã ngắt kết nối</system:String>
+
+    <system:String x:Key="Loc.Network.Command.Refresh">Làm mới</system:String>
+    <system:String x:Key="Loc.Network.Command.Cancel">Hủy</system:String>
+    <system:String x:Key="Loc.Network.Search.Label">Tìm trong trạng thái mạng</system:String>
+    <system:String x:Key="Loc.Network.Search.Tooltip">Lọc các giao diện mạng và socket đang lắng nghe đã tải theo địa chỉ, giao thức, cổng, PID hoặc tiến trình.</system:String>
+    <system:String x:Key="Loc.Network.Search.Clear">Xóa tìm kiếm</system:String>
+
+    <system:String x:Key="Loc.Network.Summary.Interfaces">Giao diện mạng</system:String>
+    <system:String x:Key="Loc.Network.Summary.Listeners">Socket lắng nghe</system:String>
+    <system:String x:Key="Loc.Network.Summary.HiddenOwners">Owner bị ẩn</system:String>
+
+    <system:String x:Key="Loc.Network.Status.State.Ready">Sẵn sàng</system:String>
+    <system:String x:Key="Loc.Network.Status.State.Loading">Đang tải</system:String>
+    <system:String x:Key="Loc.Network.Status.State.Empty">Trống</system:String>
+    <system:String x:Key="Loc.Network.Status.State.Disconnected">Mất kết nối</system:String>
+    <system:String x:Key="Loc.Network.Status.State.Cancelled">Đã hủy</system:String>
+    <system:String x:Key="Loc.Network.Status.State.Permission">Quyền truy cập</system:String>
+    <system:String x:Key="Loc.Network.Status.State.Capability">Khả năng hỗ trợ</system:String>
+    <system:String x:Key="Loc.Network.Status.State.Error">Lỗi</system:String>
+    <system:String x:Key="Loc.Network.Status.ReadyInitial">Sẵn sàng kiểm tra giao diện mạng và các cổng đang lắng nghe.</system:String>
+    <system:String x:Key="Loc.Network.Status.DisconnectedInitial">Hãy kết nối máy chủ trước khi tải trạng thái mạng.</system:String>
+    <system:String x:Key="Loc.Network.Status.Loading">Đang lấy bộ đếm giao diện mạng và các cổng đang lắng nghe…</system:String>
+    <system:String x:Key="Loc.Network.Status.Empty">Không nhận được dòng dữ liệu mạng nào.</system:String>
+    <system:String x:Key="Loc.Network.Status.LoadedFormat">{0:N0} giao diện · {1:N0} socket đang lắng nghe.</system:String>
+    <system:String x:Key="Loc.Network.Status.LoadedHiddenOwnersFormat">{0:N0} giao diện · {1:N0} socket đang lắng nghe. Không xem được thông tin owner ở {2:N0} dòng.</system:String>
+    <system:String x:Key="Loc.Network.Status.Cancelled">Đã dừng làm mới trạng thái mạng.</system:String>
+    <system:String x:Key="Loc.Network.Status.ErrorFormat">{0}</system:String>
+    <system:String x:Key="Loc.Network.Status.PermissionFormat">{0}</system:String>
+    <system:String x:Key="Loc.Network.Status.CapabilityFormat">{0}</system:String>
+    <system:String x:Key="Loc.Network.Status.DisconnectedErrorFormat">{0}</system:String>
+    <system:String x:Key="Loc.Network.Status.CancelledErrorFormat">{0}</system:String>
+    <system:String x:Key="Loc.Network.Status.UnsupportedOutputFormat">Đầu ra trạng thái mạng không được hỗ trợ: {0}</system:String>
+    <system:String x:Key="Loc.Network.Status.ErrorCodeFormat">{0}: {1}</system:String>
+
+    <system:String x:Key="Loc.Network.Tab.Interfaces">Giao diện mạng</system:String>
+    <system:String x:Key="Loc.Network.Tab.Ports">Cổng lắng nghe</system:String>
+    <system:String x:Key="Loc.Network.Column.Interface">Giao diện</system:String>
+    <system:String x:Key="Loc.Network.Column.State">Trạng thái</system:String>
+    <system:String x:Key="Loc.Network.Column.Addresses">Địa chỉ</system:String>
+    <system:String x:Key="Loc.Network.Column.Mac">MAC</system:String>
+    <system:String x:Key="Loc.Network.Column.Mtu">MTU</system:String>
+    <system:String x:Key="Loc.Network.Column.RxTotal">Tổng RX</system:String>
+    <system:String x:Key="Loc.Network.Column.TxTotal">Tổng TX</system:String>
+    <system:String x:Key="Loc.Network.Column.RxRate">RX/s</system:String>
+    <system:String x:Key="Loc.Network.Column.TxRate">TX/s</system:String>
+    <system:String x:Key="Loc.Network.Column.Protocol">Giao thức</system:String>
+    <system:String x:Key="Loc.Network.Column.LocalAddress">Địa chỉ local</system:String>
+    <system:String x:Key="Loc.Network.Column.Port">Cổng</system:String>
+    <system:String x:Key="Loc.Network.Column.Pid">PID</system:String>
+    <system:String x:Key="Loc.Network.Column.Process">Tiến trình</system:String>
+    <system:String x:Key="Loc.Network.Column.Owner">Owner</system:String>
+    <system:String x:Key="Loc.Network.Owner.Visible">Hiển thị</system:String>
+    <system:String x:Key="Loc.Network.Owner.Unavailable">Không khả dụng</system:String>
+
+    <system:String x:Key="Loc.Network.Footer.ReadOnly">Chẩn đoán mạng chỉ đọc. Linux có thể ẩn owner/PID do quyền truy cập.</system:String>
+    <system:String x:Key="Loc.Network.Footer.CountsFormat">Chỉ đọc · {0:N0} giao diện · {1:N0} socket đang lắng nghe.</system:String>
+    <system:String x:Key="Loc.Network.Footer.FilterFormat">Lọc “{0}” · {1:N0}/{2:N0} giao diện · {3:N0}/{4:N0} socket.</system:String>
+</ResourceDictionary>
