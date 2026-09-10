@@ -224,8 +224,7 @@
                                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                             <Ellipse Width="7"
                                                      Height="7"
-                                                     Margin="0,0,7,0"
-                                                     Fill="{DynamicResource MutedTextBrush}">
+                                                     Margin="0,0,7,0">
                                                 <Ellipse.Style>
                                                     <Style TargetType="Ellipse">
                                                         <Setter Property="Fill" Value="{DynamicResource MutedTextBrush}" />
