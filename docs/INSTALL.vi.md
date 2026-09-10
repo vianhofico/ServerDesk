@@ -6,7 +6,7 @@ ServerDesk cung cấp hai dạng package Windows x64.
 
 ## Khuyến nghị — Windows installer
 
-Tải `ServerDesk-v1.0.3-win-x64-setup.exe` từ GitHub Release và chạy một lần.
+Tải `ServerDesk-v1.0.4-win-x64-setup.exe` từ GitHub Release và chạy một lần.
 
 Installer cài theo user hiện tại và không yêu cầu quyền Administrator với đường dẫn cài đặt mặc định. Sau khi cài, installer sẽ:
 
@@ -24,7 +24,7 @@ Sau khi cài xong, chỉ cần mở ServerDesk từ Desktop hoặc Start Menu nh
 
 ## ZIP portable
 
-`ServerDesk-v1.0.3-win-x64.zip` vẫn được giữ cho trường hợp chủ động muốn dùng bản portable.
+`ServerDesk-v1.0.4-win-x64.zip` vẫn được giữ cho trường hợp chủ động muốn dùng bản portable.
 
 1. Giải nén ZIP vào một thư mục.
 2. Chạy `ServerDesk.App.exe` trong thư mục đó.
@@ -36,8 +36,8 @@ Bản portable **không** tự cài app, không tự tạo shortcut Desktop/Star
 Tải `SHA256SUMS.txt` trong cùng GitHub Release. Chạy PowerShell:
 
 ```powershell
-Get-FileHash .\ServerDesk-v1.0.3-win-x64-setup.exe -Algorithm SHA256
-Get-FileHash .\ServerDesk-v1.0.3-win-x64.zip -Algorithm SHA256
+Get-FileHash .\ServerDesk-v1.0.4-win-x64-setup.exe -Algorithm SHA256
+Get-FileHash .\ServerDesk-v1.0.4-win-x64.zip -Algorithm SHA256
 ```
 
 Đối chiếu kết quả với đúng hai dòng tương ứng trong `SHA256SUMS.txt`.
