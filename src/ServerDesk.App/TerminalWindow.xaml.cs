@@ -310,8 +310,11 @@ internal sealed class TerminalTabHost : Grid, IAsyncDisposable
     private readonly CancellationTokenSource _lifetimeCancellation = new();
     private readonly SemaphoreSlim _messageGate = new(1, 1);
     private readonly TaskCompletionSource _frontendReady = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private readonly AsyncOperationDrain _operations = new();
+    private readonly object _disposeSync = new();
+    private readonly TaskCompletionSource _disposeCompletion = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private TerminalSize _requestedSize = TerminalSize.Default;
-    private bool _disposed;
+    private bool _disposeStarted;
 
     public TerminalTabHost(IRemoteTerminalSession session)
     {
@@ -328,11 +331,13 @@ internal sealed class TerminalTabHost : Grid, IAsyncDisposable
 
     public async Task InitializeAsync(CancellationToken cancellationToken = default)
     {
-        ThrowIfDisposed();
+        using var operation = _operations.EnterOrThrow(this);
         using var linkedCancellation = CancellationTokenSource.CreateLinkedTokenSource(
             cancellationToken,
             _lifetimeCancellation.Token);
         var token = linkedCancellation.Token;
+        token.ThrowIfCancellationRequested();
+
         var frontendDirectory = Path.Combine(AppContext.BaseDirectory, "TerminalFrontend", "dist");
         var frontendEntry = Path.Combine(frontendDirectory, "index.html");
         if (!File.Exists(frontendEntry))
@@ -344,8 +349,11 @@ internal sealed class TerminalTabHost : Grid, IAsyncDisposable
 
         _session.OutputReceived += SessionOnOutputReceived;
         _session.StateChanged += SessionOnStateChanged;
+        token.ThrowIfCancellationRequested();
 
         await _webView.EnsureCoreWebView2Async().ConfigureAwait(true);
+        token.ThrowIfCancellationRequested();
+
         var core = _webView.CoreWebView2;
         core.Settings.AreDefaultContextMenusEnabled = false;
         core.Settings.AreDevToolsEnabled = false;
@@ -355,18 +363,29 @@ internal sealed class TerminalTabHost : Grid, IAsyncDisposable
             VirtualHost,
             frontendDirectory,
             CoreWebView2HostResourceAccessKind.DenyCors);
-        core.WebMessageReceived += CoreOnWebMessageReceived;
-        core.NavigationStarting += CoreOnNavigationStarting;
-        core.Navigate($"{VirtualOrigin}index.html");
+        token.ThrowIfCancellationRequested();
+
+        var initialized = _operations.TryRunWhileAccepting(() =>
+        {
+            core.WebMessageReceived += CoreOnWebMessageReceived;
+            core.NavigationStarting += CoreOnNavigationStarting;
+            core.Navigate($"{VirtualOrigin}index.html");
+        });
+        if (!initialized)
+        {
+            throw new OperationCanceledException(token);
+        }
 
         await _frontendReady.Task.WaitAsync(TimeSpan.FromSeconds(10), token).ConfigureAwait(true);
+        token.ThrowIfCancellationRequested();
         await _session.ConnectAsync(_requestedSize, token).ConfigureAwait(true);
+        token.ThrowIfCancellationRequested();
         PostState(_session.State);
     }
 
     public Task FocusAsync()
     {
-        if (_disposed || _webView.CoreWebView2 is null)
+        if (_operations.IsStopping || _webView.CoreWebView2 is null)
         {
             return Task.CompletedTask;
         }
@@ -375,14 +394,42 @@ internal sealed class TerminalTabHost : Grid, IAsyncDisposable
         return Task.CompletedTask;
     }
 
-    public async ValueTask DisposeAsync()
+    public ValueTask DisposeAsync()
     {
-        if (_disposed)
+        var startDisposal = false;
+        lock (_disposeSync)
         {
-            return;
+            if (!_disposeStarted)
+            {
+                _disposeStarted = true;
+                startDisposal = true;
+            }
         }
 
-        _disposed = true;
+        if (startDisposal)
+        {
+            _ = CompleteDisposalAsync();
+        }
+
+        return new ValueTask(_disposeCompletion.Task);
+    }
+
+    private async Task CompleteDisposalAsync()
+    {
+        try
+        {
+            await DisposeCoreAsync().ConfigureAwait(true);
+            _disposeCompletion.TrySetResult();
+        }
+        catch (Exception exception)
+        {
+            _disposeCompletion.TrySetException(exception);
+        }
+    }
+
+    private async Task DisposeCoreAsync()
+    {
+        var drainTask = _operations.StopAndDrainAsync();
         _lifetimeCancellation.Cancel();
         _session.OutputReceived -= SessionOnOutputReceived;
         _session.StateChanged -= SessionOnStateChanged;
@@ -392,6 +439,7 @@ internal sealed class TerminalTabHost : Grid, IAsyncDisposable
             core.NavigationStarting -= CoreOnNavigationStarting;
         }
 
+        await drainTask.ConfigureAwait(true);
         try
         {
             await _session.DisposeAsync().ConfigureAwait(true);
@@ -406,6 +454,12 @@ internal sealed class TerminalTabHost : Grid, IAsyncDisposable
 
     private void CoreOnNavigationStarting(object? sender, CoreWebView2NavigationStartingEventArgs e)
     {
+        if (_operations.IsStopping)
+        {
+            e.Cancel = true;
+            return;
+        }
+
         if (!e.Uri.StartsWith(VirtualOrigin, StringComparison.OrdinalIgnoreCase))
         {
             e.Cancel = true;
@@ -415,83 +469,89 @@ internal sealed class TerminalTabHost : Grid, IAsyncDisposable
 
     private async void CoreOnWebMessageReceived(object? sender, CoreWebView2WebMessageReceivedEventArgs e)
     {
-        if (_disposed)
+        if (!_operations.TryEnter(out var operation))
         {
             return;
         }
 
-        try
+        using (operation)
         {
-            using var document = JsonDocument.Parse(e.WebMessageAsJson);
-            var root = document.RootElement;
-            if (!root.TryGetProperty("type", out var typeElement))
+            try
             {
-                return;
-            }
+                using var document = JsonDocument.Parse(e.WebMessageAsJson);
+                var root = document.RootElement;
+                if (!root.TryGetProperty("type", out var typeElement))
+                {
+                    return;
+                }
 
-            var type = typeElement.GetString();
-            switch (type)
+                var type = typeElement.GetString();
+                switch (type)
+                {
+                    case "ready":
+                        _requestedSize = ReadSize(root);
+                        _frontendReady.TrySetResult();
+                        break;
+
+                    case "input":
+                        if (_session.State == TerminalSessionState.Connected &&
+                            TryReadBoundedText(root, "data", out var input))
+                        {
+                            await ExecuteSerializedAsync(
+                                    cancellationToken => _session.SendAsync(input, cancellationToken),
+                                    _lifetimeCancellation.Token)
+                                .ConfigureAwait(true);
+                        }
+                        break;
+
+                    case "resize":
+                        _requestedSize = ReadSize(root);
+                        if (_session.State == TerminalSessionState.Connected)
+                        {
+                            await ExecuteSerializedAsync(
+                                    cancellationToken => _session.ResizeAsync(_requestedSize, cancellationToken),
+                                    _lifetimeCancellation.Token)
+                                .ConfigureAwait(true);
+                        }
+                        break;
+
+                    case "copy":
+                        if (TryReadBoundedText(root, "data", out var selection) && selection.Length > 0)
+                        {
+                            Clipboard.SetText(selection);
+                        }
+                        break;
+
+                    case "pasteRequest":
+                        if (Clipboard.ContainsText())
+                        {
+                            var clipboardText = Clipboard.GetText();
+                            if (clipboardText.Length <= MaxBridgeTextLength)
+                            {
+                                PostMessage(new { type = "paste", data = clipboardText });
+                            }
+                            else
+                            {
+                                ErrorRaised?.Invoke(TerminalPresentationText.Get("Loc.Terminal.Bridge.ClipboardTooLarge"));
+                            }
+                        }
+                        break;
+                }
+            }
+            catch (OperationCanceledException) when (_operations.IsStopping)
             {
-                case "ready":
-                    _requestedSize = ReadSize(root);
-                    _frontendReady.TrySetResult();
-                    break;
-
-                case "input":
-                    if (_session.State == TerminalSessionState.Connected &&
-                        TryReadBoundedText(root, "data", out var input))
-                    {
-                        await ExecuteSerializedAsync(
-                                cancellationToken => _session.SendAsync(input, cancellationToken),
-                                _lifetimeCancellation.Token)
-                            .ConfigureAwait(true);
-                    }
-                    break;
-
-                case "resize":
-                    _requestedSize = ReadSize(root);
-                    if (_session.State == TerminalSessionState.Connected)
-                    {
-                        await ExecuteSerializedAsync(
-                                cancellationToken => _session.ResizeAsync(_requestedSize, cancellationToken),
-                                _lifetimeCancellation.Token)
-                            .ConfigureAwait(true);
-                    }
-                    break;
-
-                case "copy":
-                    if (TryReadBoundedText(root, "data", out var selection) && selection.Length > 0)
-                    {
-                        Clipboard.SetText(selection);
-                    }
-                    break;
-
-                case "pasteRequest":
-                    if (Clipboard.ContainsText())
-                    {
-                        var clipboardText = Clipboard.GetText();
-                        if (clipboardText.Length <= MaxBridgeTextLength)
-                        {
-                            PostMessage(new { type = "paste", data = clipboardText });
-                        }
-                        else
-                        {
-                            ErrorRaised?.Invoke(TerminalPresentationText.Get("Loc.Terminal.Bridge.ClipboardTooLarge"));
-                        }
-                    }
-                    break;
             }
-        }
-        catch (OperationCanceledException) when (_lifetimeCancellation.IsCancellationRequested)
-        {
-        }
-        catch (TerminalSessionException exception)
-        {
-            ErrorRaised?.Invoke(exception.Error.Message);
-        }
-        catch (Exception exception)
-        {
-            ErrorRaised?.Invoke(TerminalPresentationText.Format("Loc.Terminal.Bridge.ErrorFormat", exception.Message));
+            catch (ObjectDisposedException) when (_operations.IsStopping)
+            {
+            }
+            catch (TerminalSessionException exception)
+            {
+                ErrorRaised?.Invoke(exception.Error.Message);
+            }
+            catch (Exception exception)
+            {
+                ErrorRaised?.Invoke(TerminalPresentationText.Format("Loc.Terminal.Bridge.ErrorFormat", exception.Message));
+            }
         }
     }
 
@@ -512,14 +572,14 @@ internal sealed class TerminalTabHost : Grid, IAsyncDisposable
 
     private void SessionOnOutputReceived(string chunk)
     {
-        if (_disposed || Dispatcher.HasShutdownStarted)
+        if (_operations.IsStopping || Dispatcher.HasShutdownStarted)
         {
             return;
         }
 
         Dispatcher.BeginInvoke(() =>
         {
-            if (!_disposed)
+            if (!_operations.IsStopping)
             {
                 PostMessage(new { type = "output", data = chunk });
             }
@@ -528,14 +588,14 @@ internal sealed class TerminalTabHost : Grid, IAsyncDisposable
 
     private void SessionOnStateChanged(TerminalSessionState state)
     {
-        if (_disposed || Dispatcher.HasShutdownStarted)
+        if (_operations.IsStopping || Dispatcher.HasShutdownStarted)
         {
             return;
         }
 
         Dispatcher.BeginInvoke(() =>
         {
-            if (_disposed)
+            if (_operations.IsStopping)
             {
                 return;
             }
@@ -554,7 +614,7 @@ internal sealed class TerminalTabHost : Grid, IAsyncDisposable
 
     private void PostMessage(object message)
     {
-        if (_disposed || _webView.CoreWebView2 is null)
+        if (_operations.IsStopping || _webView.CoreWebView2 is null)
         {
             return;
         }
@@ -591,10 +651,5 @@ internal sealed class TerminalTabHost : Grid, IAsyncDisposable
         return new TerminalSize(
             Math.Clamp(columns, 2u, 1000u),
             Math.Clamp(rows, 1u, 1000u));
-    }
-
-    private void ThrowIfDisposed()
-    {
-        ObjectDisposedException.ThrowIf(_disposed, this);
     }
 }

@@ -42,6 +42,20 @@ public sealed class TerminalPresentationTests
     }
 
     [Fact]
+    public void TerminalHostDrainsInitializationAndBridgeWorkBeforeResourceTeardown()
+    {
+        var content = File.ReadAllText(PresentationFixture("TerminalWindow.xaml.cs"));
+
+        Assert.Contains("using var operation = _operations.EnterOrThrow(this);", content, StringComparison.Ordinal);
+        Assert.Contains("if (!_operations.TryEnter(out var operation))", content, StringComparison.Ordinal);
+        Assert.Contains("_operations.TryRunWhileAccepting", content, StringComparison.Ordinal);
+        Assert.Contains("var drainTask = _operations.StopAndDrainAsync();", content, StringComparison.Ordinal);
+        Assert.Contains("await drainTask.ConfigureAwait(true);", content, StringComparison.Ordinal);
+        Assert.Contains("catch (ObjectDisposedException) when (_operations.IsStopping)", content, StringComparison.Ordinal);
+        Assert.Contains("return new ValueTask(_disposeCompletion.Task);", content, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void TerminalEnglishAndVietnameseResourcesHaveIdenticalKeys()
     {
         var english = ReadResources("Strings.Terminal.en.xaml");
