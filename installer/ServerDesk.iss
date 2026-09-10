@@ -13,11 +13,15 @@
 #ifndef BrandingIcon
   #error BrandingIcon must be supplied by scripts/build-windows-installer.ps1
 #endif
+#ifndef BrandingSource
+  #error BrandingSource must be supplied by scripts/build-windows-installer.ps1
+#endif
 
 #define AppName "ServerDesk"
 #define AppExeName "ServerDesk.App.exe"
 #define AppPublisher "ServerDesk"
 #define AppUrl "https://github.com/vianhofico/ServerDesk"
+#define InstalledBrandingIcon "{app}\Assets\Branding\serverdesk.ico"
 
 [Setup]
 AppId={{8680D74F-3283-4694-A5F3-1D89AD638F5E}
@@ -37,7 +41,7 @@ ArchitecturesInstallIn64BitMode=x64compatible
 OutputDir={#OutputDir}
 OutputBaseFilename=ServerDesk-{#ReleaseTag}-win-x64-setup
 SetupIconFile={#BrandingIcon}
-UninstallDisplayIcon={app}\{#AppExeName}
+UninstallDisplayIcon={#InstalledBrandingIcon}
 UninstallDisplayName={#AppName}
 Compression=lzma2
 SolidCompression=yes
@@ -108,10 +112,11 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 
 [Files]
 Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#BrandingSource}"; DestDir: "{app}\Assets\Branding"; DestName: "serverdesk.ico"; Flags: ignoreversion
 
 [Icons]
-Name: "{autoprograms}\ServerDesk"; Filename: "{app}\{#AppExeName}"; WorkingDir: "{app}"; IconFilename: "{app}\{#AppExeName}"
-Name: "{autodesktop}\ServerDesk"; Filename: "{app}\{#AppExeName}"; WorkingDir: "{app}"; IconFilename: "{app}\{#AppExeName}"; Tasks: desktopicon
+Name: "{autoprograms}\ServerDesk"; Filename: "{app}\{#AppExeName}"; WorkingDir: "{app}"; IconFilename: "{#InstalledBrandingIcon}"
+Name: "{autodesktop}\ServerDesk"; Filename: "{app}\{#AppExeName}"; WorkingDir: "{app}"; IconFilename: "{#InstalledBrandingIcon}"; Tasks: desktopicon
 
 [Run]
 Filename: "{app}\{#AppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(AppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent

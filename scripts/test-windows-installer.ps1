@@ -26,6 +26,7 @@ $programsDir = [Environment]::GetFolderPath([Environment+SpecialFolder]::Program
 $desktopShortcut = Join-Path $desktopDir "ServerDesk.lnk"
 $startMenuShortcut = Join-Path $programsDir "ServerDesk.lnk"
 $appExe = Join-Path $installDir "ServerDesk.App.exe"
+$brandingIcon = Join-Path $installDir "Assets\Branding\serverdesk.ico"
 $uninstaller = Join-Path $installDir "unins000.exe"
 $uninstallRegistryRoot = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall"
 
@@ -57,7 +58,8 @@ function Get-ServerDeskUninstallEntry {
 function Assert-Shortcut {
     param(
         [Parameter(Mandatory = $true)] [string]$Path,
-        [Parameter(Mandatory = $true)] [string]$ExpectedTarget
+        [Parameter(Mandatory = $true)] [string]$ExpectedTarget,
+        [Parameter(Mandatory = $true)] [string]$ExpectedIcon
     )
 
     if (-not (Test-Path $Path)) {
@@ -68,18 +70,19 @@ function Assert-Shortcut {
     try {
         $shortcut = $shell.CreateShortcut($Path)
         $actualTarget = [IO.Path]::GetFullPath($shortcut.TargetPath)
-        $expected = [IO.Path]::GetFullPath($ExpectedTarget)
-        if (-not $actualTarget.Equals($expected, [StringComparison]::OrdinalIgnoreCase)) {
-            throw "Shortcut $Path targets '$actualTarget' instead of '$expected'."
+        $expectedTargetPath = [IO.Path]::GetFullPath($ExpectedTarget)
+        if (-not $actualTarget.Equals($expectedTargetPath, [StringComparison]::OrdinalIgnoreCase)) {
+            throw "Shortcut $Path targets '$actualTarget' instead of '$expectedTargetPath'."
         }
 
         $iconPath = ($shortcut.IconLocation -split ',')[0].Trim().Trim('"')
         if ([string]::IsNullOrWhiteSpace($iconPath)) {
-            throw "Shortcut $Path does not declare the ServerDesk executable as its icon source."
+            throw "Shortcut $Path does not declare an icon source."
         }
         $actualIcon = [IO.Path]::GetFullPath($iconPath)
-        if (-not $actualIcon.Equals($expected, [StringComparison]::OrdinalIgnoreCase)) {
-            throw "Shortcut $Path uses icon '$actualIcon' instead of '$expected'."
+        $expectedIconPath = [IO.Path]::GetFullPath($ExpectedIcon)
+        if (-not $actualIcon.Equals($expectedIconPath, [StringComparison]::OrdinalIgnoreCase)) {
+            throw "Shortcut $Path uses icon '$actualIcon' instead of '$expectedIconPath'."
         }
     }
     finally {
@@ -103,12 +106,15 @@ try {
     if (-not (Test-Path $appExe)) {
         throw "Installed ServerDesk executable is missing: $appExe"
     }
+    if (-not (Test-Path $brandingIcon)) {
+        throw "Installed ServerDesk branding icon is missing: $brandingIcon"
+    }
     if (-not (Test-Path $uninstaller)) {
         throw "ServerDesk uninstaller is missing: $uninstaller"
     }
 
-    Assert-Shortcut -Path $desktopShortcut -ExpectedTarget $appExe
-    Assert-Shortcut -Path $startMenuShortcut -ExpectedTarget $appExe
+    Assert-Shortcut -Path $desktopShortcut -ExpectedTarget $appExe -ExpectedIcon $brandingIcon
+    Assert-Shortcut -Path $startMenuShortcut -ExpectedTarget $appExe -ExpectedIcon $brandingIcon
 
     $uninstallEntry = Get-ServerDeskUninstallEntry
     if ($null -eq $uninstallEntry) {
@@ -117,8 +123,16 @@ try {
     if ([string]::IsNullOrWhiteSpace($uninstallEntry.UninstallString)) {
         throw "ServerDesk uninstall registry entry has no UninstallString."
     }
+    if ([string]::IsNullOrWhiteSpace($uninstallEntry.DisplayIcon)) {
+        throw "ServerDesk uninstall registry entry has no DisplayIcon."
+    }
+    $actualDisplayIcon = [IO.Path]::GetFullPath(($uninstallEntry.DisplayIcon -split ',')[0].Trim().Trim('"'))
+    $expectedDisplayIcon = [IO.Path]::GetFullPath($brandingIcon)
+    if (-not $actualDisplayIcon.Equals($expectedDisplayIcon, [StringComparison]::OrdinalIgnoreCase)) {
+        throw "ServerDesk uninstall DisplayIcon '$actualDisplayIcon' does not use '$expectedDisplayIcon'."
+    }
 
-    Write-Host "Desktop shortcut, Start Menu shortcut, app icon source and uninstall registration verified."
+    Write-Host "Desktop shortcut, Start Menu shortcut, installed branding icon and uninstall registration verified."
 
     & (Join-Path $repoRoot "scripts\test-windows-gui-launch.ps1") `
         -OutputDirectory $installDir `
@@ -137,19 +151,19 @@ try {
     }
 
     if (Test-Path $appExe) {
-        throw "Uninstall left the ServerDesk executable behind at $appExe."
+        throw "Uninstall left the ServerDesk executable behind at $appExe"
     }
     if (Test-Path $desktopShortcut) {
-        throw "Uninstall left the Desktop shortcut behind at $desktopShortcut."
+        throw "Uninstall left the Desktop shortcut behind at $desktopShortcut"
     }
     if (Test-Path $startMenuShortcut) {
-        throw "Uninstall left the Start Menu shortcut behind at $startMenuShortcut."
+        throw "Uninstall left the Start Menu shortcut behind at $startMenuShortcut"
     }
     if ($null -ne (Get-ServerDeskUninstallEntry)) {
         throw "Uninstall left the ServerDesk Apps/Uninstall registry entry behind."
     }
 
-    Write-Host "ServerDesk installer smoke passed: install, shortcuts, GUI launch, uninstall and cleanup are verified."
+    Write-Host "ServerDesk installer smoke passed: install, branding icon, shortcuts, GUI launch, uninstall and cleanup are verified."
 }
 finally {
     try {
