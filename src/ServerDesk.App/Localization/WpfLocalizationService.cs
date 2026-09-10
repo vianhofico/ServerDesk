@@ -46,6 +46,7 @@ public sealed class WpfLocalizationService : ILocalizationService
         "DatabaseRuntime",
         "DatabaseBackups",
         "DatabaseRestores",
+        "Dashboard",
         "GlobalDashboard",
         "BulkOperations",
         "ProfileTransfer",

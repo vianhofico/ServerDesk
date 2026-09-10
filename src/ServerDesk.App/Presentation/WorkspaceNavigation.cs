@@ -80,4 +80,37 @@ public sealed record WorkspaceNavigationItem(
     string Title,
     string Description,
     bool IsAvailable,
-    bool ShowGroupHeader);
+    bool ShowGroupHeader)
+{
+    public string IconGlyph => Route switch
+    {
+        WorkspaceNavigationCatalog.GlobalDashboard => "\uE80F",
+        WorkspaceNavigationCatalog.Dashboard => "\uE9D2",
+        WorkspaceNavigationCatalog.Explorer => "\uE8B7",
+        WorkspaceNavigationCatalog.Terminal => "\uE756",
+        WorkspaceNavigationCatalog.Processes => "\uE9D2",
+        WorkspaceNavigationCatalog.Services => "\uE713",
+        WorkspaceNavigationCatalog.Docker => "\uE7B8",
+        WorkspaceNavigationCatalog.Storage => "\uEDA2",
+        WorkspaceNavigationCatalog.Network => "\uE968",
+        WorkspaceNavigationCatalog.Logs => "\uE8A5",
+        WorkspaceNavigationCatalog.Tunnels => "\uE968",
+        WorkspaceNavigationCatalog.ScheduledTasks => "\uE823",
+        WorkspaceNavigationCatalog.Git => "\uE8AD",
+        WorkspaceNavigationCatalog.Nginx => "\uE774",
+        WorkspaceNavigationCatalog.Tls => "\uE72E",
+        WorkspaceNavigationCatalog.EnvironmentFiles => "\uE8A5",
+        WorkspaceNavigationCatalog.Deployment => "\uE896",
+        WorkspaceNavigationCatalog.Firewall => "\uE83D",
+        WorkspaceNavigationCatalog.Users => "\uE716",
+        WorkspaceNavigationCatalog.Packages => "\uE7B8",
+        WorkspaceNavigationCatalog.Databases => "\uE9D9",
+        WorkspaceNavigationCatalog.DatabaseProfiles => "\uE77B",
+        WorkspaceNavigationCatalog.Backups => "\uE777",
+        WorkspaceNavigationCatalog.OperationHistory => "\uE81C",
+        WorkspaceNavigationCatalog.Organize => "\uE8B7",
+        WorkspaceNavigationCatalog.ConnectionHistory => "\uE81C",
+        WorkspaceNavigationCatalog.ConnectionRoute => "\uE968",
+        _ => "\uE10C",
+    };
+}

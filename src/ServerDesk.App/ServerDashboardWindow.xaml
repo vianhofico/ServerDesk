@@ -1,83 +1,91 @@
 <Window x:Class="ServerDesk.App.ServerDashboardWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Server dashboard"
-        Width="1120"
-        Height="780"
-        MinWidth="920"
-        MinHeight="640"
+        xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+        Title="{DynamicResource Loc.Dashboard.WindowTitle}"
+        Width="1180"
+        Height="820"
+        MinWidth="940"
+        MinHeight="660"
         WindowStartupLocation="CenterOwner"
         Background="{DynamicResource WindowBackgroundBrush}"
         Foreground="{DynamicResource PrimaryTextBrush}">
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
-        <Style x:Key="DashboardCard" TargetType="Border">
-            <Setter Property="Padding" Value="16" />
-            <Setter Property="Margin" Value="0,0,12,12" />
-            <Setter Property="CornerRadius" Value="10" />
-            <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
-            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
-            <Setter Property="BorderThickness" Value="1" />
-        </Style>
-        <Style x:Key="DashboardButton" TargetType="Button">
-            <Setter Property="Padding" Value="14,8" />
-            <Setter Property="MinHeight" Value="34" />
-            <Setter Property="Margin" Value="8,0,0,0" />
-            <Setter Property="Cursor" Value="Hand" />
-        </Style>
     </Window.Resources>
 
-    <Grid Margin="24">
+    <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
+            <RowDefinition Height="76" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <Grid Grid.Row="0">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
-            </Grid.ColumnDefinitions>
-            <StackPanel>
-                <TextBlock Text="{Binding Title}" FontSize="26" FontWeight="SemiBold" />
-                <TextBlock Margin="0,5,0,0"
-                           Text="{Binding Endpoint}"
-                           Foreground="{DynamicResource MutedTextBrush}" />
-                <TextBlock Margin="0,3,0,0"
-                           Text="{Binding CapturedText}"
-                           FontSize="11"
-                           Foreground="{DynamicResource MutedTextBrush}" />
-            </StackPanel>
-            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Top">
-                <ProgressBar Width="90"
-                             Height="4"
-                             Margin="0,15,8,0"
-                             IsIndeterminate="True"
-                             Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibility}}" />
-                <Button x:Name="RefreshButton"
-                        Content="Refresh"
-                        Click="RefreshOnClick"
-                        Style="{StaticResource DashboardButton}" />
-                <Button x:Name="CancelButton"
-                        Content="Cancel"
-                        Click="CancelOnClick"
-                        Style="{StaticResource DashboardButton}" />
-            </StackPanel>
-        </Grid>
+        <Border Grid.Row="0"
+                Background="{DynamicResource SurfaceBrush}"
+                BorderBrush="{DynamicResource BorderBrush}"
+                BorderThickness="0,0,0,1">
+            <Grid Margin="28,0,30,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
 
-        <Border Grid.Row="1"
-                Margin="0,16,0,0"
-                Padding="12"
-                CornerRadius="8"
-                Background="{DynamicResource SurfaceSecondaryBrush}"
-                Visibility="{Binding HasStatusMessage, Converter={StaticResource BoolToVisibility}}">
-            <TextBlock Text="{Binding StatusMessage}" TextWrapping="Wrap" />
+                <StackPanel VerticalAlignment="Center">
+                    <TextBlock Text="{Binding Title}"
+                               Style="{StaticResource PageTitleText}"
+                               TextTrimming="CharacterEllipsis" />
+                    <StackPanel Margin="0,3,0,0" Orientation="Horizontal">
+                        <TextBlock Text="{Binding Endpoint}"
+                                   FontFamily="Cascadia Mono, Consolas"
+                                   FontSize="10.5"
+                                   Foreground="{DynamicResource MutedTextBrush}" />
+                        <TextBlock Margin="10,0,0,0"
+                                   Text="{Binding CapturedText}"
+                                   Style="{StaticResource CaptionText}" />
+                    </StackPanel>
+                </StackPanel>
+
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <ProgressBar Width="90"
+                                 Height="4"
+                                 Margin="0,0,12,0"
+                                 IsIndeterminate="True"
+                                 Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibility}}" />
+                    <Button x:Name="RefreshButton"
+                            Content="{DynamicResource Loc.Dashboard.Command.Refresh}"
+                            Click="RefreshOnClick"
+                            Style="{StaticResource PrimaryButton}" />
+                    <Button x:Name="CancelButton"
+                            Margin="8,0,0,0"
+                            Content="{DynamicResource Loc.Dashboard.Command.Cancel}"
+                            Click="CancelOnClick"
+                            Style="{StaticResource SecondaryButton}" />
+                </StackPanel>
+            </Grid>
         </Border>
 
-        <ScrollViewer Grid.Row="2" Margin="0,18,0,0" VerticalScrollBarVisibility="Auto">
-            <StackPanel>
-                <ItemsControl ItemsSource="{Binding MetricCards}">
+        <ScrollViewer Grid.Row="1"
+                      VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Margin="28,24,32,32">
+                <Border Style="{StaticResource InlineInfoCard}"
+                        Visibility="{Binding HasStatusMessage, Converter={StaticResource BoolToVisibility}}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="24" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="&#xE946;"
+                                   FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                   Foreground="{DynamicResource AccentBrush}"
+                                   VerticalAlignment="Top" />
+                        <TextBlock Grid.Column="1"
+                                   Text="{Binding StatusMessage}"
+                                   TextWrapping="Wrap" />
+                    </Grid>
+                </Border>
+
+                <ItemsControl Margin="0,18,0,0" ItemsSource="{Binding MetricCards}">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
                             <UniformGrid Columns="3" />
@@ -85,89 +93,151 @@
                     </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                            <Border Style="{StaticResource DashboardCard}">
-                                <StackPanel>
+                            <Border Margin="0,0,10,10" Style="{StaticResource MetricTile}">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
                                     <TextBlock Text="{Binding Label}"
-                                               FontSize="11"
-                                               FontWeight="SemiBold"
-                                               Foreground="{DynamicResource MutedTextBrush}" />
-                                    <TextBlock Margin="0,7,0,0"
+                                               Style="{StaticResource EyebrowText}" />
+                                    <TextBlock Grid.Row="1"
+                                               Margin="0,7,0,0"
                                                Text="{Binding Value}"
-                                               FontSize="22"
+                                               FontFamily="Segoe UI Variable Display, Segoe UI"
+                                               FontSize="23"
                                                FontWeight="SemiBold" />
-                                    <TextBlock Margin="0,5,0,0"
+                                    <TextBlock Grid.Row="2"
+                                               Margin="0,5,0,0"
                                                Text="{Binding Detail}"
-                                               FontSize="11"
-                                               TextWrapping="Wrap"
-                                               Foreground="{DynamicResource MutedTextBrush}" />
-                                </StackPanel>
+                                               Style="{StaticResource CaptionText}" />
+                                </Grid>
                             </Border>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
 
-                <Border Margin="0,4,0,0" Style="{StaticResource DashboardCard}">
-                    <StackPanel>
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Text="Health warnings" FontSize="17" FontWeight="SemiBold" />
-                            <TextBlock Grid.Column="1"
-                                       Text="{Binding WarningCountText}"
-                                       Foreground="{DynamicResource MutedTextBrush}" />
-                        </Grid>
-                        <TextBlock Margin="0,8,0,0"
-                                   Text="No memory or filesystem pressure warning is active."
-                                   Foreground="{DynamicResource MutedTextBrush}"
-                                   Visibility="{Binding HasNoWarnings, Converter={StaticResource BoolToVisibility}}" />
-                        <ItemsControl Margin="0,8,0,0" ItemsSource="{Binding Warnings}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <Border Margin="0,0,0,6"
-                                            Padding="10"
-                                            CornerRadius="7"
-                                            Background="{DynamicResource SurfaceSecondaryBrush}">
-                                        <StackPanel Orientation="Horizontal">
-                                            <TextBlock Text="{Binding Severity}"
-                                                       FontWeight="SemiBold"
-                                                       MinWidth="70" />
-                                            <TextBlock Text="{Binding Message}" TextWrapping="Wrap" />
-                                        </StackPanel>
-                                    </Border>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </StackPanel>
-                </Border>
+                <Grid Margin="0,6,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="0.9*" />
+                        <ColumnDefinition Width="16" />
+                        <ColumnDefinition Width="1.35*" />
+                    </Grid.ColumnDefinitions>
 
-                <Border Margin="0,4,0,0" Style="{StaticResource DashboardCard}">
-                    <StackPanel>
-                        <TextBlock Text="Filesystems" FontSize="17" FontWeight="SemiBold" />
-                        <TextBlock Margin="0,4,0,10"
-                                   Text="Read-only filesystem usage from the normalized dashboard snapshot."
-                                   FontSize="11"
-                                   Foreground="{DynamicResource MutedTextBrush}" />
-                        <DataGrid ItemsSource="{Binding FileSystems}"
-                                  AutoGenerateColumns="False"
-                                  IsReadOnly="True"
-                                  CanUserAddRows="False"
-                                  CanUserDeleteRows="False"
-                                  HeadersVisibility="Column"
-                                  GridLinesVisibility="Horizontal"
-                                  BorderThickness="0"
-                                  MaxHeight="280">
-                            <DataGrid.Columns>
-                                <DataGridTextColumn Header="Mount" Binding="{Binding MountPoint}" Width="2*" />
-                                <DataGridTextColumn Header="Type" Binding="{Binding FileSystemType}" Width="*" />
-                                <DataGridTextColumn Header="Used" Binding="{Binding Used}" Width="*" />
-                                <DataGridTextColumn Header="Available" Binding="{Binding Available}" Width="*" />
-                                <DataGridTextColumn Header="Usage" Binding="{Binding UsedPercent}" Width="*" />
-                            </DataGrid.Columns>
-                        </DataGrid>
-                    </StackPanel>
-                </Border>
+                    <ui:Card Grid.Column="0" Padding="20">
+                        <StackPanel>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <Border Width="34"
+                                        Height="34"
+                                        CornerRadius="9"
+                                        Background="{DynamicResource AccentSoftBrush}">
+                                    <TextBlock Text="&#xE7BA;"
+                                               FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                               Foreground="{DynamicResource AccentBrush}"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center" />
+                                </Border>
+                                <TextBlock Grid.Column="1"
+                                           Margin="10,0,0,0"
+                                           Text="{DynamicResource Loc.Dashboard.Health.Title}"
+                                           Style="{StaticResource SectionTitleText}"
+                                           VerticalAlignment="Center" />
+                                <Border Grid.Column="2" Style="{StaticResource StatusPill}">
+                                    <TextBlock Text="{Binding WarningCountText}"
+                                               Style="{StaticResource CaptionText}" />
+                                </Border>
+                            </Grid>
+
+                            <TextBlock Margin="0,16,0,0"
+                                       Text="{DynamicResource Loc.Dashboard.Health.Empty}"
+                                       Style="{StaticResource SecondaryBodyText}"
+                                       Visibility="{Binding HasNoWarnings, Converter={StaticResource BoolToVisibility}}" />
+
+                            <ItemsControl Margin="0,14,0,0" ItemsSource="{Binding Warnings}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Margin="0,0,0,8"
+                                                Padding="12"
+                                                CornerRadius="8"
+                                                Background="{DynamicResource DangerSoftBrush}"
+                                                BorderBrush="{DynamicResource DangerBrush}"
+                                                BorderThickness="1">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="24" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Text="&#xEA39;"
+                                                           FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                                           Foreground="{DynamicResource DangerBrush}"
+                                                           VerticalAlignment="Top" />
+                                                <StackPanel Grid.Column="1">
+                                                    <TextBlock Text="{Binding Severity}"
+                                                               FontSize="11"
+                                                               FontWeight="SemiBold"
+                                                               Foreground="{DynamicResource DangerBrush}" />
+                                                    <TextBlock Margin="0,3,0,0"
+                                                               Text="{Binding Message}"
+                                                               TextWrapping="Wrap" />
+                                                </StackPanel>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </ui:Card>
+
+                    <ui:Card Grid.Column="2" Padding="20">
+                        <StackPanel>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Border Width="34"
+                                        Height="34"
+                                        CornerRadius="9"
+                                        Background="{DynamicResource AccentSoftBrush}">
+                                    <TextBlock Text="&#xEDA2;"
+                                               FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                               Foreground="{DynamicResource AccentBrush}"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center" />
+                                </Border>
+                                <StackPanel Grid.Column="1" Margin="10,0,0,0">
+                                    <TextBlock Text="{DynamicResource Loc.Dashboard.Filesystems.Title}"
+                                               Style="{StaticResource SectionTitleText}" />
+                                    <TextBlock Margin="0,2,0,0"
+                                               Text="{DynamicResource Loc.Dashboard.Filesystems.Description}"
+                                               Style="{StaticResource CaptionText}" />
+                                </StackPanel>
+                            </Grid>
+
+                            <DataGrid Margin="0,16,0,0"
+                                      ItemsSource="{Binding FileSystems}"
+                                      Style="{StaticResource OperationalDataGrid}"
+                                      MaxHeight="300"
+                                      MinHeight="160"
+                                      ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                                      ScrollViewer.VerticalScrollBarVisibility="Auto">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="{DynamicResource Loc.Dashboard.Column.Mount}" Binding="{Binding MountPoint}" Width="2*" MinWidth="130" />
+                                    <DataGridTextColumn Header="{DynamicResource Loc.Dashboard.Column.Type}" Binding="{Binding FileSystemType}" Width="*" MinWidth="70" />
+                                    <DataGridTextColumn Header="{DynamicResource Loc.Dashboard.Column.Used}" Binding="{Binding Used}" Width="*" MinWidth="80" />
+                                    <DataGridTextColumn Header="{DynamicResource Loc.Dashboard.Column.Available}" Binding="{Binding Available}" Width="*" MinWidth="90" />
+                                    <DataGridTextColumn Header="{DynamicResource Loc.Dashboard.Column.Usage}" Binding="{Binding UsedPercent}" Width="*" MinWidth="75" />
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </StackPanel>
+                    </ui:Card>
+                </Grid>
             </StackPanel>
         </ScrollViewer>
     </Grid>
