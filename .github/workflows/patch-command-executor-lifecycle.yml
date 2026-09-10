@@ -1,0 +1,33 @@
+name: Patch command executor lifecycle
+
+on:
+  push:
+    branches:
+      - fix/192-command-executor-dispose-race
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Apply lifecycle patch and regression test
+        run: python .github/scripts/patch-command-executor-lifecycle.py
+
+      - name: Commit lifecycle fix and test
+        shell: pwsh
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/ServerDesk.Infrastructure.Ssh/SshRemoteCommandExecutor.cs
+          git diff --cached --check
+          git commit -m "fix(ssh): drain command executions before disposal"
+          git add tests/ServerDesk.Tests/SshRemoteCommandExecutorLifecycleTests.cs
+          git diff --cached --check
+          git commit -m "test(ssh): cover command executor disposal lifecycle"
+          git push
