@@ -1,11 +1,12 @@
 <Window x:Class="ServerDesk.App.RemoteExplorerWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
         Title="{DynamicResource Loc.Explorer.WindowTitle}"
-        Width="1240"
-        Height="800"
-        MinWidth="920"
-        MinHeight="600"
+        Width="1320"
+        Height="840"
+        MinWidth="980"
+        MinHeight="640"
         WindowStartupLocation="CenterOwner"
         Background="{DynamicResource WindowBackgroundBrush}"
         Foreground="{DynamicResource PrimaryTextBrush}"
@@ -13,11 +14,13 @@
         Loaded="WindowOnLoaded"
         Closed="WindowOnClosed"
         DragOver="WindowOnDragOver"
-        Drop="WindowOnDrop">
+        Drop="WindowOnDrop"
+        PreviewKeyDown="WindowOnPreviewKeyDown">
     <Window.Resources>
         <Style x:Key="ExplorerTechnicalText"
                TargetType="TextBlock"
                BasedOn="{StaticResource TechnicalText}" />
+
         <Style x:Key="ExplorerNameText" TargetType="TextBlock">
             <Setter Property="VerticalAlignment" Value="Center" />
             <Setter Property="TextTrimming" Value="CharacterEllipsis" />
@@ -27,11 +30,25 @@
                 </DataTrigger>
             </Style.Triggers>
         </Style>
+
+        <Style x:Key="ExplorerItemIcon" TargetType="TextBlock">
+            <Setter Property="Text" Value="&#xE8A5;" />
+            <Setter Property="FontFamily" Value="Segoe Fluent Icons, Segoe MDL2 Assets" />
+            <Setter Property="FontSize" Value="15" />
+            <Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsDirectory}" Value="True">
+                    <Setter Property="Text" Value="&#xE8B7;" />
+                    <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
     </Window.Resources>
 
-    <Grid Margin="20">
+    <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
+            <RowDefinition Height="76" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
@@ -39,51 +56,56 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <Border Grid.Row="0" Style="{StaticResource SurfaceCard}" Padding="18">
-            <Grid>
+        <!-- Server identity stays visible while operating on remote files. -->
+        <Border Grid.Row="0"
+                Background="{DynamicResource SurfaceBrush}"
+                BorderBrush="{DynamicResource BorderBrush}"
+                BorderThickness="0,0,0,1">
+            <Grid Margin="24,0,28,0">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
-                <StackPanel>
+
+                <StackPanel VerticalAlignment="Center">
                     <TextBlock Text="{DynamicResource Loc.Explorer.Header.Title}"
-                               FontSize="27"
-                               FontWeight="SemiBold" />
-                    <TextBlock Text="{DynamicResource Loc.Explorer.Header.Subtitle}"
-                               Margin="0,3,0,10"
-                               Foreground="{DynamicResource MutedTextBrush}" />
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock x:Name="ServerNameText" FontWeight="SemiBold" />
-                        <TextBlock Text="  ·  " Foreground="{DynamicResource MutedTextBrush}" />
+                               Style="{StaticResource PageTitleText}" />
+                    <StackPanel Margin="0,3,0,0" Orientation="Horizontal">
+                        <TextBlock x:Name="ServerNameText"
+                                   FontSize="11"
+                                   FontWeight="SemiBold" />
+                        <TextBlock Text="  ·  "
+                                   Foreground="{DynamicResource MutedTextBrush}" />
                         <TextBlock x:Name="EndpointText"
                                    Style="{StaticResource ExplorerTechnicalText}"
                                    Foreground="{DynamicResource MutedTextBrush}" />
                     </StackPanel>
                 </StackPanel>
 
-                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                    <Border Padding="12,8"
-                            CornerRadius="8"
-                            Background="{DynamicResource SurfaceSecondaryBrush}">
-                        <StackPanel>
+                <StackPanel Grid.Column="1"
+                            Orientation="Horizontal"
+                            VerticalAlignment="Center">
+                    <Border Style="{StaticResource StatusPill}">
+                        <StackPanel Orientation="Horizontal">
                             <TextBlock Text="{DynamicResource Loc.Explorer.Header.Environment}"
-                                       FontSize="11"
+                                       Style="{StaticResource CaptionText}" />
+                            <TextBlock Text=" · "
                                        Foreground="{DynamicResource MutedTextBrush}" />
                             <TextBlock x:Name="EnvironmentValueText"
-                                       Margin="0,2,0,0"
+                                       FontSize="11"
                                        FontWeight="SemiBold" />
                         </StackPanel>
                     </Border>
                     <Border Margin="8,0,0,0"
-                            Padding="12,8"
-                            CornerRadius="8"
-                            Background="{DynamicResource AccentSoftBrush}">
-                        <StackPanel>
-                            <TextBlock Text="{DynamicResource Loc.Explorer.Header.Connection}"
-                                       FontSize="11"
-                                       Foreground="{DynamicResource MutedTextBrush}" />
+                            Style="{StaticResource AccentStatusPill}">
+                        <StackPanel Orientation="Horizontal">
+                            <Ellipse Width="6"
+                                     Height="6"
+                                     Margin="0,0,6,0"
+                                     Fill="{DynamicResource AccentBrush}"
+                                     VerticalAlignment="Center" />
                             <TextBlock x:Name="ConnectionValueText"
-                                       Margin="0,2,0,0"
+                                       FontSize="11"
                                        FontWeight="SemiBold" />
                         </StackPanel>
                     </Border>
@@ -91,152 +113,232 @@
             </Grid>
         </Border>
 
+        <!-- File command bar. Routine actions come first; destructive action stays distinct. -->
         <Border Grid.Row="1"
-                Margin="0,12,0,0"
+                Margin="20,14,20,0"
                 Style="{StaticResource CommandBarSurface}">
-            <WrapPanel VerticalAlignment="Center">
-                <Button x:Name="NewFolderButton"
-                        Content="{DynamicResource Loc.Explorer.Command.NewFolder}"
-                        Click="NewFolderOnClick"
-                        Style="{StaticResource SecondaryButton}" />
-                <Button x:Name="UploadButton"
-                        Margin="8,0,0,0"
-                        Content="{DynamicResource Loc.Explorer.Command.Upload}"
-                        Click="UploadOnClick"
-                        Style="{StaticResource PrimaryButton}" />
-                <Button x:Name="DownloadButton"
-                        Margin="8,0,0,0"
-                        Content="{DynamicResource Loc.Explorer.Command.Download}"
-                        Click="DownloadOnClick"
-                        Style="{StaticResource SecondaryButton}"
-                        IsEnabled="False" />
+            <DockPanel LastChildFill="False">
+                <WrapPanel DockPanel.Dock="Left" VerticalAlignment="Center">
+                    <Button x:Name="NewFolderButton"
+                            Click="NewFolderOnClick"
+                            Style="{StaticResource SecondaryButton}"
+                            AutomationProperties.Name="{DynamicResource Loc.Explorer.Command.NewFolder}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE8B7;"
+                                       Margin="0,0,7,0"
+                                       FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                       FontSize="14" />
+                            <TextBlock Text="{DynamicResource Loc.Explorer.Command.NewFolder}" />
+                        </StackPanel>
+                    </Button>
+                    <Button x:Name="UploadButton"
+                            Margin="8,0,0,0"
+                            Click="UploadOnClick"
+                            Style="{StaticResource PrimaryButton}"
+                            AutomationProperties.Name="{DynamicResource Loc.Explorer.Command.Upload}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE898;"
+                                       Margin="0,0,7,0"
+                                       FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                       FontSize="14"
+                                       Foreground="White" />
+                            <TextBlock Text="{DynamicResource Loc.Explorer.Command.Upload}"
+                                       Foreground="White" />
+                        </StackPanel>
+                    </Button>
+                    <Button x:Name="DownloadButton"
+                            Margin="8,0,0,0"
+                            Click="DownloadOnClick"
+                            Style="{StaticResource SecondaryButton}"
+                            IsEnabled="False"
+                            AutomationProperties.Name="{DynamicResource Loc.Explorer.Command.Download}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE896;"
+                                       Margin="0,0,7,0"
+                                       FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                       FontSize="14" />
+                            <TextBlock Text="{DynamicResource Loc.Explorer.Command.Download}" />
+                        </StackPanel>
+                    </Button>
 
-                <Border Width="1" Height="24" Margin="14,5" Background="{DynamicResource BorderBrush}" />
+                    <Separator Style="{StaticResource ToolbarSeparator}" />
 
-                <Button x:Name="EditButton"
-                        Content="{DynamicResource Loc.Explorer.Command.EditText}"
-                        Click="EditOnClick"
-                        Style="{StaticResource GhostButton}"
-                        IsEnabled="False" />
-                <Button x:Name="RenameButton"
-                        Margin="4,0,0,0"
-                        Content="{DynamicResource Loc.Explorer.Command.Rename}"
-                        Click="RenameOnClick"
-                        Style="{StaticResource GhostButton}"
-                        IsEnabled="False" />
-                <Button x:Name="PermissionsButton"
-                        Margin="4,0,0,0"
-                        Content="{DynamicResource Loc.Explorer.Command.Permissions}"
-                        Click="PermissionsOnClick"
-                        Style="{StaticResource GhostButton}"
-                        IsEnabled="False" />
-                <Button x:Name="DeleteButton"
-                        Margin="12,0,0,0"
-                        Content="{DynamicResource Loc.Explorer.Command.Delete}"
-                        Click="DeleteOnClick"
-                        Style="{StaticResource DangerButton}"
-                        IsEnabled="False" />
-            </WrapPanel>
+                    <Button x:Name="EditButton"
+                            Click="EditOnClick"
+                            Style="{StaticResource GhostButton}"
+                            IsEnabled="False"
+                            AutomationProperties.Name="{DynamicResource Loc.Explorer.Command.EditText}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE70F;"
+                                       Margin="0,0,7,0"
+                                       FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                       FontSize="14" />
+                            <TextBlock Text="{DynamicResource Loc.Explorer.Command.EditText}" />
+                        </StackPanel>
+                    </Button>
+                    <Button x:Name="RenameButton"
+                            Margin="4,0,0,0"
+                            Click="RenameOnClick"
+                            Style="{StaticResource GhostButton}"
+                            IsEnabled="False"
+                            AutomationProperties.Name="{DynamicResource Loc.Explorer.Command.Rename}">
+                        <TextBlock Text="{DynamicResource Loc.Explorer.Command.Rename}" />
+                    </Button>
+                    <Button x:Name="PermissionsButton"
+                            Margin="4,0,0,0"
+                            Click="PermissionsOnClick"
+                            Style="{StaticResource GhostButton}"
+                            IsEnabled="False"
+                            AutomationProperties.Name="{DynamicResource Loc.Explorer.Command.Permissions}">
+                        <TextBlock Text="{DynamicResource Loc.Explorer.Command.Permissions}" />
+                    </Button>
+                    <Button x:Name="DeleteButton"
+                            Margin="8,0,0,0"
+                            Click="DeleteOnClick"
+                            Style="{StaticResource DangerButton}"
+                            IsEnabled="False"
+                            AutomationProperties.Name="{DynamicResource Loc.Explorer.Command.Delete}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE74D;"
+                                       Margin="0,0,7,0"
+                                       FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                       FontSize="13"
+                                       Foreground="White" />
+                            <TextBlock Text="{DynamicResource Loc.Explorer.Command.Delete}"
+                                       Foreground="White" />
+                        </StackPanel>
+                    </Button>
+                </WrapPanel>
+            </DockPanel>
         </Border>
 
-        <Grid Grid.Row="2" Margin="0,10,0,0">
+        <!-- Navigation, editable path and local search. -->
+        <Grid Grid.Row="2" Margin="20,10,20,0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="8" />
+                <ColumnDefinition Width="300" />
             </Grid.ColumnDefinitions>
 
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                 <Button x:Name="BackButton"
                         Width="38"
+                        MinWidth="38"
                         Padding="0"
-                        Content="←"
                         ToolTip="{DynamicResource Loc.Explorer.Nav.Back}"
                         Click="BackOnClick"
                         Style="{StaticResource GhostButton}"
                         IsEnabled="False"
-                        AutomationProperties.Name="{DynamicResource Loc.Explorer.Nav.Back}" />
+                        AutomationProperties.Name="{DynamicResource Loc.Explorer.Nav.Back}">
+                    <TextBlock Text="&#xE72B;"
+                               FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                               FontSize="14" />
+                </Button>
                 <Button x:Name="ForwardButton"
                         Width="38"
+                        MinWidth="38"
                         Margin="2,0,0,0"
                         Padding="0"
-                        Content="→"
                         ToolTip="{DynamicResource Loc.Explorer.Nav.Forward}"
                         Click="ForwardOnClick"
                         Style="{StaticResource GhostButton}"
                         IsEnabled="False"
-                        AutomationProperties.Name="{DynamicResource Loc.Explorer.Nav.Forward}" />
+                        AutomationProperties.Name="{DynamicResource Loc.Explorer.Nav.Forward}">
+                    <TextBlock Text="&#xE72A;"
+                               FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                               FontSize="14" />
+                </Button>
                 <Button x:Name="UpButton"
                         Width="38"
+                        MinWidth="38"
                         Margin="2,0,0,0"
                         Padding="0"
-                        Content="↑"
                         ToolTip="{DynamicResource Loc.Explorer.Nav.Up}"
                         Click="UpOnClick"
                         Style="{StaticResource GhostButton}"
                         IsEnabled="False"
-                        AutomationProperties.Name="{DynamicResource Loc.Explorer.Nav.Up}" />
+                        AutomationProperties.Name="{DynamicResource Loc.Explorer.Nav.Up}">
+                    <TextBlock Text="&#xE74A;"
+                               FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                               FontSize="14" />
+                </Button>
             </StackPanel>
 
-            <Grid Grid.Column="1" Margin="8,0">
-                <Border Style="{StaticResource SurfaceCard}" CornerRadius="7" Padding="4,2">
-                    <Grid>
-                        <ScrollViewer x:Name="BreadcrumbScroll"
-                                      HorizontalScrollBarVisibility="Hidden"
-                                      VerticalScrollBarVisibility="Disabled">
-                            <StackPanel x:Name="BreadcrumbPanel" Orientation="Horizontal" />
-                        </ScrollViewer>
-                        <TextBox x:Name="AddressBox"
-                                 Visibility="Collapsed"
-                                 Style="{StaticResource FieldTextBox}"
-                                 BorderThickness="0"
-                                 FontFamily="Cascadia Mono, Consolas"
-                                 KeyDown="AddressBoxOnKeyDown"
-                                 AutomationProperties.Name="{DynamicResource Loc.Explorer.Path.Label}" />
-                    </Grid>
-                </Border>
-            </Grid>
-
-            <StackPanel Grid.Column="2" Orientation="Horizontal">
-                <Button x:Name="EditPathButton"
-                        Content="{DynamicResource Loc.Explorer.Nav.EditPath}"
-                        Click="EditAddressOnClick"
-                        Style="{StaticResource GhostButton}" />
-                <Button x:Name="RefreshButton"
-                        Margin="4,0,0,0"
-                        Content="{DynamicResource Loc.Explorer.Nav.Refresh}"
-                        Click="RefreshOnClick"
-                        Style="{StaticResource SecondaryButton}" />
-                <Button x:Name="CancelButton"
-                        Margin="6,0,0,0"
-                        Content="{DynamicResource Loc.Explorer.Nav.Cancel}"
-                        Click="CancelOnClick"
-                        Style="{StaticResource GhostButton}"
-                        IsEnabled="False" />
-            </StackPanel>
-        </Grid>
-
-        <Grid Grid.Row="3" Margin="0,10,0,10">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="310" />
-            </Grid.ColumnDefinitions>
-
-            <Border x:Name="StatusCard" Style="{StaticResource InlineInfoCard}" Margin="0,0,10,0">
-                <StackPanel Orientation="Horizontal">
-                    <TextBlock x:Name="StatusStateText" FontWeight="SemiBold" VerticalAlignment="Center" />
-                    <TextBlock Text="  ·  " Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
-                    <TextBlock x:Name="StatusMessageText" TextWrapping="Wrap" VerticalAlignment="Center" />
-                </StackPanel>
+            <Border Grid.Column="1"
+                    Margin="8,0,0,0"
+                    MinHeight="38"
+                    CornerRadius="8"
+                    Background="{DynamicResource SurfaceBrush}"
+                    BorderBrush="{DynamicResource BorderBrush}"
+                    BorderThickness="1">
+                <Grid Margin="4,2">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ScrollViewer x:Name="BreadcrumbScroll"
+                                  VerticalAlignment="Center"
+                                  HorizontalScrollBarVisibility="Hidden"
+                                  VerticalScrollBarVisibility="Disabled">
+                        <StackPanel x:Name="BreadcrumbPanel" Orientation="Horizontal" />
+                    </ScrollViewer>
+                    <TextBox x:Name="AddressBox"
+                             Grid.ColumnSpan="3"
+                             Visibility="Collapsed"
+                             Style="{StaticResource FieldTextBox}"
+                             BorderThickness="0"
+                             FontFamily="Cascadia Mono, Consolas"
+                             KeyDown="AddressBoxOnKeyDown"
+                             AutomationProperties.Name="{DynamicResource Loc.Explorer.Path.Label}" />
+                    <Button x:Name="EditPathButton"
+                            Grid.Column="1"
+                            Width="34"
+                            MinWidth="34"
+                            Height="32"
+                            Padding="0"
+                            ToolTip="{DynamicResource Loc.Explorer.Nav.EditPath}"
+                            Click="EditAddressOnClick"
+                            Style="{StaticResource GhostButton}"
+                            AutomationProperties.Name="{DynamicResource Loc.Explorer.Nav.EditPath}">
+                        <TextBlock Text="&#xE70F;"
+                                   FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                   FontSize="12" />
+                    </Button>
+                    <Button x:Name="RefreshButton"
+                            Grid.Column="2"
+                            Width="34"
+                            MinWidth="34"
+                            Height="32"
+                            Margin="2,0,0,0"
+                            Padding="0"
+                            ToolTip="{DynamicResource Loc.Explorer.Nav.Refresh}"
+                            Click="RefreshOnClick"
+                            Style="{StaticResource GhostButton}"
+                            AutomationProperties.Name="{DynamicResource Loc.Explorer.Nav.Refresh}">
+                        <TextBlock Text="&#xE72C;"
+                                   FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                   FontSize="13" />
+                    </Button>
+                </Grid>
             </Border>
 
-            <Grid Grid.Column="1">
+            <Grid Grid.Column="3">
                 <TextBox x:Name="SearchBox"
                          Style="{StaticResource OperationalSearchTextBox}"
-                         Padding="10,6,38,6"
+                         Padding="34,6,36,6"
                          TextChanged="SearchBoxOnTextChanged"
                          ToolTip="{DynamicResource Loc.Explorer.Search.Tooltip}"
                          AutomationProperties.Name="{DynamicResource Loc.Explorer.Search.Label}" />
+                <TextBlock Text="&#xE721;"
+                           Margin="11,0,0,0"
+                           HorizontalAlignment="Left"
+                           VerticalAlignment="Center"
+                           IsHitTestVisible="False"
+                           FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                           FontSize="13"
+                           Foreground="{DynamicResource MutedTextBrush}" />
                 <Button x:Name="ClearSearchButton"
                         Width="32"
                         Height="30"
@@ -244,106 +346,317 @@
                         VerticalAlignment="Center"
                         Margin="0,0,3,0"
                         Padding="0"
-                        Content="×"
                         ToolTip="{DynamicResource Loc.Explorer.Search.Clear}"
                         Click="ClearSearchOnClick"
                         Style="{StaticResource GhostButton}"
                         Visibility="Collapsed"
-                        AutomationProperties.Name="{DynamicResource Loc.Explorer.Search.Clear}" />
+                        AutomationProperties.Name="{DynamicResource Loc.Explorer.Search.Clear}">
+                    <TextBlock Text="&#xE711;"
+                               FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                               FontSize="11" />
+                </Button>
             </Grid>
         </Grid>
 
-        <Border Grid.Row="4" Style="{StaticResource SurfaceCard}" CornerRadius="8" ClipToBounds="True">
-            <Grid>
-                <DataGrid x:Name="FileGrid"
-                          Style="{StaticResource OperationalDataGrid}"
-                          BorderThickness="0"
-                          SelectionChanged="FileGridOnSelectionChanged"
-                          MouseDoubleClick="FileGridOnMouseDoubleClick">
-                    <DataGrid.Columns>
-                        <DataGridTemplateColumn Header="{DynamicResource Loc.Explorer.Column.Name}" SortMemberPath="Name" Width="2.8*">
-                            <DataGridTemplateColumn.CellTemplate>
-                                <DataTemplate>
-                                    <TextBlock Text="{Binding Name}" Style="{StaticResource ExplorerNameText}" />
-                                </DataTemplate>
-                            </DataGridTemplateColumn.CellTemplate>
-                        </DataGridTemplateColumn>
-                        <DataGridTextColumn Header="{DynamicResource Loc.Explorer.Column.Type}" Binding="{Binding Kind}" Width="*" />
-                        <DataGridTextColumn Header="{DynamicResource Loc.Explorer.Column.Size}" Binding="{Binding SizeText}" Width="*" />
-                        <DataGridTextColumn Header="{DynamicResource Loc.Explorer.Column.Modified}" Binding="{Binding ModifiedText}" Width="1.5*">
-                            <DataGridTextColumn.ElementStyle>
-                                <Style TargetType="TextBlock" BasedOn="{StaticResource ExplorerTechnicalText}" />
-                            </DataGridTextColumn.ElementStyle>
-                        </DataGridTextColumn>
-                        <DataGridTextColumn Header="{DynamicResource Loc.Explorer.Column.Mode}" Binding="{Binding PermissionsText}" Width="0.8*">
-                            <DataGridTextColumn.ElementStyle>
-                                <Style TargetType="TextBlock" BasedOn="{StaticResource ExplorerTechnicalText}" />
-                            </DataGridTextColumn.ElementStyle>
-                        </DataGridTextColumn>
-                        <DataGridTextColumn Header="{DynamicResource Loc.Explorer.Column.Owner}" Binding="{Binding OwnerText}" Width="0.7*">
-                            <DataGridTextColumn.ElementStyle>
-                                <Style TargetType="TextBlock" BasedOn="{StaticResource ExplorerTechnicalText}" />
-                            </DataGridTextColumn.ElementStyle>
-                        </DataGridTextColumn>
-                        <DataGridTextColumn Header="{DynamicResource Loc.Explorer.Column.Group}" Binding="{Binding GroupText}" Width="0.7*">
-                            <DataGridTextColumn.ElementStyle>
-                                <Style TargetType="TextBlock" BasedOn="{StaticResource ExplorerTechnicalText}" />
-                            </DataGridTextColumn.ElementStyle>
-                        </DataGridTextColumn>
-                    </DataGrid.Columns>
-                    <DataGrid.ContextMenu>
-                        <ContextMenu>
-                            <MenuItem Header="{DynamicResource Loc.Explorer.Command.EditText}" Click="EditOnClick" />
-                            <MenuItem Header="{DynamicResource Loc.Explorer.Command.Download}" Click="DownloadOnClick" />
-                            <MenuItem Header="{DynamicResource Loc.Explorer.Command.Rename}" Click="RenameOnClick" />
-                            <MenuItem Header="{DynamicResource Loc.Explorer.Command.Permissions}" Click="PermissionsOnClick" />
-                            <Separator />
-                            <MenuItem Header="{DynamicResource Loc.Explorer.Command.Delete}"
-                                      Foreground="{DynamicResource DangerBrush}"
-                                      Click="DeleteOnClick" />
-                        </ContextMenu>
-                    </DataGrid.ContextMenu>
-                </DataGrid>
-
-                <Border x:Name="GridStateOverlay"
-                        Background="{DynamicResource SurfaceBrush}"
-                        Visibility="Visible"
-                        IsHitTestVisible="False">
-                    <StackPanel MaxWidth="520" HorizontalAlignment="Center" VerticalAlignment="Center">
-                        <TextBlock x:Name="GridStateTitle"
-                                   FontSize="20"
-                                   FontWeight="SemiBold"
-                                   TextAlignment="Center" />
-                        <TextBlock x:Name="GridStateDetail"
-                                   Margin="0,7,0,0"
-                                   Foreground="{DynamicResource MutedTextBrush}"
-                                   TextAlignment="Center"
-                                   TextWrapping="Wrap" />
-                    </StackPanel>
-                </Border>
-            </Grid>
-        </Border>
-
-        <Grid Grid.Row="5" Margin="0,10,0,0">
+        <Grid Grid.Row="3" Margin="20,10,20,10">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="280" />
+                <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
-            <StackPanel>
-                <TextBlock x:Name="FooterText" Foreground="{DynamicResource MutedTextBrush}" />
-                <TextBlock Text="{DynamicResource Loc.Explorer.DropHint}"
-                           Margin="0,3,16,0"
-                           FontSize="11"
-                           TextWrapping="Wrap"
-                           Foreground="{DynamicResource MutedTextBrush}" />
-            </StackPanel>
-            <ProgressBar x:Name="TransferProgress"
-                         Grid.Column="1"
-                         Height="8"
-                         Minimum="0"
-                         Maximum="100"
-                         Visibility="Collapsed"
-                         VerticalAlignment="Center" />
+
+            <Border x:Name="StatusCard"
+                    Style="{StaticResource InlineInfoCard}"
+                    Margin="0,0,10,0">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Border Style="{StaticResource StatusPill}"
+                            Padding="7,2"
+                            VerticalAlignment="Top">
+                        <TextBlock x:Name="StatusStateText"
+                                   FontSize="10.5"
+                                   FontWeight="SemiBold" />
+                    </Border>
+                    <TextBlock x:Name="StatusMessageText"
+                               Grid.Column="1"
+                               Margin="10,2,0,0"
+                               TextWrapping="Wrap"
+                               VerticalAlignment="Top" />
+                </Grid>
+            </Border>
+
+            <Button x:Name="CancelButton"
+                    Grid.Column="1"
+                    MinWidth="88"
+                    Content="{DynamicResource Loc.Explorer.Nav.Cancel}"
+                    Click="CancelOnClick"
+                    Style="{StaticResource SecondaryButton}"
+                    IsEnabled="False" />
         </Grid>
+
+        <!-- Primary file workspace plus selection details. -->
+        <Grid Grid.Row="4" Margin="20,0,20,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="12" />
+                <ColumnDefinition Width="278" />
+            </Grid.ColumnDefinitions>
+
+            <ui:Card Padding="0" ClipToBounds="True">
+                <Grid>
+                    <DataGrid x:Name="FileGrid"
+                              Style="{StaticResource OperationalDataGrid}"
+                              BorderThickness="0"
+                              SelectionChanged="FileGridOnSelectionChanged"
+                              MouseDoubleClick="FileGridOnMouseDoubleClick">
+                        <DataGrid.Columns>
+                            <DataGridTemplateColumn Header="{DynamicResource Loc.Explorer.Column.Name}"
+                                                    SortMemberPath="Name"
+                                                    Width="2.6*"
+                                                    MinWidth="190">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="24" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Style="{StaticResource ExplorerItemIcon}" />
+                                            <TextBlock Grid.Column="1"
+                                                       Text="{Binding Name}"
+                                                       Style="{StaticResource ExplorerNameText}" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTextColumn Header="{DynamicResource Loc.Explorer.Column.Type}"
+                                                Binding="{Binding Kind}"
+                                                Width="*"
+                                                MinWidth="80" />
+                            <DataGridTextColumn Header="{DynamicResource Loc.Explorer.Column.Size}"
+                                                Binding="{Binding SizeText}"
+                                                Width="*"
+                                                MinWidth="80" />
+                            <DataGridTextColumn Header="{DynamicResource Loc.Explorer.Column.Modified}"
+                                                Binding="{Binding ModifiedText}"
+                                                Width="1.4*"
+                                                MinWidth="130">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock" BasedOn="{StaticResource ExplorerTechnicalText}" />
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
+                            <DataGridTextColumn Header="{DynamicResource Loc.Explorer.Column.Mode}"
+                                                Binding="{Binding PermissionsText}"
+                                                Width="0.8*"
+                                                MinWidth="78">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock" BasedOn="{StaticResource ExplorerTechnicalText}" />
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
+                            <DataGridTextColumn Header="{DynamicResource Loc.Explorer.Column.Owner}"
+                                                Binding="{Binding OwnerText}"
+                                                Width="0.7*"
+                                                MinWidth="58">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock" BasedOn="{StaticResource ExplorerTechnicalText}" />
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
+                            <DataGridTextColumn Header="{DynamicResource Loc.Explorer.Column.Group}"
+                                                Binding="{Binding GroupText}"
+                                                Width="0.7*"
+                                                MinWidth="58">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock" BasedOn="{StaticResource ExplorerTechnicalText}" />
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
+                        </DataGrid.Columns>
+                        <DataGrid.ContextMenu>
+                            <ContextMenu>
+                                <MenuItem Header="{DynamicResource Loc.Explorer.Command.EditText}" Click="EditOnClick" />
+                                <MenuItem Header="{DynamicResource Loc.Explorer.Command.Download}" Click="DownloadOnClick" />
+                                <MenuItem Header="{DynamicResource Loc.Explorer.Command.Rename}" Click="RenameOnClick" />
+                                <MenuItem Header="{DynamicResource Loc.Explorer.Command.Permissions}" Click="PermissionsOnClick" />
+                                <Separator />
+                                <MenuItem Header="{DynamicResource Loc.Explorer.Command.Delete}"
+                                          Foreground="{DynamicResource DangerBrush}"
+                                          Click="DeleteOnClick" />
+                            </ContextMenu>
+                        </DataGrid.ContextMenu>
+                    </DataGrid>
+
+                    <Border x:Name="GridStateOverlay"
+                            Background="{DynamicResource SurfaceBrush}"
+                            Visibility="Visible"
+                            IsHitTestVisible="False">
+                        <StackPanel MaxWidth="520"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center">
+                            <ProgressBar x:Name="GridStateProgress"
+                                         Width="110"
+                                         Height="4"
+                                         Margin="0,0,0,16"
+                                         IsIndeterminate="True"
+                                         Visibility="Collapsed" />
+                            <Border Width="48"
+                                    Height="48"
+                                    Margin="0,0,0,14"
+                                    CornerRadius="14"
+                                    Background="{DynamicResource SurfaceSecondaryBrush}"
+                                    HorizontalAlignment="Center">
+                                <TextBlock Text="&#xE8B7;"
+                                           FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                           FontSize="18"
+                                           Foreground="{DynamicResource MutedTextBrush}"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center" />
+                            </Border>
+                            <TextBlock x:Name="GridStateTitle"
+                                       Style="{StaticResource SectionTitleText}"
+                                       TextAlignment="Center" />
+                            <TextBlock x:Name="GridStateDetail"
+                                       Margin="0,7,0,0"
+                                       Style="{StaticResource SecondaryBodyText}"
+                                       TextAlignment="Center" />
+                        </StackPanel>
+                    </Border>
+                </Grid>
+            </ui:Card>
+
+            <Border Grid.Column="2" Style="{StaticResource DetailsPane}">
+                <StackPanel>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Border Width="34"
+                                Height="34"
+                                CornerRadius="9"
+                                Background="{DynamicResource AccentSoftBrush}">
+                            <TextBlock Text="&#xE946;"
+                                       FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                       FontSize="14"
+                                       Foreground="{DynamicResource AccentBrush}"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center" />
+                        </Border>
+                        <TextBlock Grid.Column="1"
+                                   Margin="10,0,0,0"
+                                   Text="{DynamicResource Loc.Explorer.Details.Title}"
+                                   Style="{StaticResource SectionTitleText}"
+                                   VerticalAlignment="Center" />
+                    </Grid>
+
+                    <TextBlock Margin="0,16,0,0"
+                               Text="{DynamicResource Loc.Explorer.Details.Empty}"
+                               Style="{StaticResource SecondaryBodyText}">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock" BasedOn="{StaticResource SecondaryBodyText}">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding SelectedItem, ElementName=FileGrid}" Value="{x:Null}">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+
+                    <StackPanel Margin="0,16,0,0">
+                        <StackPanel.Style>
+                            <Style TargetType="StackPanel">
+                                <Setter Property="Visibility" Value="Visible" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding SelectedItem, ElementName=FileGrid}" Value="{x:Null}">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </StackPanel.Style>
+
+                        <TextBlock Text="{Binding SelectedItem.Name, ElementName=FileGrid}"
+                                   FontSize="15"
+                                   FontWeight="SemiBold"
+                                   TextWrapping="Wrap" />
+                        <TextBlock Margin="0,5,0,16"
+                                   Text="{Binding SelectedItem.Path.Value, ElementName=FileGrid}"
+                                   FontFamily="Cascadia Mono, Consolas"
+                                   FontSize="10.5"
+                                   TextWrapping="Wrap"
+                                   Foreground="{DynamicResource MutedTextBrush}" />
+
+                        <TextBlock Text="{DynamicResource Loc.Explorer.Column.Type}" Style="{StaticResource EyebrowText}" />
+                        <TextBlock Margin="0,3,0,12" Text="{Binding SelectedItem.Kind, ElementName=FileGrid}" />
+
+                        <TextBlock Text="{DynamicResource Loc.Explorer.Column.Size}" Style="{StaticResource EyebrowText}" />
+                        <TextBlock Margin="0,3,0,12" Text="{Binding SelectedItem.SizeText, ElementName=FileGrid}" />
+
+                        <TextBlock Text="{DynamicResource Loc.Explorer.Column.Modified}" Style="{StaticResource EyebrowText}" />
+                        <TextBlock Margin="0,3,0,12"
+                                   Text="{Binding SelectedItem.ModifiedText, ElementName=FileGrid}"
+                                   Style="{StaticResource ExplorerTechnicalText}" />
+
+                        <TextBlock Text="{DynamicResource Loc.Explorer.Column.Mode}" Style="{StaticResource EyebrowText}" />
+                        <TextBlock Margin="0,3,0,12"
+                                   Text="{Binding SelectedItem.PermissionsText, ElementName=FileGrid}"
+                                   Style="{StaticResource ExplorerTechnicalText}" />
+
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <TextBlock Text="{DynamicResource Loc.Explorer.Column.Owner}" Style="{StaticResource EyebrowText}" />
+                                <TextBlock Margin="0,3,0,0"
+                                           Text="{Binding SelectedItem.OwnerText, ElementName=FileGrid}"
+                                           Style="{StaticResource ExplorerTechnicalText}" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="1">
+                                <TextBlock Text="{DynamicResource Loc.Explorer.Column.Group}" Style="{StaticResource EyebrowText}" />
+                                <TextBlock Margin="0,3,0,0"
+                                           Text="{Binding SelectedItem.GroupText, ElementName=FileGrid}"
+                                           Style="{StaticResource ExplorerTechnicalText}" />
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <!-- Low-priority activity/status strip. -->
+        <Border Grid.Row="5"
+                Margin="20,10,20,14"
+                Padding="4,0">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock x:Name="FooterText"
+                                   Style="{StaticResource CaptionText}" />
+                        <TextBlock Margin="12,0,0,0"
+                                   Text="{DynamicResource Loc.Explorer.Shortcuts}"
+                                   Style="{StaticResource CaptionText}" />
+                    </StackPanel>
+                    <TextBlock Margin="0,3,16,0"
+                               Text="{DynamicResource Loc.Explorer.DropHint}"
+                               Style="{StaticResource CaptionText}" />
+                </StackPanel>
+                <ProgressBar x:Name="TransferProgress"
+                             Grid.Column="1"
+                             Width="250"
+                             Height="7"
+                             Margin="18,0,0,0"
+                             Minimum="0"
+                             Maximum="100"
+                             Visibility="Collapsed"
+                             VerticalAlignment="Center" />
+            </Grid>
+        </Border>
     </Grid>
 </Window>
