@@ -293,8 +293,16 @@ internal static class PosixCommandLine
         return $"cd -- {Quote(command.WorkingDirectory)} && {invocation}";
     }
 
-    public static string Quote(string value) =>
-        $"'{value.Replace("'", "'\"'\"'", StringComparison.Ordinal)}'";
+    public static string Quote(string value)
+    {
+        ArgumentNullException.ThrowIfNull(value);
+        if (value.Contains('\0'))
+        {
+            throw new ArgumentException("Remote command tokens cannot contain NUL characters.", nameof(value));
+        }
+
+        return $"'{value.Replace("'", "'\"'\"'", StringComparison.Ordinal)}'";
+    }
 
     public static bool IsEnvironmentName(string value)
     {
