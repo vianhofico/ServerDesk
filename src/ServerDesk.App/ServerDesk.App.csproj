@@ -24,7 +24,7 @@
   <Target Name="BuildTerminalFrontend"
           BeforeTargets="BeforeBuild"
           Condition="'$(DesignTimeBuild)' != 'true'">
-    <Exec Command="npm install --no-package-lock --no-audit --no-fund"
+    <Exec Command="npm ci --no-audit --no-fund"
           WorkingDirectory="$(MSBuildProjectDirectory)\TerminalFrontend" />
     <Exec Command="npm run build"
           WorkingDirectory="$(MSBuildProjectDirectory)\TerminalFrontend" />
