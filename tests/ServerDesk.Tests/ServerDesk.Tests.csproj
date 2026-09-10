@@ -100,6 +100,14 @@
           Link="Fixtures\Presentation\DockerInventoryWindow.xaml"
           CopyToOutputDirectory="PreserveNewest"
           CopyToPublishDirectory="Never" />
+    <None Include="..\..\src\ServerDesk.App\TerminalWindow.xaml"
+          Link="Fixtures\Presentation\TerminalWindow.xaml"
+          CopyToOutputDirectory="PreserveNewest"
+          CopyToPublishDirectory="Never" />
+    <None Include="..\..\src\ServerDesk.App\TerminalWindow.xaml.cs"
+          Link="Fixtures\Presentation\TerminalWindow.xaml.cs"
+          CopyToOutputDirectory="PreserveNewest"
+          CopyToPublishDirectory="Never" />
     <None Include="..\..\src\ServerDesk.App\ScheduledTasksWindow.xaml"
           Link="Fixtures\Presentation\ScheduledTasksWindow.xaml"
           CopyToOutputDirectory="PreserveNewest"

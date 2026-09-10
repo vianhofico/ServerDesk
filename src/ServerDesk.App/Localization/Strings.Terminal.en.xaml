@@ -1,0 +1,36 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:system="clr-namespace:System;assembly=System.Runtime">
+    <system:String x:Key="Loc.Terminal.WindowTitle">ServerDesk Terminal</system:String>
+    <system:String x:Key="Loc.Terminal.Header.Title">Terminal</system:String>
+    <system:String x:Key="Loc.Terminal.Header.Subtitle">Interactive SSH PTY sessions</system:String>
+    <system:String x:Key="Loc.Terminal.Server.Label">Server</system:String>
+    <system:String x:Key="Loc.Terminal.Server.Hint">Choose the server used for the next terminal tab.</system:String>
+    <system:String x:Key="Loc.Terminal.Command.New">New terminal</system:String>
+    <system:String x:Key="Loc.Terminal.Command.Reconnect">Reconnect</system:String>
+    <system:String x:Key="Loc.Terminal.Command.CloseTab">Close tab</system:String>
+    <system:String x:Key="Loc.Terminal.Status.Ready">Ready</system:String>
+    <system:String x:Key="Loc.Terminal.Status.OpeningFormat">Opening terminal for {0}…</system:String>
+    <system:String x:Key="Loc.Terminal.Status.ReconnectingFormat">Reconnecting terminal for {0}…</system:String>
+    <system:String x:Key="Loc.Terminal.Status.ConnectedFormat">Connected to {0}</system:String>
+    <system:String x:Key="Loc.Terminal.Status.ConnectCancelledFormat">Terminal connection to {0} was cancelled.</system:String>
+    <system:String x:Key="Loc.Terminal.Status.OpenErrorFormat">Could not open terminal: {0}</system:String>
+    <system:String x:Key="Loc.Terminal.Status.EndpointStateFormat">{0} — {1}</system:String>
+    <system:String x:Key="Loc.Terminal.Status.ClosingPty">Closing remote PTY…</system:String>
+    <system:String x:Key="Loc.Terminal.Status.NoTabs">No terminal tabs are open.</system:String>
+    <system:String x:Key="Loc.Terminal.Status.TabClosed">Terminal tab closed.</system:String>
+    <system:String x:Key="Loc.Terminal.Status.ClosingAll">Closing remote terminal sessions…</system:String>
+    <system:String x:Key="Loc.Terminal.Tab.ConnectingFormat">{0} #{1} · Connecting</system:String>
+    <system:String x:Key="Loc.Terminal.Tab.StateFormat">{0} #{1} · {2}</system:String>
+    <system:String x:Key="Loc.Terminal.State.Created">Created</system:String>
+    <system:String x:Key="Loc.Terminal.State.Connecting">Connecting</system:String>
+    <system:String x:Key="Loc.Terminal.State.Connected">Connected</system:String>
+    <system:String x:Key="Loc.Terminal.State.Disconnecting">Disconnecting</system:String>
+    <system:String x:Key="Loc.Terminal.State.Disconnected">Disconnected</system:String>
+    <system:String x:Key="Loc.Terminal.State.Faulted">Faulted</system:String>
+    <system:String x:Key="Loc.Terminal.Shortcuts">Ctrl+Shift+F search · Ctrl+Shift+C copy selection · Ctrl+Shift+V paste · Ctrl+C remains remote SIGINT</system:String>
+    <system:String x:Key="Loc.Terminal.Bridge.MissingFrontend">The local terminal frontend bundle is missing. Rebuild ServerDesk so the xterm assets are generated.</system:String>
+    <system:String x:Key="Loc.Terminal.Bridge.NavigationBlocked">Terminal navigation outside the packaged local frontend was blocked.</system:String>
+    <system:String x:Key="Loc.Terminal.Bridge.ClipboardTooLarge">Clipboard text is too large to paste into a terminal in one operation.</system:String>
+    <system:String x:Key="Loc.Terminal.Bridge.ErrorFormat">Terminal bridge error: {0}</system:String>
+</ResourceDictionary>

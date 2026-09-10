@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Globalization;
 using System.IO;
 using System.Text.Json;
 using System.Windows;
@@ -35,6 +36,7 @@ public partial class TerminalWindow : Window
         ServerPicker.SelectedItem = _profiles.FirstOrDefault(profile => profile.Id == initialProfile.Id) ?? initialProfile;
         Loaded += TerminalWindowOnLoaded;
         Closing += TerminalWindowOnClosing;
+        UpdateTabActions();
     }
 
     private async void TerminalWindowOnLoaded(object sender, RoutedEventArgs e)
@@ -56,6 +58,11 @@ public partial class TerminalWindow : Window
         }
     }
 
+    private async void ReconnectOnClick(object sender, RoutedEventArgs e)
+    {
+        await ReconnectSelectedTabAsync().ConfigureAwait(true);
+    }
+
     private async void CloseTabOnClick(object sender, RoutedEventArgs e)
     {
         await CloseSelectedTabAsync().ConfigureAwait(true);
@@ -63,6 +70,7 @@ public partial class TerminalWindow : Window
 
     private async void TerminalTabsOnSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
+        UpdateTabActions();
         if (TerminalTabs.SelectedItem is TabItem tab && _hosts.TryGetValue(tab, out var host))
         {
             await host.FocusAsync().ConfigureAwait(true);
@@ -74,23 +82,88 @@ public partial class TerminalWindow : Window
         var session = _terminalFactory.Create(profile);
         var host = new TerminalTabHost(session);
         var tabNumber = ++_tabSequence;
+        var metadata = new TerminalTabMetadata(profile, tabNumber);
         var tab = new TabItem
         {
-            Header = $"{profile.Name} #{tabNumber} • connecting",
+            Header = TerminalPresentationText.Format("Loc.Terminal.Tab.ConnectingFormat", profile.Name, tabNumber),
             Content = host,
+            Tag = metadata,
         };
 
+        AttachHostHandlers(tab, host, metadata);
+        _hosts.Add(tab, host);
+        TerminalTabs.Items.Add(tab);
+        TerminalTabs.SelectedItem = tab;
+        UpdateTabActions();
+        StatusText.Text = TerminalPresentationText.Format("Loc.Terminal.Status.OpeningFormat", profile.Name);
+
+        await InitializeHostAsync(host, profile).ConfigureAwait(true);
+        UpdateTabActions();
+    }
+
+    private async Task ReconnectSelectedTabAsync()
+    {
+        if (TerminalTabs.SelectedItem is not TabItem tab ||
+            !_hosts.TryGetValue(tab, out var currentHost) ||
+            tab.Tag is not TerminalTabMetadata metadata ||
+            currentHost.State is not (TerminalSessionState.Disconnected or TerminalSessionState.Faulted))
+        {
+            return;
+        }
+
+        ReconnectButton.IsEnabled = false;
+        CloseTabButton.IsEnabled = false;
+        StatusText.Text = TerminalPresentationText.Format(
+            "Loc.Terminal.Status.ReconnectingFormat",
+            metadata.Profile.Name);
+
+        try
+        {
+            await currentHost.DisposeAsync().ConfigureAwait(true);
+        }
+        catch (Exception exception)
+        {
+            StatusText.Text = TerminalPresentationText.Format("Loc.Terminal.Status.OpenErrorFormat", exception.Message);
+            UpdateTabActions();
+            return;
+        }
+
+        var replacement = new TerminalTabHost(_terminalFactory.Create(metadata.Profile));
+        _hosts[tab] = replacement;
+        tab.Content = replacement;
+        tab.Header = TerminalPresentationText.Format(
+            "Loc.Terminal.Tab.ConnectingFormat",
+            metadata.Profile.Name,
+            metadata.TabNumber);
+        AttachHostHandlers(tab, replacement, metadata);
+        UpdateTabActions();
+
+        await InitializeHostAsync(replacement, metadata.Profile).ConfigureAwait(true);
+        UpdateTabActions();
+    }
+
+    private void AttachHostHandlers(TabItem tab, TerminalTabHost host, TerminalTabMetadata metadata)
+    {
         host.StateChanged += state =>
         {
             if (!Dispatcher.HasShutdownStarted)
             {
                 Dispatcher.BeginInvoke(() =>
                 {
-                    tab.Header = $"{profile.Name} #{tabNumber} • {state.ToString().ToLowerInvariant()}";
+                    tab.Header = TerminalPresentationText.Format(
+                        "Loc.Terminal.Tab.StateFormat",
+                        metadata.Profile.Name,
+                        metadata.TabNumber,
+                        TerminalPresentationText.State(state));
                     if (ReferenceEquals(TerminalTabs.SelectedItem, tab))
                     {
-                        StatusText.Text = $"{profile.Username}@{profile.Host}:{profile.Port} — {state}";
+                        StatusText.Text = TerminalPresentationText.Format(
+                            "Loc.Terminal.Status.EndpointStateFormat",
+                            Endpoint(metadata.Profile),
+                            TerminalPresentationText.State(state));
                     }
+
+                    UpdateTabActions();
                 });
             }
         };
@@ -98,23 +171,25 @@ public partial class TerminalWindow : Window
         {
             if (!Dispatcher.HasShutdownStarted)
             {
-                Dispatcher.BeginInvoke(() => StatusText.Text = message);
+                Dispatcher.BeginInvoke(() =>
+                {
+                    StatusText.Text = message;
+                    UpdateTabActions();
+                });
             }
         };
+    }
 
-        _hosts.Add(tab, host);
-        TerminalTabs.Items.Add(tab);
-        TerminalTabs.SelectedItem = tab;
-        StatusText.Text = $"Opening terminal for {profile.Name}…";
-
+    private async Task InitializeHostAsync(TerminalTabHost host, ServerProfile profile)
+    {
         try
         {
             await host.InitializeAsync().ConfigureAwait(true);
-            StatusText.Text = $"Connected to {profile.Username}@{profile.Host}:{profile.Port}";
+            StatusText.Text = TerminalPresentationText.Format("Loc.Terminal.Status.ConnectedFormat", Endpoint(profile));
         }
         catch (OperationCanceledException)
         {
-            StatusText.Text = $"Terminal connection to {profile.Name} was cancelled.";
+            StatusText.Text = TerminalPresentationText.Format("Loc.Terminal.Status.ConnectCancelledFormat", profile.Name);
         }
         catch (TerminalSessionException exception)
         {
@@ -122,7 +197,7 @@ public partial class TerminalWindow : Window
         }
         catch (Exception exception)
         {
-            StatusText.Text = $"Could not open terminal: {exception.Message}";
+            StatusText.Text = TerminalPresentationText.Format("Loc.Terminal.Status.OpenErrorFormat", exception.Message);
         }
     }
 
@@ -134,9 +209,25 @@ public partial class TerminalWindow : Window
         }
 
         TerminalTabs.Items.Remove(tab);
-        StatusText.Text = "Closing remote PTY…";
+        UpdateTabActions();
+        StatusText.Text = TerminalPresentationText.Get("Loc.Terminal.Status.ClosingPty");
         await host.DisposeAsync().ConfigureAwait(true);
-        StatusText.Text = _hosts.Count == 0 ? "No terminal tabs are open." : "Terminal tab closed.";
+        StatusText.Text = TerminalPresentationText.Get(
+            _hosts.Count == 0 ? "Loc.Terminal.Status.NoTabs" : "Loc.Terminal.Status.TabClosed");
+        UpdateTabActions();
+    }
+
+    private void UpdateTabActions()
+    {
+        if (TerminalTabs.SelectedItem is TabItem tab && _hosts.TryGetValue(tab, out var host))
+        {
+            CloseTabButton.IsEnabled = true;
+            ReconnectButton.IsEnabled = host.State is TerminalSessionState.Disconnected or TerminalSessionState.Faulted;
+            return;
+        }
+
+        CloseTabButton.IsEnabled = false;
+        ReconnectButton.IsEnabled = false;
     }
 
     private void TerminalWindowOnClosing(object? sender, CancelEventArgs e)
@@ -158,10 +249,11 @@ public partial class TerminalWindow : Window
 
     private async Task CloseAllAndCloseAsync()
     {
-        StatusText.Text = "Closing remote terminal sessions…";
+        StatusText.Text = TerminalPresentationText.Get("Loc.Terminal.Status.ClosingAll");
         var hosts = _hosts.Values.ToArray();
         _hosts.Clear();
         TerminalTabs.Items.Clear();
+        UpdateTabActions();
 
         foreach (var host in hosts)
         {
@@ -178,6 +270,33 @@ public partial class TerminalWindow : Window
         _allowClose = true;
         Close();
     }
+
+    private static string Endpoint(ServerProfile profile) =>
+        $"{profile.Username}@{profile.Host}:{profile.Port}";
+
+    private sealed record TerminalTabMetadata(ServerProfile Profile, int TabNumber);
+}
+
+internal static class TerminalPresentationText
+{
+    public static string Get(string key) =>
+        System.Windows.Application.Current?.TryFindResource(key) as string ?? key;
+
+    public static string Format(string key, params object?[] arguments)
+    {
+        var template = Get(key);
+        try
+        {
+            return string.Format(CultureInfo.CurrentCulture, template, arguments);
+        }
+        catch (FormatException)
+        {
+            return template;
+        }
+    }
+
+    public static string State(TerminalSessionState state) =>
+        Get($"Loc.Terminal.State.{state}");
 }
 
 internal sealed class TerminalTabHost : Grid, IAsyncDisposable
@@ -205,6 +324,8 @@ internal sealed class TerminalTabHost : Grid, IAsyncDisposable
 
     public event Action<string>? ErrorRaised;
 
+    public TerminalSessionState State => _session.State;
+
     public async Task InitializeAsync(CancellationToken cancellationToken = default)
     {
         ThrowIfDisposed();
@@ -217,7 +338,7 @@ internal sealed class TerminalTabHost : Grid, IAsyncDisposable
         if (!File.Exists(frontendEntry))
         {
             throw new FileNotFoundException(
-                "The local terminal frontend bundle is missing. Rebuild ServerDesk so the xterm assets are generated.",
+                TerminalPresentationText.Get("Loc.Terminal.Bridge.MissingFrontend"),
                 frontendEntry);
         }
 
@@ -288,7 +409,7 @@ internal sealed class TerminalTabHost : Grid, IAsyncDisposable
         if (!e.Uri.StartsWith(VirtualOrigin, StringComparison.OrdinalIgnoreCase))
         {
             e.Cancel = true;
-            ErrorRaised?.Invoke("Terminal navigation outside the packaged local frontend was blocked.");
+            ErrorRaised?.Invoke(TerminalPresentationText.Get("Loc.Terminal.Bridge.NavigationBlocked"));
         }
     }
 
@@ -355,7 +476,7 @@ internal sealed class TerminalTabHost : Grid, IAsyncDisposable
                         }
                         else
                         {
-                            ErrorRaised?.Invoke("Clipboard text is too large to paste into a terminal in one operation.");
+                            ErrorRaised?.Invoke(TerminalPresentationText.Get("Loc.Terminal.Bridge.ClipboardTooLarge"));
                         }
                     }
                     break;
@@ -370,7 +491,7 @@ internal sealed class TerminalTabHost : Grid, IAsyncDisposable
         }
         catch (Exception exception)
         {
-            ErrorRaised?.Invoke($"Terminal bridge error: {exception.Message}");
+            ErrorRaised?.Invoke(TerminalPresentationText.Format("Loc.Terminal.Bridge.ErrorFormat", exception.Message));
         }
     }
 
