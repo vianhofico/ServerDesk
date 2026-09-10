@@ -86,6 +86,7 @@ Write-Host "==> Build ServerDesk Windows installer with $iscc"
     "/DSourceDir=$publishDir" `
     "/DOutputDir=$outputDir" `
     "/DBrandingIcon=$setupIconPath" `
+    "/DBrandingSource=$brandingSource" `
     $installerScript
 
 if ($LASTEXITCODE -ne 0) {
