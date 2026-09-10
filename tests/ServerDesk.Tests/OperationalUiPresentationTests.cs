@@ -142,6 +142,40 @@ public sealed class OperationalUiPresentationTests
     }
 
     [Fact]
+    public void ServiceWorkspaceUsesFluentMetricsStatusCueAndSharedDetailsPattern()
+    {
+        var content = File.ReadAllText(PresentationFixture("ServiceManagerWindow.xaml"));
+
+        Assert.Contains("xmlns:ui=\"http://schemas.lepo.co/wpfui/2022/xaml\"", content, StringComparison.Ordinal);
+        Assert.Contains("<ui:Card", content, StringComparison.Ordinal);
+        Assert.Contains("Style=\"{StaticResource MetricTile}\"", content, StringComparison.Ordinal);
+        Assert.Contains("Style=\"{StaticResource DetailsPane}\"", content, StringComparison.Ordinal);
+        Assert.Contains("Style=\"{StaticResource ToolbarSeparator}\"", content, StringComparison.Ordinal);
+        Assert.Contains("SortMemberPath=\"ActiveState\"", content, StringComparison.Ordinal);
+        Assert.Contains("Binding=\"{Binding ActiveState}\" Value=\"active\"", content, StringComparison.Ordinal);
+        Assert.Contains("AutomationProperties.Name=\"{DynamicResource Loc.Services.Command.Refresh}\"", content, StringComparison.Ordinal);
+        Assert.DoesNotContain("x:Key=\"ServiceSummaryLabel\"", content, StringComparison.Ordinal);
+        Assert.DoesNotContain("x:Key=\"ServiceDetailLabel\"", content, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void DockerWorkspaceUsesFluentMetricsTabsStatusCueAndSharedDetailsPattern()
+    {
+        var content = File.ReadAllText(PresentationFixture("DockerInventoryWindow.xaml"));
+
+        Assert.Contains("xmlns:ui=\"http://schemas.lepo.co/wpfui/2022/xaml\"", content, StringComparison.Ordinal);
+        Assert.Contains("<ui:Card", content, StringComparison.Ordinal);
+        Assert.Contains("Style=\"{StaticResource MetricTile}\"", content, StringComparison.Ordinal);
+        Assert.Contains("Style=\"{StaticResource DetailsPane}\"", content, StringComparison.Ordinal);
+        Assert.Contains("x:Name=\"InventoryTabs\"", content, StringComparison.Ordinal);
+        Assert.Contains("SortMemberPath=\"State\"", content, StringComparison.Ordinal);
+        Assert.Contains("Binding=\"{Binding State}\" Value=\"running\"", content, StringComparison.Ordinal);
+        Assert.Contains("AutomationProperties.Name=\"{DynamicResource Loc.Docker.Command.Diagnostics}\"", content, StringComparison.Ordinal);
+        Assert.DoesNotContain("x:Key=\"DockerSummaryLabel\"", content, StringComparison.Ordinal);
+        Assert.DoesNotContain("x:Key=\"DockerDetailLabel\"", content, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void TouchedModulesDoNotReintroduceLocalButtonStyles()
     {
         Assert.DoesNotContain(
