@@ -29,6 +29,7 @@
     <system:String x:Key="Loc.Logs.Filter.Subtitle">Các bộ lọc này chỉ thay đổi các dòng hiển thị từ bộ đệm cục bộ đã giữ lại.</system:String>
     <system:String x:Key="Loc.Logs.Filter.Search">Tìm kiếm</system:String>
     <system:String x:Key="Loc.Logs.Filter.Search.Tooltip">Lọc các dòng đã giữ lại theo nội dung và metadata có thể tìm kiếm.</system:String>
+    <system:String x:Key="Loc.Logs.Filter.Clear">Xóa tìm kiếm</system:String>
     <system:String x:Key="Loc.Logs.Filter.Severity">Mức độ</system:String>
     <system:String x:Key="Loc.Logs.Filter.Identifier">Định danh</system:String>
     <system:String x:Key="Loc.Logs.Filter.Unit">Unit</system:String>
