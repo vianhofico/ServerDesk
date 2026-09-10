@@ -50,10 +50,16 @@ internal sealed class SshPortForwardSession : IPortForwardSession
     private readonly SshClientFactory _clientFactory;
     private readonly SshSessionOptions _options;
     private readonly SemaphoreSlim _stateGate = new(1, 1);
+    private readonly object _lifecycleSync = new();
+    private readonly CancellationTokenSource _disposeCancellation = new();
+    private readonly TaskCompletionSource _operationsDrained =
+        new(TaskCreationOptions.RunContinuationsAsynchronously);
     private SshClientLease? _lease;
     private ForwardedPort? _forwardedPort;
+    private int _activeOperations;
     private bool _stopping;
     private bool _disposed;
+    private Task? _disposeTask;
 
     public SshPortForwardSession(
         ServerProfile serverProfile,
@@ -80,7 +86,9 @@ internal sealed class SshPortForwardSession : IPortForwardSession
 
     public async ValueTask StartAsync(CancellationToken cancellationToken = default)
     {
-        ThrowIfDisposed();
+        using var operation = EnterOperation(cancellationToken);
+        cancellationToken = operation.Token;
+        cancellationToken.ThrowIfCancellationRequested();
         await _stateGate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
@@ -161,7 +169,9 @@ internal sealed class SshPortForwardSession : IPortForwardSession
 
     public async ValueTask StopAsync(CancellationToken cancellationToken = default)
     {
-        ThrowIfDisposed();
+        using var operation = EnterOperation(cancellationToken);
+        cancellationToken = operation.Token;
+        cancellationToken.ThrowIfCancellationRequested();
         await _stateGate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
@@ -223,15 +233,28 @@ internal sealed class SshPortForwardSession : IPortForwardSession
         }
     }
 
-    public async ValueTask DisposeAsync()
+    public ValueTask DisposeAsync()
     {
-        if (_disposed)
+        lock (_lifecycleSync)
         {
-            return;
-        }
+            if (_disposeTask is not null)
+            {
+                return new ValueTask(_disposeTask);
+            }
 
-        _disposed = true;
-        await _stateGate.WaitAsync(CancellationToken.None).ConfigureAwait(false);
+            _disposed = true;
+            var drainTask = _activeOperations == 0
+                ? Task.CompletedTask
+                : _operationsDrained.Task;
+            _disposeTask = DisposeCoreAsync(drainTask);
+            return new ValueTask(_disposeTask);
+        }
+    }
+
+    private async Task DisposeCoreAsync(Task drainTask)
+    {
+        await _disposeCancellation.CancelAsync().ConfigureAwait(false);
+        await drainTask.ConfigureAwait(false);
         try
         {
             _stopping = true;
@@ -242,8 +265,61 @@ internal sealed class SshPortForwardSession : IPortForwardSession
         finally
         {
             _stopping = false;
-            _stateGate.Release();
             _stateGate.Dispose();
+            _disposeCancellation.Dispose();
+        }
+    }
+
+    private OperationLease EnterOperation(CancellationToken cancellationToken)
+    {
+        lock (_lifecycleSync)
+        {
+            ObjectDisposedException.ThrowIf(_disposed, this);
+            var operationCancellation = CancellationTokenSource.CreateLinkedTokenSource(
+                cancellationToken,
+                _disposeCancellation.Token);
+            _activeOperations++;
+            return new OperationLease(this, operationCancellation);
+        }
+    }
+
+    private void EndOperation()
+    {
+        lock (_lifecycleSync)
+        {
+            _activeOperations--;
+            if (_disposed && _activeOperations == 0)
+            {
+                _operationsDrained.TrySetResult();
+            }
+        }
+    }
+
+    private sealed class OperationLease : IDisposable
+    {
+        private readonly SshPortForwardSession _owner;
+        private readonly CancellationTokenSource _cancellation;
+        private int _disposed;
+
+        public OperationLease(
+            SshPortForwardSession owner,
+            CancellationTokenSource cancellation)
+        {
+            _owner = owner;
+            _cancellation = cancellation;
+        }
+
+        public CancellationToken Token => _cancellation.Token;
+
+        public void Dispose()
+        {
+            if (Interlocked.Exchange(ref _disposed, 1) != 0)
+            {
+                return;
+            }
+
+            _cancellation.Dispose();
+            _owner.EndOperation();
         }
     }
 
@@ -428,8 +504,4 @@ internal sealed class SshPortForwardSession : IPortForwardSession
         StateChanged?.Invoke(state);
     }
 
-    private void ThrowIfDisposed()
-    {
-        ObjectDisposedException.ThrowIf(_disposed, this);
-    }
 }
