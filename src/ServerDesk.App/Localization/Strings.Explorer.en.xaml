@@ -29,6 +29,9 @@
     <system:String x:Key="Loc.Explorer.Search.Tooltip">Filter the currently loaded directory locally by name, type, path, permissions, owner or group.</system:String>
     <system:String x:Key="Loc.Explorer.Search.Clear">Clear search</system:String>
     <system:String x:Key="Loc.Explorer.DropHint">Drop local files anywhere in this window to upload them to the current folder.</system:String>
+    <system:String x:Key="Loc.Explorer.Details.Title">Details</system:String>
+    <system:String x:Key="Loc.Explorer.Details.Empty">Select an item to inspect its remote path and Linux metadata.</system:String>
+    <system:String x:Key="Loc.Explorer.Shortcuts">Ctrl+L path · Ctrl+F search · Alt+←/→ history · Alt+↑ parent · F2 rename · F5 refresh</system:String>
 
     <system:String x:Key="Loc.Explorer.Column.Name">Name</system:String>
     <system:String x:Key="Loc.Explorer.Column.Type">Type</system:String>
