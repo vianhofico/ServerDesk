@@ -7,9 +7,11 @@
     <system:String x:Key="Loc.Terminal.Server.Label">Máy chủ</system:String>
     <system:String x:Key="Loc.Terminal.Server.Hint">Chọn máy chủ sẽ dùng cho tab terminal tiếp theo.</system:String>
     <system:String x:Key="Loc.Terminal.Command.New">Terminal mới</system:String>
+    <system:String x:Key="Loc.Terminal.Command.Reconnect">Kết nối lại</system:String>
     <system:String x:Key="Loc.Terminal.Command.CloseTab">Đóng tab</system:String>
     <system:String x:Key="Loc.Terminal.Status.Ready">Sẵn sàng</system:String>
     <system:String x:Key="Loc.Terminal.Status.OpeningFormat">Đang mở terminal cho {0}…</system:String>
+    <system:String x:Key="Loc.Terminal.Status.ReconnectingFormat">Đang kết nối lại terminal cho {0}…</system:String>
     <system:String x:Key="Loc.Terminal.Status.ConnectedFormat">Đã kết nối tới {0}</system:String>
     <system:String x:Key="Loc.Terminal.Status.ConnectCancelledFormat">Đã hủy kết nối terminal tới {0}.</system:String>
     <system:String x:Key="Loc.Terminal.Status.OpenErrorFormat">Không thể mở terminal: {0}</system:String>
