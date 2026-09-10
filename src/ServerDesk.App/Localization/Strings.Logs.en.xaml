@@ -29,6 +29,7 @@
     <system:String x:Key="Loc.Logs.Filter.Subtitle">These filters only change the rows shown from the retained local buffer.</system:String>
     <system:String x:Key="Loc.Logs.Filter.Search">Search</system:String>
     <system:String x:Key="Loc.Logs.Filter.Search.Tooltip">Filter retained rows by message and searchable metadata.</system:String>
+    <system:String x:Key="Loc.Logs.Filter.Clear">Clear search</system:String>
     <system:String x:Key="Loc.Logs.Filter.Severity">Severity</system:String>
     <system:String x:Key="Loc.Logs.Filter.Identifier">Identifier</system:String>
     <system:String x:Key="Loc.Logs.Filter.Unit">Unit</system:String>
