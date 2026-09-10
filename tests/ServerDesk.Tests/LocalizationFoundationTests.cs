@@ -51,6 +51,12 @@ public sealed class LocalizationFoundationTests
     }
 
     [Fact]
+    public void DashboardEnglishAndVietnameseResourcesHaveIdenticalKeys()
+    {
+        AssertResourceParity("Strings.Dashboard.en.xaml", "Strings.Dashboard.vi.xaml");
+    }
+
+    [Fact]
     public void ParameterizedResourceFormatsInBothLanguages()
     {
         var english = ReadResources("Strings.en.xaml");

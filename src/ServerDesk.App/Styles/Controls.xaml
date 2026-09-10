@@ -2,11 +2,15 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
     <Style x:Key="ServerDeskButtonBase" TargetType="Button">
-        <Setter Property="MinHeight" Value="34" />
-        <Setter Property="Padding" Value="12,6" />
+        <Setter Property="MinHeight" Value="36" />
+        <Setter Property="MinWidth" Value="40" />
+        <Setter Property="Padding" Value="14,7" />
         <Setter Property="BorderThickness" Value="1" />
         <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="FontSize" Value="12.5" />
         <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
         <Setter Property="FocusVisualStyle" Value="{x:Null}" />
         <Setter Property="Template">
             <Setter.Value>
@@ -15,12 +19,12 @@
                             Background="{TemplateBinding Background}"
                             BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}"
-                            CornerRadius="6"
+                            CornerRadius="8"
                             SnapsToDevicePixels="True">
                         <Grid>
                             <Border x:Name="FocusRing"
-                                    Margin="-2"
-                                    CornerRadius="8"
+                                    Margin="-3"
+                                    CornerRadius="10"
                                     BorderBrush="{DynamicResource FocusRingBrush}"
                                     BorderThickness="2"
                                     Opacity="0"
@@ -36,10 +40,10 @@
                             <Setter TargetName="FocusRing" Property="Opacity" Value="1" />
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
-                            <Setter TargetName="Root" Property="Opacity" Value="0.82" />
+                            <Setter TargetName="Root" Property="Opacity" Value="0.78" />
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
-                            <Setter TargetName="Root" Property="Opacity" Value="0.48" />
+                            <Setter TargetName="Root" Property="Opacity" Value="0.42" />
                             <Setter Property="Cursor" Value="Arrow" />
                         </Trigger>
                     </ControlTemplate.Triggers>
@@ -94,8 +98,8 @@
     </Style>
 
     <Style x:Key="FieldTextBox" TargetType="TextBox">
-        <Setter Property="MinHeight" Value="36" />
-        <Setter Property="Padding" Value="10,6" />
+        <Setter Property="MinHeight" Value="38" />
+        <Setter Property="Padding" Value="11,7" />
         <Setter Property="VerticalContentAlignment" Value="Center" />
         <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}" />
         <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
@@ -109,9 +113,10 @@
             <Trigger Property="IsKeyboardFocusWithin" Value="True">
                 <Setter Property="BorderBrush" Value="{DynamicResource FocusRingBrush}" />
                 <Setter Property="BorderThickness" Value="2" />
+                <Setter Property="Padding" Value="10,6" />
             </Trigger>
             <Trigger Property="IsEnabled" Value="False">
-                <Setter Property="Opacity" Value="0.55" />
+                <Setter Property="Opacity" Value="0.5" />
             </Trigger>
         </Style.Triggers>
     </Style>
@@ -120,29 +125,31 @@
         <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
         <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
         <Setter Property="BorderThickness" Value="1" />
-        <Setter Property="CornerRadius" Value="10" />
+        <Setter Property="CornerRadius" Value="12" />
     </Style>
 
     <Style x:Key="InlineInfoCard" TargetType="Border">
-        <Setter Property="Padding" Value="12" />
-        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="Padding" Value="14" />
+        <Setter Property="CornerRadius" Value="10" />
         <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
     </Style>
 
     <Style x:Key="InlineErrorCard" TargetType="Border">
-        <Setter Property="Padding" Value="12" />
-        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="Padding" Value="14" />
+        <Setter Property="CornerRadius" Value="10" />
         <Setter Property="Background" Value="{DynamicResource DangerSoftBrush}" />
         <Setter Property="BorderBrush" Value="{DynamicResource DangerBrush}" />
         <Setter Property="BorderThickness" Value="1" />
     </Style>
 
     <Style x:Key="WorkspaceNavigationButton" TargetType="Button" BasedOn="{StaticResource GhostButton}">
-        <Setter Property="MinHeight" Value="36" />
+        <Setter Property="MinHeight" Value="40" />
         <Setter Property="HorizontalContentAlignment" Value="Stretch" />
         <Setter Property="FontWeight" Value="Normal" />
         <Setter Property="Margin" Value="0,1" />
-        <Setter Property="Padding" Value="10,7" />
+        <Setter Property="Padding" Value="12,8" />
     </Style>
 
     <Style x:Key="ServerListItem" TargetType="ListBoxItem">
@@ -156,12 +163,25 @@
             <Setter.Value>
                 <ControlTemplate TargetType="ListBoxItem">
                     <Border x:Name="Root"
-                            Padding="10,9"
+                            Padding="7,10,10,10"
                             CornerRadius="8"
                             Background="{TemplateBinding Background}"
                             BorderBrush="Transparent"
                             BorderThickness="1">
-                        <ContentPresenter />
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="3" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Border x:Name="SelectionIndicator"
+                                    Width="3"
+                                    MinHeight="22"
+                                    CornerRadius="2"
+                                    Background="{DynamicResource AccentBrush}"
+                                    Opacity="0"
+                                    VerticalAlignment="Center" />
+                            <ContentPresenter Grid.Column="1" Margin="8,0,0,0" />
+                        </Grid>
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
@@ -169,10 +189,13 @@
                         </Trigger>
                         <Trigger Property="IsSelected" Value="True">
                             <Setter TargetName="Root" Property="Background" Value="{DynamicResource AccentSoftBrush}" />
-                            <Setter TargetName="Root" Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+                            <Setter TargetName="SelectionIndicator" Property="Opacity" Value="1" />
                         </Trigger>
                         <Trigger Property="IsKeyboardFocusWithin" Value="True">
                             <Setter TargetName="Root" Property="BorderBrush" Value="{DynamicResource FocusRingBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="Root" Property="Opacity" Value="0.5" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>

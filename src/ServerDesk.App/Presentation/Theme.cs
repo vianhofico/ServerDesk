@@ -1,5 +1,7 @@
 using System.Windows;
 using ServerDesk.Application.Settings;
+using Wpf.Ui.Appearance;
+using Wpf.Ui.Controls;
 
 namespace ServerDesk.App.Presentation;
 
@@ -27,6 +29,12 @@ public sealed class WpfThemeService : IThemeService
             preference,
             _systemThemeDetector.GetCurrentTheme());
 
+        ApplicationThemeManager.Apply(
+            EffectiveTheme == AppThemeKind.Dark
+                ? ApplicationTheme.Dark
+                : ApplicationTheme.Light,
+            WindowBackdropType.None);
+
         var resources = System.Windows.Application.Current.Resources;
         var oldThemes = resources.MergedDictionaries
             .Where(IsServerDeskThemeDictionary)
@@ -38,7 +46,7 @@ public sealed class WpfThemeService : IThemeService
         }
 
         resources.MergedDictionaries.Insert(
-            0,
+            2,
             new ResourceDictionary
             {
                 Source = new Uri(

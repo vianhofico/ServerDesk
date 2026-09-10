@@ -1,0 +1,16 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:system="clr-namespace:System;assembly=System.Runtime">
+    <system:String x:Key="Loc.Dashboard.WindowTitle">Server dashboard</system:String>
+    <system:String x:Key="Loc.Dashboard.Command.Refresh">Refresh</system:String>
+    <system:String x:Key="Loc.Dashboard.Command.Cancel">Cancel</system:String>
+    <system:String x:Key="Loc.Dashboard.Health.Title">Health warnings</system:String>
+    <system:String x:Key="Loc.Dashboard.Health.Empty">No memory or filesystem pressure warning is active.</system:String>
+    <system:String x:Key="Loc.Dashboard.Filesystems.Title">Filesystems</system:String>
+    <system:String x:Key="Loc.Dashboard.Filesystems.Description">Read-only filesystem usage from the normalized dashboard snapshot.</system:String>
+    <system:String x:Key="Loc.Dashboard.Column.Mount">Mount</system:String>
+    <system:String x:Key="Loc.Dashboard.Column.Type">Type</system:String>
+    <system:String x:Key="Loc.Dashboard.Column.Used">Used</system:String>
+    <system:String x:Key="Loc.Dashboard.Column.Available">Available</system:String>
+    <system:String x:Key="Loc.Dashboard.Column.Usage">Usage</system:String>
+</ResourceDictionary>
