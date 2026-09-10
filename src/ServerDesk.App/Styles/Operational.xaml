@@ -4,8 +4,8 @@
     <Style x:Key="OperationalSearchTextBox"
            TargetType="TextBox"
            BasedOn="{StaticResource FieldTextBox}">
-        <Setter Property="MinHeight" Value="36" />
-        <Setter Property="Padding" Value="10,6" />
+        <Setter Property="MinHeight" Value="38" />
+        <Setter Property="Padding" Value="11,7" />
         <Setter Property="FontWeight" Value="Normal" />
     </Style>
 
@@ -13,14 +13,14 @@
            TargetType="Border"
            BasedOn="{StaticResource SurfaceCard}">
         <Setter Property="Padding" Value="8" />
-        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="CornerRadius" Value="10" />
     </Style>
 
     <Style x:Key="DetailsPane"
            TargetType="Border"
            BasedOn="{StaticResource SurfaceCard}">
-        <Setter Property="Padding" Value="14" />
-        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="Padding" Value="16" />
+        <Setter Property="CornerRadius" Value="10" />
     </Style>
 
     <Style x:Key="TechnicalText" TargetType="TextBlock">
@@ -30,19 +30,20 @@
     </Style>
 
     <Style x:Key="OperationalDataGridColumnHeader" TargetType="DataGridColumnHeader">
-        <Setter Property="Height" Value="34" />
-        <Setter Property="Padding" Value="10,7" />
+        <Setter Property="Height" Value="38" />
+        <Setter Property="Padding" Value="12,8" />
         <Setter Property="Background" Value="{DynamicResource SurfaceSecondaryBrush}" />
         <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}" />
         <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
         <Setter Property="BorderThickness" Value="0,0,0,1" />
         <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="FontSize" Value="12" />
         <Setter Property="HorizontalContentAlignment" Value="Left" />
         <Setter Property="VerticalContentAlignment" Value="Center" />
     </Style>
 
     <Style x:Key="OperationalDataGridCell" TargetType="DataGridCell">
-        <Setter Property="Padding" Value="9,0" />
+        <Setter Property="Padding" Value="11,0" />
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}" />
         <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
@@ -62,7 +63,7 @@
     </Style>
 
     <Style x:Key="OperationalDataGridRow" TargetType="DataGridRow">
-        <Setter Property="MinHeight" Value="34" />
+        <Setter Property="MinHeight" Value="38" />
         <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
         <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}" />
         <Setter Property="BorderThickness" Value="0" />
@@ -82,7 +83,7 @@
                 <Setter Property="BorderThickness" Value="1" />
             </Trigger>
             <Trigger Property="IsEnabled" Value="False">
-                <Setter Property="Opacity" Value="0.55" />
+                <Setter Property="Opacity" Value="0.5" />
             </Trigger>
         </Style.Triggers>
     </Style>
@@ -112,6 +113,8 @@
         <Setter Property="VirtualizingPanel.IsVirtualizing" Value="True" />
         <Setter Property="VirtualizingPanel.VirtualizationMode" Value="Recycling" />
         <Setter Property="ScrollViewer.CanContentScroll" Value="True" />
+        <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Auto" />
+        <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto" />
         <Setter Property="SnapsToDevicePixels" Value="True" />
     </Style>
 </ResourceDictionary>
