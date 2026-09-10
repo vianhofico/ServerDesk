@@ -68,6 +68,7 @@
                     <ColumnDefinition Width="300" />
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
 
@@ -102,10 +103,28 @@
                     </StackPanel>
                 </Button>
 
-                <Button Grid.Column="3"
+                <Button x:Name="ReconnectButton"
+                        Grid.Column="3"
+                        Margin="8,0,0,0"
+                        Click="ReconnectOnClick"
+                        Style="{StaticResource SecondaryButton}"
+                        IsEnabled="False"
+                        AutomationProperties.Name="{DynamicResource Loc.Terminal.Command.Reconnect}">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE72C;"
+                                   Margin="0,0,7,0"
+                                   FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                   FontSize="12" />
+                        <TextBlock Text="{DynamicResource Loc.Terminal.Command.Reconnect}" />
+                    </StackPanel>
+                </Button>
+
+                <Button x:Name="CloseTabButton"
+                        Grid.Column="4"
                         Margin="8,0,0,0"
                         Click="CloseTabOnClick"
-                        Style="{StaticResource SecondaryButton}"
+                        Style="{StaticResource GhostButton}"
+                        IsEnabled="False"
                         AutomationProperties.Name="{DynamicResource Loc.Terminal.Command.CloseTab}">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="&#xE711;"
