@@ -53,9 +53,15 @@ internal sealed class RouteAwareSftpRemoteFileSystem : IRemoteFileSystem
     private readonly SshClientFactory _clientFactory;
     private readonly SshSessionOptions _options;
     private readonly SemaphoreSlim _connectionGate = new(1, 1);
+    private readonly object _lifecycleSync = new();
+    private readonly CancellationTokenSource _disposeCancellation = new();
+    private readonly TaskCompletionSource _operationsDrained =
+        new(TaskCreationOptions.RunContinuationsAsynchronously);
     private SftpClient? _client;
     private SshConnectionPlan? _plan;
+    private int _activeOperations;
     private bool _disposed;
+    private Task? _disposeTask;
 
     public RouteAwareSftpRemoteFileSystem(
         ServerProfile profile,
@@ -73,7 +79,9 @@ internal sealed class RouteAwareSftpRemoteFileSystem : IRemoteFileSystem
 
     public async ValueTask ConnectAsync(CancellationToken cancellationToken = default)
     {
-        ThrowIfDisposed();
+        using var operation = EnterLifecycleOperation(cancellationToken);
+        cancellationToken = operation.Token;
+        cancellationToken.ThrowIfCancellationRequested();
         await _connectionGate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
@@ -136,7 +144,9 @@ internal sealed class RouteAwareSftpRemoteFileSystem : IRemoteFileSystem
 
     public async ValueTask DisconnectAsync(CancellationToken cancellationToken = default)
     {
-        ThrowIfDisposed();
+        using var operation = EnterLifecycleOperation(cancellationToken);
+        cancellationToken = operation.Token;
+        cancellationToken.ThrowIfCancellationRequested();
         await _connectionGate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
@@ -181,6 +191,9 @@ internal sealed class RouteAwareSftpRemoteFileSystem : IRemoteFileSystem
         RemotePath path,
         CancellationToken cancellationToken = default)
     {
+        using var operation = await EnterSerializedOperationAsync(cancellationToken).ConfigureAwait(false);
+        cancellationToken = operation.Token;
+        cancellationToken.ThrowIfCancellationRequested();
         var client = GetConnectedClient();
         try
         {
@@ -211,6 +224,9 @@ internal sealed class RouteAwareSftpRemoteFileSystem : IRemoteFileSystem
         RemotePath path,
         CancellationToken cancellationToken = default)
     {
+        using var operation = await EnterSerializedOperationAsync(cancellationToken).ConfigureAwait(false);
+        cancellationToken = operation.Token;
+        cancellationToken.ThrowIfCancellationRequested();
         var client = GetConnectedClient();
         try
         {
@@ -230,6 +246,9 @@ internal sealed class RouteAwareSftpRemoteFileSystem : IRemoteFileSystem
         RemotePath path,
         CancellationToken cancellationToken = default)
     {
+        using var operation = await EnterSerializedOperationAsync(cancellationToken).ConfigureAwait(false);
+        cancellationToken = operation.Token;
+        cancellationToken.ThrowIfCancellationRequested();
         var client = GetConnectedClient();
         try
         {
@@ -256,6 +275,9 @@ internal sealed class RouteAwareSftpRemoteFileSystem : IRemoteFileSystem
         bool overwrite = false,
         CancellationToken cancellationToken = default)
     {
+        using var operation = await EnterSerializedOperationAsync(cancellationToken).ConfigureAwait(false);
+        cancellationToken = operation.Token;
+        cancellationToken.ThrowIfCancellationRequested();
         var client = GetConnectedClient();
         try
         {
@@ -296,6 +318,9 @@ internal sealed class RouteAwareSftpRemoteFileSystem : IRemoteFileSystem
         RemotePath path,
         CancellationToken cancellationToken = default)
     {
+        using var operation = await EnterSerializedOperationAsync(cancellationToken).ConfigureAwait(false);
+        cancellationToken = operation.Token;
+        cancellationToken.ThrowIfCancellationRequested();
         var client = GetConnectedClient();
         try
         {
@@ -315,6 +340,9 @@ internal sealed class RouteAwareSftpRemoteFileSystem : IRemoteFileSystem
         RemotePath path,
         CancellationToken cancellationToken = default)
     {
+        using var operation = await EnterSerializedOperationAsync(cancellationToken).ConfigureAwait(false);
+        cancellationToken = operation.Token;
+        cancellationToken.ThrowIfCancellationRequested();
         var client = GetConnectedClient();
         try
         {
@@ -335,6 +363,9 @@ internal sealed class RouteAwareSftpRemoteFileSystem : IRemoteFileSystem
         RemoteUnixPermissions permissions,
         CancellationToken cancellationToken = default)
     {
+        using var operation = await EnterSerializedOperationAsync(cancellationToken).ConfigureAwait(false);
+        cancellationToken = operation.Token;
+        cancellationToken.ThrowIfCancellationRequested();
         var client = GetConnectedClient();
         try
         {
@@ -378,6 +409,9 @@ internal sealed class RouteAwareSftpRemoteFileSystem : IRemoteFileSystem
             throw new ArgumentException("Upload destination must identify a file.", nameof(destination));
         }
 
+        using var operation = await EnterSerializedOperationAsync(cancellationToken).ConfigureAwait(false);
+        cancellationToken = operation.Token;
+        cancellationToken.ThrowIfCancellationRequested();
         var client = GetConnectedClient();
         var temporaryPath = destination.Parent.Combine($".serverdesk-upload-{Guid.NewGuid():N}.part");
         var committed = false;
@@ -458,6 +492,9 @@ internal sealed class RouteAwareSftpRemoteFileSystem : IRemoteFileSystem
             throw new ArgumentException("Download destination stream must be writable.", nameof(destination));
         }
 
+        using var operation = await EnterSerializedOperationAsync(cancellationToken).ConfigureAwait(false);
+        cancellationToken = operation.Token;
+        cancellationToken.ThrowIfCancellationRequested();
         var client = GetConnectedClient();
         try
         {
@@ -494,23 +531,36 @@ internal sealed class RouteAwareSftpRemoteFileSystem : IRemoteFileSystem
         }
     }
 
-    public async ValueTask DisposeAsync()
+    public ValueTask DisposeAsync()
     {
-        if (_disposed)
+        lock (_lifecycleSync)
         {
-            return;
-        }
+            if (_disposeTask is not null)
+            {
+                return new ValueTask(_disposeTask);
+            }
 
-        _disposed = true;
-        await _connectionGate.WaitAsync(CancellationToken.None).ConfigureAwait(false);
+            _disposed = true;
+            var drainTask = _activeOperations == 0
+                ? Task.CompletedTask
+                : _operationsDrained.Task;
+            _disposeTask = DisposeCoreAsync(drainTask);
+            return new ValueTask(_disposeTask);
+        }
+    }
+
+    private async Task DisposeCoreAsync(Task drainTask)
+    {
+        await _disposeCancellation.CancelAsync().ConfigureAwait(false);
+        await drainTask.ConfigureAwait(false);
         try
         {
             DisposeConnection();
         }
         finally
         {
-            _connectionGate.Release();
             _connectionGate.Dispose();
+            _disposeCancellation.Dispose();
         }
     }
 
@@ -569,9 +619,90 @@ internal sealed class RouteAwareSftpRemoteFileSystem : IRemoteFileSystem
         }
     }
 
+    private OperationLease EnterLifecycleOperation(CancellationToken cancellationToken)
+    {
+        lock (_lifecycleSync)
+        {
+            ObjectDisposedException.ThrowIf(_disposed, this);
+            var operationCancellation = CancellationTokenSource.CreateLinkedTokenSource(
+                cancellationToken,
+                _disposeCancellation.Token);
+            _activeOperations++;
+            return new OperationLease(this, operationCancellation);
+        }
+    }
+
+    private async ValueTask<OperationLease> EnterSerializedOperationAsync(CancellationToken cancellationToken)
+    {
+        var operation = EnterLifecycleOperation(cancellationToken);
+        try
+        {
+            await _connectionGate.WaitAsync(operation.Token).ConfigureAwait(false);
+            operation.MarkGateAcquired();
+            return operation;
+        }
+        catch
+        {
+            operation.Dispose();
+            throw;
+        }
+    }
+
+    private void EndOperation()
+    {
+        lock (_lifecycleSync)
+        {
+            _activeOperations--;
+            if (_disposed && _activeOperations == 0)
+            {
+                _operationsDrained.TrySetResult();
+            }
+        }
+    }
+
+    private sealed class OperationLease : IDisposable
+    {
+        private readonly RouteAwareSftpRemoteFileSystem _owner;
+        private readonly CancellationTokenSource _cancellation;
+        private int _gateAcquired;
+        private int _disposed;
+
+        public OperationLease(
+            RouteAwareSftpRemoteFileSystem owner,
+            CancellationTokenSource cancellation)
+        {
+            _owner = owner;
+            _cancellation = cancellation;
+        }
+
+        public CancellationToken Token => _cancellation.Token;
+
+        public void MarkGateAcquired() => Interlocked.Exchange(ref _gateAcquired, 1);
+
+        public void Dispose()
+        {
+            if (Interlocked.Exchange(ref _disposed, 1) != 0)
+            {
+                return;
+            }
+
+            try
+            {
+                if (Volatile.Read(ref _gateAcquired) != 0)
+                {
+                    _owner._connectionGate.Release();
+                }
+            }
+            finally
+            {
+                _cancellation.Dispose();
+                _owner.EndOperation();
+            }
+        }
+    }
+
     private SftpClient GetConnectedClient()
     {
-        ThrowIfDisposed();
         if (_client?.IsConnected != true)
         {
             throw CreateError(
@@ -770,8 +901,4 @@ internal sealed class RouteAwareSftpRemoteFileSystem : IRemoteFileSystem
                 innerException is null ? null : $"{innerException.GetType().Name}: {innerException.Message}"),
             innerException);
 
-    private void ThrowIfDisposed()
-    {
-        ObjectDisposedException.ThrowIf(_disposed, this);
-    }
 }
