@@ -21,6 +21,7 @@
                 <ResourceDictionary Source="/ServerDesk.App;component/Localization/Strings.TasksWorkspace.en.xaml" />
                 <ResourceDictionary Source="/ServerDesk.App;component/Localization/Strings.Storage.en.xaml" />
                 <ResourceDictionary Source="/ServerDesk.App;component/Localization/Strings.Nginx.en.xaml" />
+                <ResourceDictionary Source="/ServerDesk.App;component/Localization/Strings.Dashboard.en.xaml" />
             </ResourceDictionary.MergedDictionaries>
 
             <Style TargetType="Window">
