@@ -49,6 +49,22 @@ internal sealed class AsyncOperationDrain
         }
     }
 
+    public bool TryRunWhileAccepting(Action action)
+    {
+        ArgumentNullException.ThrowIfNull(action);
+
+        lock (_sync)
+        {
+            if (_stopping)
+            {
+                return false;
+            }
+
+            action();
+            return true;
+        }
+    }
+
     public Task StopAndDrainAsync()
     {
         lock (_sync)
