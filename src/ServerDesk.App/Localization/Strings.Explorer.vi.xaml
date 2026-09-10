@@ -29,6 +29,9 @@
     <system:String x:Key="Loc.Explorer.Search.Tooltip">Lọc cục bộ thư mục đã tải theo tên, loại, đường dẫn, quyền, chủ sở hữu hoặc nhóm.</system:String>
     <system:String x:Key="Loc.Explorer.Search.Clear">Xóa tìm kiếm</system:String>
     <system:String x:Key="Loc.Explorer.DropHint">Thả tệp cục bộ vào bất kỳ đâu trong cửa sổ này để tải lên thư mục hiện tại.</system:String>
+    <system:String x:Key="Loc.Explorer.Details.Title">Chi tiết</system:String>
+    <system:String x:Key="Loc.Explorer.Details.Empty">Chọn một mục để xem đường dẫn từ xa và metadata Linux.</system:String>
+    <system:String x:Key="Loc.Explorer.Shortcuts">Ctrl+L đường dẫn · Ctrl+F tìm kiếm · Alt+←/→ lịch sử · Alt+↑ thư mục cha · F2 đổi tên · F5 làm mới</system:String>
 
     <system:String x:Key="Loc.Explorer.Column.Name">Tên</system:String>
     <system:String x:Key="Loc.Explorer.Column.Type">Loại</system:String>
