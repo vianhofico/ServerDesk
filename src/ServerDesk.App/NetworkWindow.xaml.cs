@@ -11,10 +11,10 @@ public partial class NetworkWindow : Window
 {
     private readonly IServerNetworkService _networkService;
     private readonly ServerProfile _profile;
-    private readonly bool _initiallyConnected;
     private readonly List<InterfaceRow> _allInterfaces = [];
     private readonly List<PortRow> _allPorts = [];
     private CancellationTokenSource? _operationCancellation;
+    private bool _hasConnection;
 
     public NetworkWindow(
         IServerNetworkService networkService,
@@ -23,19 +23,34 @@ public partial class NetworkWindow : Window
     {
         _networkService = networkService ?? throw new ArgumentNullException(nameof(networkService));
         _profile = profile ?? throw new ArgumentNullException(nameof(profile));
-        _initiallyConnected = initiallyConnected;
+        _hasConnection = initiallyConnected;
         InitializeComponent();
-        TitleText.Text = $"Network · {_profile.Name}";
+
+        ServerNameText.Text = _profile.Name;
         EndpointText.Text = $"{_profile.Username}@{_profile.Host}:{_profile.Port}";
-        StatusText.Text = initiallyConnected
-            ? "Ready to inspect interfaces and listening ports."
-            : "Disconnected: connect the server before loading network state.";
-        FooterText.Text = "Read-only network diagnostics. Owner/PID may be hidden by Linux permissions.";
+        if (string.IsNullOrWhiteSpace(_profile.Environment))
+        {
+            EnvironmentValueText.SetResourceReference(TextBlock.TextProperty, "Loc.Network.Header.Unlabeled");
+        }
+        else
+        {
+            EnvironmentValueText.Text = _profile.Environment;
+        }
+
+        RefreshConnectionLabel();
+        SetStatusResource(
+            initiallyConnected ? "Loc.Network.Status.State.Ready" : "Loc.Network.Status.State.Disconnected",
+            initiallyConnected ? "Loc.Network.Status.ReadyInitial" : "Loc.Network.Status.DisconnectedInitial");
+        FooterText.SetResourceReference(TextBlock.TextProperty, "Loc.Network.Footer.ReadOnly");
+        UpdateSummary();
+        UpdateCommandState();
     }
+
+    private bool IsBusy => _operationCancellation is not null;
 
     private async void WindowOnLoaded(object sender, RoutedEventArgs e)
     {
-        if (_initiallyConnected)
+        if (_hasConnection)
         {
             await RefreshAsync();
         }
@@ -49,10 +64,17 @@ public partial class NetworkWindow : Window
 
     private void SearchBoxOnTextChanged(object sender, TextChangedEventArgs e) => ApplyFilter();
 
+    private void ClearSearchOnClick(object sender, RoutedEventArgs e)
+    {
+        SearchBox.Clear();
+        SearchBox.Focus();
+    }
+
     private async Task RefreshAsync()
     {
         using var operation = BeginOperation();
-        StatusText.Text = "Sampling interface counters and listening ports…";
+        SetStatusResource("Loc.Network.Status.State.Loading", "Loc.Network.Status.Loading");
+        UpdateCommandState();
         try
         {
             var result = await _networkService.InspectAsync(_profile, operation.Token);
@@ -66,22 +88,46 @@ public partial class NetworkWindow : Window
             _allInterfaces.AddRange(result.Interfaces.Select(InterfaceRow.From));
             _allPorts.Clear();
             _allPorts.AddRange(result.ListeningSockets.Select(PortRow.From));
+            _hasConnection = true;
+            RefreshConnectionLabel();
             ApplyFilter();
+            UpdateSummary();
 
             var hiddenOwners = _allPorts.Count(row => !row.OwnerVisible);
-            StatusText.Text = _allInterfaces.Count == 0 && _allPorts.Count == 0
-                ? "Empty: no network rows were returned."
-                : hiddenOwners == 0
-                    ? $"Ready: {_allInterfaces.Count:N0} interface(s), {_allPorts.Count:N0} listening socket(s)."
-                    : $"Ready: {_allInterfaces.Count:N0} interface(s), {_allPorts.Count:N0} listening socket(s); owner details are unavailable for {hiddenOwners:N0} row(s).";
+            if (_allInterfaces.Count == 0 && _allPorts.Count == 0)
+            {
+                SetStatusResource("Loc.Network.Status.State.Empty", "Loc.Network.Status.Empty");
+            }
+            else if (hiddenOwners == 0)
+            {
+                SetStatusRaw(
+                    "Loc.Network.Status.State.Ready",
+                    FormatLocalize("Loc.Network.Status.LoadedFormat", _allInterfaces.Count, _allPorts.Count));
+            }
+            else
+            {
+                SetStatusRaw(
+                    "Loc.Network.Status.State.Ready",
+                    FormatLocalize(
+                        "Loc.Network.Status.LoadedHiddenOwnersFormat",
+                        _allInterfaces.Count,
+                        _allPorts.Count,
+                        hiddenOwners));
+            }
         }
         catch (OperationCanceledException)
         {
-            StatusText.Text = "Cancelled: network refresh stopped.";
+            SetStatusResource("Loc.Network.Status.State.Cancelled", "Loc.Network.Status.Cancelled");
         }
         catch (Exception exception)
         {
-            StatusText.Text = $"Error: {exception.Message}";
+            SetStatusRaw(
+                "Loc.Network.Status.State.Error",
+                FormatLocalize("Loc.Network.Status.ErrorFormat", exception.Message));
+        }
+        finally
+        {
+            UpdateCommandState();
         }
     }
 
@@ -96,22 +142,91 @@ public partial class NetworkWindow : Window
             : _allPorts.Where(row => row.SearchText.Contains(query, StringComparison.OrdinalIgnoreCase)).ToList();
         InterfaceGrid.ItemsSource = interfaces;
         PortGrid.ItemsSource = ports;
+        ClearSearchButton.Visibility = query.Length == 0 ? Visibility.Collapsed : Visibility.Visible;
         FooterText.Text = query.Length == 0
-            ? $"Read-only · {_allInterfaces.Count:N0} interface(s) · {_allPorts.Count:N0} listening socket(s)."
-            : $"Filter '{query}': {interfaces.Count:N0}/{_allInterfaces.Count:N0} interface(s), {ports.Count:N0}/{_allPorts.Count:N0} socket(s).";
+            ? FormatLocalize("Loc.Network.Footer.CountsFormat", _allInterfaces.Count, _allPorts.Count)
+            : FormatLocalize(
+                "Loc.Network.Footer.FilterFormat",
+                query,
+                interfaces.Count,
+                _allInterfaces.Count,
+                ports.Count,
+                _allPorts.Count);
     }
 
     private void ApplyError(RemoteError error)
     {
-        StatusText.Text = error.Code switch
+        switch (error.Code)
         {
-            RemoteErrorCode.PermissionDenied => $"Permission: {error.Message}",
-            RemoteErrorCode.CommandNotFound or RemoteErrorCode.CapabilityUnavailable => $"Capability: {error.Message}",
-            RemoteErrorCode.NetworkInterrupted => $"Disconnected: {error.Message}",
-            RemoteErrorCode.OperationCancelled => $"Cancelled: {error.Message}",
-            RemoteErrorCode.ParseFailed => $"Unsupported output: {error.Message}",
-            _ => $"{error.Code}: {error.Message}",
-        };
+            case RemoteErrorCode.PermissionDenied:
+                SetStatusRaw(
+                    "Loc.Network.Status.State.Permission",
+                    FormatLocalize("Loc.Network.Status.PermissionFormat", error.Message));
+                break;
+
+            case RemoteErrorCode.CommandNotFound:
+            case RemoteErrorCode.CapabilityUnavailable:
+                SetStatusRaw(
+                    "Loc.Network.Status.State.Capability",
+                    FormatLocalize("Loc.Network.Status.CapabilityFormat", error.Message));
+                break;
+
+            case RemoteErrorCode.NetworkInterrupted:
+                _hasConnection = false;
+                RefreshConnectionLabel();
+                SetStatusRaw(
+                    "Loc.Network.Status.State.Disconnected",
+                    FormatLocalize("Loc.Network.Status.DisconnectedErrorFormat", error.Message));
+                break;
+
+            case RemoteErrorCode.OperationCancelled:
+                SetStatusRaw(
+                    "Loc.Network.Status.State.Cancelled",
+                    FormatLocalize("Loc.Network.Status.CancelledErrorFormat", error.Message));
+                break;
+
+            case RemoteErrorCode.ParseFailed:
+                SetStatusRaw(
+                    "Loc.Network.Status.State.Error",
+                    FormatLocalize("Loc.Network.Status.UnsupportedOutputFormat", error.Message));
+                break;
+
+            default:
+                SetStatusRaw(
+                    "Loc.Network.Status.State.Error",
+                    FormatLocalize("Loc.Network.Status.ErrorCodeFormat", error.Code, error.Message));
+                break;
+        }
+    }
+
+    private void UpdateSummary()
+    {
+        InterfaceCountText.Text = _allInterfaces.Count.ToString("N0", CultureInfo.CurrentCulture);
+        PortCountText.Text = _allPorts.Count.ToString("N0", CultureInfo.CurrentCulture);
+        HiddenOwnerCountText.Text = _allPorts.Count(row => !row.OwnerVisible).ToString("N0", CultureInfo.CurrentCulture);
+    }
+
+    private void UpdateCommandState()
+    {
+        RefreshButton.IsEnabled = !IsBusy;
+        CancelButton.IsEnabled = IsBusy;
+    }
+
+    private void RefreshConnectionLabel() =>
+        ConnectionValueText.SetResourceReference(
+            TextBlock.TextProperty,
+            _hasConnection ? "Loc.Network.Connection.Connected" : "Loc.Network.Connection.Disconnected");
+
+    private void SetStatusResource(string stateResourceKey, string messageResourceKey)
+    {
+        StatusStateText.SetResourceReference(TextBlock.TextProperty, stateResourceKey);
+        StatusText.SetResourceReference(TextBlock.TextProperty, messageResourceKey);
+    }
+
+    private void SetStatusRaw(string stateResourceKey, string message)
+    {
+        StatusStateText.SetResourceReference(TextBlock.TextProperty, stateResourceKey);
+        StatusText.Text = message;
     }
 
     private OperationScope BeginOperation()
@@ -126,6 +241,22 @@ public partial class NetworkWindow : Window
         if (_operationCancellation is not null && !_operationCancellation.IsCancellationRequested)
         {
             _operationCancellation.Cancel();
+        }
+    }
+
+    private static string Localize(string key) =>
+        System.Windows.Application.Current?.TryFindResource(key) as string ?? key;
+
+    private static string FormatLocalize(string key, params object?[] arguments)
+    {
+        var template = Localize(key);
+        try
+        {
+            return string.Format(CultureInfo.CurrentCulture, template, arguments);
+        }
+        catch (FormatException)
+        {
+            return template;
         }
     }
 
@@ -191,7 +322,7 @@ public partial class NetworkWindow : Window
         {
             var pid = info.ProcessId?.ToString(CultureInfo.InvariantCulture) ?? "—";
             var process = string.IsNullOrWhiteSpace(info.ProcessName) ? "—" : info.ProcessName;
-            var owner = info.OwnerVisible ? "Visible" : "Unavailable";
+            var owner = Localize(info.OwnerVisible ? "Loc.Network.Owner.Visible" : "Loc.Network.Owner.Unavailable");
             return new PortRow(
                 info.Protocol,
                 info.State,
@@ -233,6 +364,7 @@ public partial class NetworkWindow : Window
             }
 
             _source.Dispose();
+            _owner.UpdateCommandState();
         }
     }
 }
