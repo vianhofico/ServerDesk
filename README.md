@@ -29,7 +29,7 @@ This does **not** mean every Linux distribution, database version, topology, or 
 - [Detailed user guide by module](docs/USER_GUIDE.md)
 - [Certified support matrix](docs/SUPPORT_MATRIX.md)
 - [Windows installation guide](docs/INSTALL.md)
-- [Latest release notes](docs/releases/v1.0.3.md)
+- [Latest release notes](docs/releases/v1.0.4.md)
 
 ## Install on Windows
 
@@ -99,7 +99,7 @@ For users:
 2. [`docs/USER_GUIDE.md`](docs/USER_GUIDE.md) — how to use each module.
 3. [`docs/CURRENT_SCOPE.md`](docs/CURRENT_SCOPE.md) — delivered, conditional, unsupported and out-of-scope capabilities.
 4. [`docs/SUPPORT_MATRIX.md`](docs/SUPPORT_MATRIX.md) — exact certified platforms/engines.
-5. [`docs/releases/v1.0.3.md`](docs/releases/v1.0.3.md) — latest Windows installer release notes.
+5. [`docs/releases/v1.0.4.md`](docs/releases/v1.0.4.md) — latest Windows installer release notes.
 
 For contributors/agents:
 
