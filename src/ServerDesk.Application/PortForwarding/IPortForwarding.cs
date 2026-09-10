@@ -107,7 +107,7 @@ public sealed class PortForwardManager : IAsyncDisposable
         Guid serverProfileId,
         CancellationToken cancellationToken = default)
     {
-        using var operation = EnterOperation(cancellationToken);
+        using var operation = EnterOperation();
         return await _forwardRepository.ListForServerAsync(serverProfileId, cancellationToken).ConfigureAwait(false);
     }
 
@@ -115,8 +115,8 @@ public sealed class PortForwardManager : IAsyncDisposable
         PortForwardProfile profile,
         CancellationToken cancellationToken = default)
     {
+        using var operation = EnterOperation();
         ArgumentNullException.ThrowIfNull(profile);
-        using var operation = EnterOperation(cancellationToken);
         await _lifecycleGate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
@@ -159,7 +159,7 @@ public sealed class PortForwardManager : IAsyncDisposable
         Guid profileId,
         CancellationToken cancellationToken = default)
     {
-        using var operation = EnterOperation(cancellationToken);
+        using var operation = EnterOperation();
         await _lifecycleGate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
@@ -175,7 +175,7 @@ public sealed class PortForwardManager : IAsyncDisposable
 
     public bool TryGetRuntimeSnapshot(Guid profileId, out PortForwardRuntimeSnapshot snapshot)
     {
-        using var operation = EnterOperation(CancellationToken.None);
+        using var operation = EnterOperation();
         if (_activeForwards.TryGetValue(profileId, out var active))
         {
             snapshot = ToSnapshot(active.Session);
@@ -190,7 +190,7 @@ public sealed class PortForwardManager : IAsyncDisposable
         Guid profileId,
         CancellationToken cancellationToken = default)
     {
-        using var operation = EnterOperation(cancellationToken);
+        using var operation = EnterOperation();
         await _lifecycleGate.WaitAsync(cancellationToken).ConfigureAwait(false);
         ActiveForward? active = null;
         try
@@ -264,7 +264,7 @@ public sealed class PortForwardManager : IAsyncDisposable
         Guid profileId,
         CancellationToken cancellationToken = default)
     {
-        using var operation = EnterOperation(cancellationToken);
+        using var operation = EnterOperation();
         await _lifecycleGate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
@@ -342,9 +342,8 @@ public sealed class PortForwardManager : IAsyncDisposable
         }
     }
 
-    private OperationLease EnterOperation(CancellationToken cancellationToken)
+    private OperationLease EnterOperation()
     {
-        cancellationToken.ThrowIfCancellationRequested();
         lock (_lifecycleSync)
         {
             ObjectDisposedException.ThrowIf(_disposed, this);
