@@ -1,0 +1,32 @@
+name: Patch routed SFTP lifecycle
+
+on:
+  push:
+    branches:
+      - fix/200-route-aware-sftp-dispose-race
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Apply lifecycle patch and integration regression
+        run: python .github/scripts/patch-route-aware-sftp-lifecycle.py
+
+      - name: Commit lifecycle fix and test
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/ServerDesk.Infrastructure.Ssh/RouteAwareSftpRemoteFileSystem.cs
+          git diff --cached --check
+          git commit -m "fix(sftp): coordinate routed operations with teardown"
+          git add tests/ServerDesk.Ssh.IntegrationTests/RouteAwareSftpLifecycleIntegrationTests.cs
+          git diff --cached --check
+          git commit -m "test(sftp): cover routed upload disposal lifecycle"
+          git push
