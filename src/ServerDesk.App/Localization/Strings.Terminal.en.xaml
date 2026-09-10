@@ -7,9 +7,11 @@
     <system:String x:Key="Loc.Terminal.Server.Label">Server</system:String>
     <system:String x:Key="Loc.Terminal.Server.Hint">Choose the server used for the next terminal tab.</system:String>
     <system:String x:Key="Loc.Terminal.Command.New">New terminal</system:String>
+    <system:String x:Key="Loc.Terminal.Command.Reconnect">Reconnect</system:String>
     <system:String x:Key="Loc.Terminal.Command.CloseTab">Close tab</system:String>
     <system:String x:Key="Loc.Terminal.Status.Ready">Ready</system:String>
     <system:String x:Key="Loc.Terminal.Status.OpeningFormat">Opening terminal for {0}…</system:String>
+    <system:String x:Key="Loc.Terminal.Status.ReconnectingFormat">Reconnecting terminal for {0}…</system:String>
     <system:String x:Key="Loc.Terminal.Status.ConnectedFormat">Connected to {0}</system:String>
     <system:String x:Key="Loc.Terminal.Status.ConnectCancelledFormat">Terminal connection to {0} was cancelled.</system:String>
     <system:String x:Key="Loc.Terminal.Status.OpenErrorFormat">Could not open terminal: {0}</system:String>
