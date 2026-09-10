@@ -237,11 +237,11 @@
                                         Padding="0"
                                         HorizontalAlignment="Right"
                                         VerticalAlignment="Center"
-                                        ToolTip="{DynamicResource Loc.Network.Search.Clear}"
+                                        ToolTip="{DynamicResource Loc.Logs.Filter.Clear}"
                                         Click="ClearSearchOnClick"
                                         Style="{StaticResource GhostButton}"
                                         Visibility="Collapsed"
-                                        AutomationProperties.Name="{DynamicResource Loc.Network.Search.Clear}">
+                                        AutomationProperties.Name="{DynamicResource Loc.Logs.Filter.Clear}">
                                     <TextBlock Text="&#xE711;"
                                                FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
                                                FontSize="11" />
