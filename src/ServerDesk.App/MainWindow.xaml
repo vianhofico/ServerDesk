@@ -265,20 +265,28 @@
                                 <ColumnDefinition Width="10" />
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
-                            <ComboBox Grid.Column="0"
-                                      MinWidth="0"
-                                      ItemsSource="{Binding ThemeOptions}"
-                                      DisplayMemberPath="DisplayName"
-                                      SelectedValuePath="Value"
-                                      SelectedValue="{Binding ThemePreference, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                      ToolTip="{DynamicResource Loc.Theme}" />
-                            <ComboBox Grid.Column="2"
-                                      MinWidth="0"
-                                      ItemsSource="{Binding LanguageOptions}"
-                                      DisplayMemberPath="DisplayName"
-                                      SelectedValuePath="Value"
-                                      SelectedValue="{Binding LanguagePreference, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                      ToolTip="{DynamicResource Loc.Language}" />
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="{DynamicResource Loc.Theme}"
+                                           Style="{StaticResource CaptionText}"
+                                           Margin="0,0,0,4" />
+                                <ComboBox MinWidth="0"
+                                          ItemsSource="{Binding ThemeOptions}"
+                                          DisplayMemberPath="DisplayName"
+                                          SelectedValuePath="Value"
+                                          SelectedValue="{Binding ThemePreference, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                          AutomationProperties.Name="{DynamicResource Loc.Theme}" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Text="{DynamicResource Loc.Language}"
+                                           Style="{StaticResource CaptionText}"
+                                           Margin="0,0,0,4" />
+                                <ComboBox MinWidth="0"
+                                          ItemsSource="{Binding LanguageOptions}"
+                                          DisplayMemberPath="DisplayName"
+                                          SelectedValuePath="Value"
+                                          SelectedValue="{Binding LanguagePreference, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                          AutomationProperties.Name="{DynamicResource Loc.Language}" />
+                            </StackPanel>
                         </Grid>
                     </StackPanel>
                 </Border>
