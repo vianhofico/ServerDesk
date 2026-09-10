@@ -6,7 +6,7 @@ ServerDesk ships in two Windows x64 formats.
 
 ## Recommended — Windows installer
 
-Download `ServerDesk-v1.0.3-win-x64-setup.exe` from the GitHub Release and run it once.
+Download `ServerDesk-v1.0.4-win-x64-setup.exe` from the GitHub Release and run it once.
 
 The installer is per-user and does not require administrator elevation for the normal installation path. By default it:
 
@@ -24,7 +24,7 @@ To uninstall, use **Settings → Apps → Installed apps → ServerDesk → Unin
 
 ## Portable ZIP
 
-`ServerDesk-v1.0.3-win-x64.zip` remains available for users who intentionally want a portable copy.
+`ServerDesk-v1.0.4-win-x64.zip` remains available for users who intentionally want a portable copy.
 
 1. Extract the ZIP to a folder.
 2. Run `ServerDesk.App.exe` from that folder.
@@ -36,8 +36,8 @@ The portable package does **not** install the app, create Desktop/Start Menu sho
 Download `SHA256SUMS.txt` from the same GitHub Release. In PowerShell:
 
 ```powershell
-Get-FileHash .\ServerDesk-v1.0.3-win-x64-setup.exe -Algorithm SHA256
-Get-FileHash .\ServerDesk-v1.0.3-win-x64.zip -Algorithm SHA256
+Get-FileHash .\ServerDesk-v1.0.4-win-x64-setup.exe -Algorithm SHA256
+Get-FileHash .\ServerDesk-v1.0.4-win-x64.zip -Algorithm SHA256
 ```
 
 Compare the output with the corresponding entries in `SHA256SUMS.txt`.
