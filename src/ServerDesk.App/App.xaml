@@ -1,10 +1,14 @@
 <Application x:Class="ServerDesk.App.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml">
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
+                <ui:ThemesDictionary Theme="Light" />
+                <ui:ControlsDictionary />
                 <ResourceDictionary Source="/ServerDesk.App;component/Themes/Light.xaml" />
+                <ResourceDictionary Source="/ServerDesk.App;component/Styles/DesignSystem.xaml" />
                 <ResourceDictionary Source="/ServerDesk.App;component/Styles/Controls.xaml" />
                 <ResourceDictionary Source="/ServerDesk.App;component/Styles/Operational.xaml" />
                 <ResourceDictionary Source="/ServerDesk.App;component/Localization/Strings.en.xaml" />
@@ -22,6 +26,9 @@
             <Style TargetType="Window">
                 <Setter Property="Icon" Value="/ServerDesk.App;component/Assets/Branding/serverdesk.ico" />
                 <Setter Property="FontFamily" Value="Segoe UI Variable Text, Segoe UI" />
+                <Setter Property="TextOptions.TextFormattingMode" Value="Display" />
+                <Setter Property="UseLayoutRounding" Value="True" />
+                <Setter Property="SnapsToDevicePixels" Value="True" />
                 <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}" />
                 <Setter Property="Background" Value="{DynamicResource WindowBackgroundBrush}" />
             </Style>
@@ -31,7 +38,7 @@
             </Style>
 
             <Style TargetType="ComboBox">
-                <Setter Property="MinHeight" Value="32" />
+                <Setter Property="MinHeight" Value="36" />
                 <Setter Property="Padding" Value="10,4" />
                 <Setter Property="VerticalContentAlignment" Value="Center" />
             </Style>
