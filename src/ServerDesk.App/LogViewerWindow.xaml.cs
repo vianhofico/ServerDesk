@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
@@ -35,11 +36,26 @@ public partial class LogViewerWindow : Window
         _retained = new LogRetentionBuffer(_logService.Options.MaxRetainedRows);
 
         InitializeComponent();
-        TitleText.Text = $"Logs · {_profile.Name}";
+        ServerNameText.Text = _profile.Name;
         EndpointText.Text = $"{_profile.Username}@{_profile.Host}:{_profile.Port}";
+        if (string.IsNullOrWhiteSpace(_profile.Environment))
+        {
+            EnvironmentValueText.SetResourceReference(TextBlock.TextProperty, "Loc.Logs.Header.Unlabeled");
+        }
+        else
+        {
+            EnvironmentValueText.Text = _profile.Environment;
+        }
+
+        ConnectionValueText.SetResourceReference(
+            TextBlock.TextProperty,
+            initiallyConnected ? "Loc.Logs.Connection.Connected" : "Loc.Logs.Connection.Disconnected");
+
         SourceBox.ItemsSource = Enum.GetValues<ServerLogSource>();
         SourceBox.SelectedItem = ServerLogSource.Journal;
-        SeverityBox.ItemsSource = new[] { "All" }.Concat(Enum.GetNames<LogSeverity>()).ToArray();
+        SeverityBox.ItemsSource = new[] { Localize("Loc.Logs.Filter.All") }
+            .Concat(Enum.GetNames<LogSeverity>())
+            .ToArray();
         SeverityBox.SelectedIndex = 0;
         if (!string.IsNullOrWhiteSpace(initialUnitFilter))
         {
@@ -47,12 +63,15 @@ public partial class LogViewerWindow : Window
             UnitFilterBox.Text = initialUnitFilter;
         }
 
-        StatusText.Text = initiallyConnected
-            ? "Initial: choose a source or refresh recent logs."
-            : "Disconnected: connect the server before loading logs.";
-        FooterText.Text = $"Retention is bounded to {_logService.Options.MaxRetainedRows:N0} row(s).";
+        SetStatusResource(
+            initiallyConnected ? LogUiState.Initial : LogUiState.Disconnected,
+            initiallyConnected ? "Loc.Logs.Status.ReadyInitial" : "Loc.Logs.Status.DisconnectedInitial");
+        FooterText.Text = FormatLocalize("Loc.Logs.Footer.RetentionFormat", _logService.Options.MaxRetainedRows);
+        RetentionLimitText.Text = _logService.Options.MaxRetainedRows.ToString("N0", CultureInfo.CurrentCulture);
         _uiReady = true;
         UpdateSourceInputs();
+        ApplyFilter();
+        UpdateCommandState();
     }
 
     private async void WindowOnLoaded(object sender, RoutedEventArgs e)
@@ -75,14 +94,16 @@ public partial class LogViewerWindow : Window
     {
         if (!_initiallyConnected)
         {
-            StatusText.Text = "Disconnected: connect the server before following logs.";
+            SetStatusResource(LogUiState.Disconnected, "Loc.Logs.Status.DisconnectedFollow");
             return;
         }
 
         if (_retained.Entries.Count == 0)
         {
             await RefreshAsync();
-            if (_retained.Entries.Count == 0 && CurrentSource == ServerLogSource.File && string.IsNullOrWhiteSpace(FilePathBox.Text))
+            if (_retained.Entries.Count == 0 &&
+                CurrentSource == ServerLogSource.File &&
+                string.IsNullOrWhiteSpace(FilePathBox.Text))
             {
                 return;
             }
@@ -95,20 +116,23 @@ public partial class LogViewerWindow : Window
     {
         if (!_followRequested || _paused)
         {
-            StatusText.Text = "Pause is available while follow is active.";
+            SetStatusResource(LogUiState.Ready, "Loc.Logs.Status.PauseUnavailable");
             return;
         }
 
         _paused = true;
         CancelFollow(keepFollowIntent: true);
-        StatusText.Text = $"Paused: {_retained.Entries.Count:N0} row(s) retained. Resume continues from the last journal cursor where available.";
+        SetStatusRaw(
+            LogUiState.Paused,
+            FormatLocalize("Loc.Logs.Status.PausedFormat", _retained.Entries.Count));
+        UpdateCommandState();
     }
 
     private void ResumeOnClick(object sender, RoutedEventArgs e)
     {
         if (!_followRequested || !_paused)
         {
-            StatusText.Text = "Resume is available after pausing follow.";
+            SetStatusResource(LogUiState.Ready, "Loc.Logs.Status.ResumeUnavailable");
             return;
         }
 
@@ -119,7 +143,8 @@ public partial class LogViewerWindow : Window
     private void CancelOnClick(object sender, RoutedEventArgs e)
     {
         CancelAll(keepFollowIntent: false);
-        StatusText.Text = "Cancelled: active log work stopped.";
+        SetStatusResource(LogUiState.Cancelled, "Loc.Logs.Status.Cancelled");
+        UpdateCommandState();
     }
 
     private async void ExportOnClick(object sender, RoutedEventArgs e)
@@ -127,14 +152,14 @@ public partial class LogViewerWindow : Window
         var visible = (LogGrid.ItemsSource as IEnumerable<LogEntry>)?.ToArray() ?? [];
         if (visible.Length == 0)
         {
-            StatusText.Text = "Export: there are no visible rows to save.";
+            SetStatusResource(LogUiState.Empty, "Loc.Logs.Status.ExportEmpty");
             return;
         }
 
         var dialog = new SaveFileDialog
         {
-            Title = "Export visible ServerDesk logs",
-            Filter = "Tab-separated log (*.tsv)|*.tsv|Text file (*.txt)|*.txt|All files (*.*)|*.*",
+            Title = Localize("Loc.Logs.Export.DialogTitle"),
+            Filter = Localize("Loc.Logs.Export.Filter"),
             DefaultExt = ".tsv",
             AddExtension = true,
             FileName = $"serverdesk-{_profile.Name}-logs.tsv",
@@ -148,11 +173,15 @@ public partial class LogViewerWindow : Window
         {
             var content = BuildExport(visible);
             await File.WriteAllTextAsync(dialog.FileName, content, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
-            StatusText.Text = $"Exported {visible.Length:N0} visible row(s) as UTF-8 text.";
+            SetStatusRaw(
+                LogUiState.Ready,
+                FormatLocalize("Loc.Logs.Status.ExportedFormat", visible.Length));
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or NotSupportedException)
         {
-            StatusText.Text = $"Local I/O error: ServerDesk could not export logs. {exception.Message}";
+            SetStatusRaw(
+                LogUiState.Error,
+                FormatLocalize("Loc.Logs.Status.ExportErrorFormat", exception.Message));
         }
     }
 
@@ -168,9 +197,12 @@ public partial class LogViewerWindow : Window
         _lastCursor = null;
         UpdateSourceInputs();
         ApplyFilter();
-        StatusText.Text = CurrentSource == ServerLogSource.Journal
-            ? "Initial: journald selected. Refresh or Follow to load structured entries."
-            : "Initial: file source selected. Enter an absolute remote log path, then Refresh or Follow.";
+        SetStatusResource(
+            LogUiState.Initial,
+            CurrentSource == ServerLogSource.Journal
+                ? "Loc.Logs.Status.JournalSelected"
+                : "Loc.Logs.Status.FileSelected");
+        UpdateCommandState();
     }
 
     private void FilterOnChanged(object sender, TextChangedEventArgs e)
@@ -189,11 +221,17 @@ public partial class LogViewerWindow : Window
         }
     }
 
+    private void ClearSearchOnClick(object sender, RoutedEventArgs e)
+    {
+        SearchBox.Clear();
+        SearchBox.Focus();
+    }
+
     private async Task RefreshAsync()
     {
         if (!_initiallyConnected)
         {
-            StatusText.Text = "Disconnected: connect the server before loading logs.";
+            SetStatusResource(LogUiState.Disconnected, "Loc.Logs.Status.DisconnectedInitial");
             return;
         }
 
@@ -201,7 +239,8 @@ public partial class LogViewerWindow : Window
         CancelRefresh();
         _refreshCancellation = new CancellationTokenSource();
         var source = _refreshCancellation;
-        StatusText.Text = "Loading: reading recent remote logs…";
+        SetStatusResource(LogUiState.Loading, "Loc.Logs.Status.Loading");
+        UpdateCommandState();
         try
         {
             var result = await ReadCurrentAsync(incremental: false, source.Token);
@@ -214,21 +253,32 @@ public partial class LogViewerWindow : Window
             _retained.Reset(result.Entries);
             _lastCursor = result.LastCursor;
             ApplyFilter();
-            StatusText.Text = result.Entries.Count == 0
-                ? "Empty: the selected log source returned no rows."
-                : $"Loaded: {result.Entries.Count:N0} row(s) read; {_retained.Entries.Count:N0} retained.";
+            if (result.Entries.Count == 0)
+            {
+                SetStatusResource(LogUiState.Empty, "Loc.Logs.Status.Empty");
+            }
+            else
+            {
+                SetStatusRaw(
+                    LogUiState.Ready,
+                    FormatLocalize("Loc.Logs.Status.LoadedFormat", result.Entries.Count, _retained.Entries.Count));
+            }
         }
         catch (OperationCanceledException)
         {
-            StatusText.Text = "Cancelled: log refresh stopped.";
+            SetStatusResource(LogUiState.Cancelled, "Loc.Logs.Status.RefreshCancelled");
         }
         catch (ArgumentException exception)
         {
-            StatusText.Text = $"Recoverable input error: {exception.Message}";
+            SetStatusRaw(
+                LogUiState.Error,
+                FormatLocalize("Loc.Logs.Status.InputErrorFormat", exception.Message));
         }
         catch (Exception exception)
         {
-            StatusText.Text = $"Recoverable error: {exception.Message}";
+            SetStatusRaw(
+                LogUiState.Error,
+                FormatLocalize("Loc.Logs.Status.ErrorFormat", exception.Message));
         }
         finally
         {
@@ -238,6 +288,7 @@ public partial class LogViewerWindow : Window
             }
 
             source.Dispose();
+            UpdateCommandState();
         }
     }
 
@@ -254,7 +305,12 @@ public partial class LogViewerWindow : Window
         _paused = false;
         _followCancellation = new CancellationTokenSource();
         var source = _followCancellation;
-        StatusText.Text = $"Following: polling every {_logService.Options.FollowPollInterval.TotalSeconds:0.##}s. Pause or Cancel at any time.";
+        SetStatusRaw(
+            LogUiState.Following,
+            FormatLocalize(
+                "Loc.Logs.Status.FollowingStartFormat",
+                _logService.Options.FollowPollInterval.TotalSeconds));
+        UpdateCommandState();
         _followTask = FollowLoopAsync(source);
     }
 
@@ -274,7 +330,9 @@ public partial class LogViewerWindow : Window
                 }
                 catch (ArgumentException exception)
                 {
-                    StatusText.Text = $"Recoverable input error: {exception.Message}";
+                    SetStatusRaw(
+                        LogUiState.Error,
+                        FormatLocalize("Loc.Logs.Status.InputErrorFormat", exception.Message));
                     _followRequested = false;
                     break;
                 }
@@ -305,7 +363,12 @@ public partial class LogViewerWindow : Window
                 }
 
                 ApplyFilter();
-                StatusText.Text = $"Following: {_retained.Entries.Count:N0} row(s) retained; newest poll returned {result.Entries.Count:N0}.";
+                SetStatusRaw(
+                    LogUiState.Following,
+                    FormatLocalize(
+                        "Loc.Logs.Status.FollowingUpdateFormat",
+                        _retained.Entries.Count,
+                        result.Entries.Count));
                 await Task.Delay(_logService.Options.FollowPollInterval, token);
             }
         }
@@ -316,7 +379,9 @@ public partial class LogViewerWindow : Window
         {
             if (!_closed)
             {
-                StatusText.Text = $"Recoverable follow error: {exception.Message}";
+                SetStatusRaw(
+                    LogUiState.Error,
+                    FormatLocalize("Loc.Logs.Status.FollowErrorFormat", exception.Message));
                 _followRequested = false;
             }
         }
@@ -328,6 +393,7 @@ public partial class LogViewerWindow : Window
             }
 
             source.Dispose();
+            UpdateCommandState();
         }
     }
 
@@ -353,7 +419,7 @@ public partial class LogViewerWindow : Window
         var path = FilePathBox.Text.Trim();
         if (path.Length == 0)
         {
-            throw new ArgumentException("Enter an absolute remote text log path, for example /var/log/nginx/error.log.");
+            throw new ArgumentException(Localize("Loc.Logs.Status.FilePathRequired"));
         }
 
         return _logService.ReadFileTailAsync(
@@ -371,8 +437,8 @@ public partial class LogViewerWindow : Window
         }
 
         LogSeverity? severity = null;
-        if (SeverityBox.SelectedItem is string selectedSeverity &&
-            !string.Equals(selectedSeverity, "All", StringComparison.Ordinal) &&
+        if (SeverityBox.SelectedIndex > 0 &&
+            SeverityBox.SelectedItem is string selectedSeverity &&
             Enum.TryParse<LogSeverity>(selectedSeverity, out var parsedSeverity))
         {
             severity = parsedSeverity;
@@ -386,21 +452,70 @@ public partial class LogViewerWindow : Window
             CurrentSource);
         var visible = ServerLogProjection.Filter(_retained.Entries, filter);
         LogGrid.ItemsSource = visible;
-        FooterText.Text = $"{visible.Count:N0} visible / {_retained.Entries.Count:N0} retained · max {_logService.Options.MaxRetainedRows:N0}. Filters are client-side.";
+        ClearSearchButton.Visibility = string.IsNullOrWhiteSpace(SearchBox.Text)
+            ? Visibility.Collapsed
+            : Visibility.Visible;
+        VisibleCountText.Text = visible.Count.ToString("N0", CultureInfo.CurrentCulture);
+        RetainedCountText.Text = _retained.Entries.Count.ToString("N0", CultureInfo.CurrentCulture);
+        RetentionLimitText.Text = _logService.Options.MaxRetainedRows.ToString("N0", CultureInfo.CurrentCulture);
+        FooterText.Text = FormatLocalize(
+            "Loc.Logs.Footer.VisibleFormat",
+            visible.Count,
+            _retained.Entries.Count,
+            _logService.Options.MaxRetainedRows);
+        UpdateCommandState();
     }
 
     private void ApplyError(RemoteError error)
     {
-        StatusText.Text = error.Code switch
+        switch (error.Code)
         {
-            RemoteErrorCode.PermissionDenied or RemoteErrorCode.SudoRequired => $"Permission denied: {error.Message}",
-            RemoteErrorCode.CommandNotFound or RemoteErrorCode.CapabilityUnavailable or RemoteErrorCode.UnsupportedVersion => $"Capability unavailable: {error.Message}",
-            RemoteErrorCode.PathNotFound => $"Not found: {error.Message}",
-            RemoteErrorCode.NetworkInterrupted or RemoteErrorCode.ConnectionFailed => $"Disconnected: {error.Message}",
-            RemoteErrorCode.OperationCancelled => $"Cancelled: {error.Message}",
-            RemoteErrorCode.ParseFailed => $"Malformed/partial source: {error.Message}",
-            _ => $"Recoverable error ({error.Code}): {error.Message}",
-        };
+            case RemoteErrorCode.PermissionDenied:
+            case RemoteErrorCode.SudoRequired:
+                SetStatusRaw(
+                    LogUiState.Permission,
+                    FormatLocalize("Loc.Logs.Status.PermissionFormat", error.Message));
+                break;
+
+            case RemoteErrorCode.CommandNotFound:
+            case RemoteErrorCode.CapabilityUnavailable:
+            case RemoteErrorCode.UnsupportedVersion:
+                SetStatusRaw(
+                    LogUiState.Capability,
+                    FormatLocalize("Loc.Logs.Status.CapabilityFormat", error.Message));
+                break;
+
+            case RemoteErrorCode.PathNotFound:
+                SetStatusRaw(
+                    LogUiState.NotFound,
+                    FormatLocalize("Loc.Logs.Status.NotFoundFormat", error.Message));
+                break;
+
+            case RemoteErrorCode.NetworkInterrupted:
+            case RemoteErrorCode.ConnectionFailed:
+                SetStatusRaw(
+                    LogUiState.Disconnected,
+                    FormatLocalize("Loc.Logs.Status.DisconnectedErrorFormat", error.Message));
+                break;
+
+            case RemoteErrorCode.OperationCancelled:
+                SetStatusRaw(
+                    LogUiState.Cancelled,
+                    FormatLocalize("Loc.Logs.Status.CancelledErrorFormat", error.Message));
+                break;
+
+            case RemoteErrorCode.ParseFailed:
+                SetStatusRaw(
+                    LogUiState.Error,
+                    FormatLocalize("Loc.Logs.Status.MalformedFormat", error.Message));
+                break;
+
+            default:
+                SetStatusRaw(
+                    LogUiState.Error,
+                    FormatLocalize("Loc.Logs.Status.ErrorCodeFormat", error.Code, error.Message));
+                break;
+        }
     }
 
     private void UpdateSourceInputs()
@@ -408,6 +523,28 @@ public partial class LogViewerWindow : Window
         var journal = CurrentSource == ServerLogSource.Journal;
         JournalUnitBox.IsEnabled = journal;
         FilePathBox.IsEnabled = !journal;
+    }
+
+    private void UpdateCommandState()
+    {
+        RefreshButton.IsEnabled = _refreshCancellation is null;
+        FollowButton.IsEnabled = _initiallyConnected && !_followRequested && _refreshCancellation is null;
+        PauseButton.IsEnabled = _followRequested && !_paused;
+        ResumeButton.IsEnabled = _followRequested && _paused;
+        CancelButton.IsEnabled = _refreshCancellation is not null || _followRequested;
+        ExportButton.IsEnabled = (LogGrid.ItemsSource as IEnumerable<LogEntry>)?.Any() == true;
+    }
+
+    private void SetStatusResource(LogUiState state, string messageResourceKey)
+    {
+        StatusStateText.SetResourceReference(TextBlock.TextProperty, $"Loc.Logs.Status.State.{state}");
+        StatusText.SetResourceReference(TextBlock.TextProperty, messageResourceKey);
+    }
+
+    private void SetStatusRaw(LogUiState state, string message)
+    {
+        StatusStateText.SetResourceReference(TextBlock.TextProperty, $"Loc.Logs.Status.State.{state}");
+        StatusText.Text = message;
     }
 
     private ServerLogSource CurrentSource =>
@@ -441,6 +578,22 @@ public partial class LogViewerWindow : Window
         }
     }
 
+    private static string Localize(string key) =>
+        System.Windows.Application.Current?.TryFindResource(key) as string ?? key;
+
+    private static string FormatLocalize(string key, params object?[] arguments)
+    {
+        var template = Localize(key);
+        try
+        {
+            return string.Format(CultureInfo.CurrentCulture, template, arguments);
+        }
+        catch (FormatException)
+        {
+            return template;
+        }
+    }
+
     private static string BuildExport(IEnumerable<LogEntry> entries)
     {
         var builder = new StringBuilder();
@@ -465,4 +618,20 @@ public partial class LogViewerWindow : Window
         .Replace("\t", "\\t", StringComparison.Ordinal)
         .Replace("\r", "\\r", StringComparison.Ordinal)
         .Replace("\n", "\\n", StringComparison.Ordinal);
+
+    private enum LogUiState
+    {
+        Initial,
+        Loading,
+        Ready,
+        Following,
+        Paused,
+        Empty,
+        Disconnected,
+        Cancelled,
+        Permission,
+        Capability,
+        NotFound,
+        Error,
+    }
 }

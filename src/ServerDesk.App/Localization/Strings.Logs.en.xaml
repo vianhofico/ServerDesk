@@ -1,0 +1,96 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:system="clr-namespace:System;assembly=System.Runtime">
+    <system:String x:Key="Loc.Logs.WindowTitle">Logs</system:String>
+    <system:String x:Key="Loc.Logs.Header.Title">Logs</system:String>
+    <system:String x:Key="Loc.Logs.Header.Subtitle">Structured journal and remote text log inspection</system:String>
+    <system:String x:Key="Loc.Logs.Header.Environment">Environment</system:String>
+    <system:String x:Key="Loc.Logs.Header.Connection">Connection</system:String>
+    <system:String x:Key="Loc.Logs.Header.Unlabeled">Unlabeled</system:String>
+    <system:String x:Key="Loc.Logs.Connection.Connected">Connected</system:String>
+    <system:String x:Key="Loc.Logs.Connection.Disconnected">Disconnected</system:String>
+
+    <system:String x:Key="Loc.Logs.Command.Refresh">Refresh</system:String>
+    <system:String x:Key="Loc.Logs.Command.Follow">Follow</system:String>
+    <system:String x:Key="Loc.Logs.Command.Pause">Pause</system:String>
+    <system:String x:Key="Loc.Logs.Command.Resume">Resume</system:String>
+    <system:String x:Key="Loc.Logs.Command.Cancel">Cancel</system:String>
+    <system:String x:Key="Loc.Logs.Command.Export">Export</system:String>
+
+    <system:String x:Key="Loc.Logs.Source.Title">Log source</system:String>
+    <system:String x:Key="Loc.Logs.Source.Subtitle">Choose where ServerDesk reads remote log entries from.</system:String>
+    <system:String x:Key="Loc.Logs.Source.Label">Source</system:String>
+    <system:String x:Key="Loc.Logs.Source.JournalUnit">Journal unit</system:String>
+    <system:String x:Key="Loc.Logs.Source.JournalUnit.Tooltip">Optional systemd .service filter passed as a tokenized journalctl argument.</system:String>
+    <system:String x:Key="Loc.Logs.Source.RemoteFile">Remote file</system:String>
+    <system:String x:Key="Loc.Logs.Source.RemoteFile.Tooltip">Absolute remote text log path, for example /var/log/nginx/error.log.</system:String>
+
+    <system:String x:Key="Loc.Logs.Filter.Title">Client-side filters</system:String>
+    <system:String x:Key="Loc.Logs.Filter.Subtitle">These filters only change the rows shown from the retained local buffer.</system:String>
+    <system:String x:Key="Loc.Logs.Filter.Search">Search</system:String>
+    <system:String x:Key="Loc.Logs.Filter.Search.Tooltip">Filter retained rows by message and searchable metadata.</system:String>
+    <system:String x:Key="Loc.Logs.Filter.Clear">Clear search</system:String>
+    <system:String x:Key="Loc.Logs.Filter.Severity">Severity</system:String>
+    <system:String x:Key="Loc.Logs.Filter.Identifier">Identifier</system:String>
+    <system:String x:Key="Loc.Logs.Filter.Unit">Unit</system:String>
+    <system:String x:Key="Loc.Logs.Filter.All">All</system:String>
+
+    <system:String x:Key="Loc.Logs.Summary.Visible">Visible</system:String>
+    <system:String x:Key="Loc.Logs.Summary.Retained">Retained</system:String>
+    <system:String x:Key="Loc.Logs.Summary.RetentionLimit">Retention limit</system:String>
+
+    <system:String x:Key="Loc.Logs.Status.State.Initial">Initial</system:String>
+    <system:String x:Key="Loc.Logs.Status.State.Loading">Loading</system:String>
+    <system:String x:Key="Loc.Logs.Status.State.Ready">Ready</system:String>
+    <system:String x:Key="Loc.Logs.Status.State.Following">Following</system:String>
+    <system:String x:Key="Loc.Logs.Status.State.Paused">Paused</system:String>
+    <system:String x:Key="Loc.Logs.Status.State.Empty">Empty</system:String>
+    <system:String x:Key="Loc.Logs.Status.State.Disconnected">Disconnected</system:String>
+    <system:String x:Key="Loc.Logs.Status.State.Cancelled">Cancelled</system:String>
+    <system:String x:Key="Loc.Logs.Status.State.Permission">Permission</system:String>
+    <system:String x:Key="Loc.Logs.Status.State.Capability">Capability</system:String>
+    <system:String x:Key="Loc.Logs.Status.State.NotFound">Not found</system:String>
+    <system:String x:Key="Loc.Logs.Status.State.Error">Error</system:String>
+    <system:String x:Key="Loc.Logs.Status.ReadyInitial">Choose a source or refresh recent logs.</system:String>
+    <system:String x:Key="Loc.Logs.Status.DisconnectedInitial">Connect the server before loading logs.</system:String>
+    <system:String x:Key="Loc.Logs.Status.DisconnectedFollow">Connect the server before following logs.</system:String>
+    <system:String x:Key="Loc.Logs.Status.PauseUnavailable">Pause is available while follow is active.</system:String>
+    <system:String x:Key="Loc.Logs.Status.ResumeUnavailable">Resume is available after pausing follow.</system:String>
+    <system:String x:Key="Loc.Logs.Status.PausedFormat">{0:N0} row(s) retained. Resume continues from the last journal cursor where available.</system:String>
+    <system:String x:Key="Loc.Logs.Status.Cancelled">Active log work stopped.</system:String>
+    <system:String x:Key="Loc.Logs.Status.ExportEmpty">There are no visible rows to save.</system:String>
+    <system:String x:Key="Loc.Logs.Status.ExportedFormat">Exported {0:N0} visible row(s) as UTF-8 text.</system:String>
+    <system:String x:Key="Loc.Logs.Status.ExportErrorFormat">ServerDesk could not export logs. {0}</system:String>
+    <system:String x:Key="Loc.Logs.Status.JournalSelected">journald selected. Refresh or Follow to load structured entries.</system:String>
+    <system:String x:Key="Loc.Logs.Status.FileSelected">File source selected. Enter an absolute remote log path, then Refresh or Follow.</system:String>
+    <system:String x:Key="Loc.Logs.Status.Loading">Reading recent remote logs…</system:String>
+    <system:String x:Key="Loc.Logs.Status.Empty">The selected log source returned no rows.</system:String>
+    <system:String x:Key="Loc.Logs.Status.LoadedFormat">{0:N0} row(s) read · {1:N0} retained.</system:String>
+    <system:String x:Key="Loc.Logs.Status.RefreshCancelled">Log refresh stopped.</system:String>
+    <system:String x:Key="Loc.Logs.Status.InputErrorFormat">Input error: {0}</system:String>
+    <system:String x:Key="Loc.Logs.Status.ErrorFormat">{0}</system:String>
+    <system:String x:Key="Loc.Logs.Status.FollowingStartFormat">Polling every {0:0.##}s. Pause or Cancel at any time.</system:String>
+    <system:String x:Key="Loc.Logs.Status.FollowingUpdateFormat">{0:N0} row(s) retained · newest poll returned {1:N0}.</system:String>
+    <system:String x:Key="Loc.Logs.Status.FollowErrorFormat">Follow error: {0}</system:String>
+    <system:String x:Key="Loc.Logs.Status.FilePathRequired">Enter an absolute remote text log path, for example /var/log/nginx/error.log.</system:String>
+    <system:String x:Key="Loc.Logs.Status.PermissionFormat">{0}</system:String>
+    <system:String x:Key="Loc.Logs.Status.CapabilityFormat">{0}</system:String>
+    <system:String x:Key="Loc.Logs.Status.NotFoundFormat">{0}</system:String>
+    <system:String x:Key="Loc.Logs.Status.DisconnectedErrorFormat">{0}</system:String>
+    <system:String x:Key="Loc.Logs.Status.CancelledErrorFormat">{0}</system:String>
+    <system:String x:Key="Loc.Logs.Status.MalformedFormat">Malformed or partial log source: {0}</system:String>
+    <system:String x:Key="Loc.Logs.Status.ErrorCodeFormat">{0}: {1}</system:String>
+
+    <system:String x:Key="Loc.Logs.Column.Time">Time</system:String>
+    <system:String x:Key="Loc.Logs.Column.Severity">Severity</system:String>
+    <system:String x:Key="Loc.Logs.Column.Source">Source</system:String>
+    <system:String x:Key="Loc.Logs.Column.Unit">Unit</system:String>
+    <system:String x:Key="Loc.Logs.Column.Identifier">Identifier</system:String>
+    <system:String x:Key="Loc.Logs.Column.Pid">PID</system:String>
+    <system:String x:Key="Loc.Logs.Column.Message">Message</system:String>
+
+    <system:String x:Key="Loc.Logs.Footer.RetentionFormat">Retention is bounded to {0:N0} row(s).</system:String>
+    <system:String x:Key="Loc.Logs.Footer.VisibleFormat">{0:N0} visible / {1:N0} retained · max {2:N0}. Filters are client-side.</system:String>
+    <system:String x:Key="Loc.Logs.Export.DialogTitle">Export visible ServerDesk logs</system:String>
+    <system:String x:Key="Loc.Logs.Export.Filter">Tab-separated log (*.tsv)|*.tsv|Text file (*.txt)|*.txt|All files (*.*)|*.*</system:String>
+</ResourceDictionary>

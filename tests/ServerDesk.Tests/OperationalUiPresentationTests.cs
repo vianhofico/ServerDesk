@@ -70,6 +70,8 @@ public sealed class OperationalUiPresentationTests
     [InlineData("ProcessManagerWindow.xaml")]
     [InlineData("ServiceManagerWindow.xaml")]
     [InlineData("DockerInventoryWindow.xaml")]
+    [InlineData("NetworkWindow.xaml")]
+    [InlineData("LogViewerWindow.xaml")]
     public void OperationalWindowsConsumeSharedGridSearchAndCommandPatterns(string fileName)
     {
         var content = File.ReadAllText(PresentationFixture(fileName));
@@ -176,6 +178,44 @@ public sealed class OperationalUiPresentationTests
     }
 
     [Fact]
+    public void NetworkWorkspaceUsesFluentMetricsLocalizedStateAndSharedVirtualizedTables()
+    {
+        var content = File.ReadAllText(PresentationFixture("NetworkWindow.xaml"));
+
+        Assert.Contains("xmlns:ui=\"http://schemas.lepo.co/wpfui/2022/xaml\"", content, StringComparison.Ordinal);
+        Assert.Contains("<ui:Card", content, StringComparison.Ordinal);
+        Assert.Contains("Style=\"{StaticResource MetricTile}\"", content, StringComparison.Ordinal);
+        Assert.Contains("Style=\"{StaticResource OperationalDataGrid}\"", content, StringComparison.Ordinal);
+        Assert.Contains("Style=\"{StaticResource OperationalSearchTextBox}\"", content, StringComparison.Ordinal);
+        Assert.Contains("Loc.Network.Header.Title", content, StringComparison.Ordinal);
+        Assert.Contains("Binding=\"{Binding State}\" Value=\"UP\"", content, StringComparison.Ordinal);
+        Assert.Contains("AutomationProperties.Name=\"{DynamicResource Loc.Network.Command.Refresh}\"", content, StringComparison.Ordinal);
+        Assert.DoesNotContain("x:Key=\"NetworkButton\"", content, StringComparison.Ordinal);
+        Assert.DoesNotContain("EnableRowVirtualization=\"True\"", content, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void LogsWorkspaceSeparatesSourceFiltersAndUsesSharedFluentDiagnosticsPatterns()
+    {
+        var content = File.ReadAllText(PresentationFixture("LogViewerWindow.xaml"));
+
+        Assert.Contains("xmlns:ui=\"http://schemas.lepo.co/wpfui/2022/xaml\"", content, StringComparison.Ordinal);
+        Assert.Contains("<ui:Card", content, StringComparison.Ordinal);
+        Assert.Contains("Loc.Logs.Source.Title", content, StringComparison.Ordinal);
+        Assert.Contains("Loc.Logs.Filter.Title", content, StringComparison.Ordinal);
+        Assert.Contains("Style=\"{StaticResource MetricTile}\"", content, StringComparison.Ordinal);
+        Assert.Contains("Style=\"{StaticResource OperationalDataGrid}\"", content, StringComparison.Ordinal);
+        Assert.Contains("Style=\"{StaticResource OperationalSearchTextBox}\"", content, StringComparison.Ordinal);
+        Assert.Contains("Style=\"{StaticResource ToolbarSeparator}\"", content, StringComparison.Ordinal);
+        Assert.Contains("Binding=\"{Binding Severity}\" Value=\"Error\"", content, StringComparison.Ordinal);
+        Assert.Contains("AutomationProperties.Name=\"{DynamicResource Loc.Logs.Command.Export}\"", content, StringComparison.Ordinal);
+        Assert.Contains("AutomationProperties.Name=\"{DynamicResource Loc.Logs.Filter.Clear}\"", content, StringComparison.Ordinal);
+        Assert.DoesNotContain("x:Key=\"LogButton\"", content, StringComparison.Ordinal);
+        Assert.DoesNotContain("x:Key=\"FilterLabel\"", content, StringComparison.Ordinal);
+        Assert.DoesNotContain("EnableRowVirtualization=\"True\"", content, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void TouchedModulesDoNotReintroduceLocalButtonStyles()
     {
         Assert.DoesNotContain(
@@ -189,6 +229,14 @@ public sealed class OperationalUiPresentationTests
         Assert.DoesNotContain(
             "DockerButton",
             File.ReadAllText(PresentationFixture("DockerInventoryWindow.xaml")),
+            StringComparison.Ordinal);
+        Assert.DoesNotContain(
+            "NetworkButton",
+            File.ReadAllText(PresentationFixture("NetworkWindow.xaml")),
+            StringComparison.Ordinal);
+        Assert.DoesNotContain(
+            "LogButton",
+            File.ReadAllText(PresentationFixture("LogViewerWindow.xaml")),
             StringComparison.Ordinal);
         Assert.DoesNotContain(
             "DashboardButton",

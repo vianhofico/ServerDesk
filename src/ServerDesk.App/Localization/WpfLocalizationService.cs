@@ -48,6 +48,8 @@ public sealed class WpfLocalizationService : ILocalizationService
         "DatabaseRestores",
         "Dashboard",
         "Terminal",
+        "Network",
+        "Logs",
         "GlobalDashboard",
         "BulkOperations",
         "ProfileTransfer",
