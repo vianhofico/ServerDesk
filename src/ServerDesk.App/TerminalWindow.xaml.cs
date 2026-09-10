@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Globalization;
 using System.IO;
 using System.Text.Json;
 using System.Windows;
@@ -76,7 +77,7 @@ public partial class TerminalWindow : Window
         var tabNumber = ++_tabSequence;
         var tab = new TabItem
         {
-            Header = $"{profile.Name} #{tabNumber} • connecting",
+            Header = TerminalPresentationText.Format("Loc.Terminal.Tab.ConnectingFormat", profile.Name, tabNumber),
             Content = host,
         };
 
@@ -86,10 +87,17 @@ public partial class TerminalWindow : Window
             {
                 Dispatcher.BeginInvoke(() =>
                 {
-                    tab.Header = $"{profile.Name} #{tabNumber} • {state.ToString().ToLowerInvariant()}";
+                    tab.Header = TerminalPresentationText.Format(
+                        "Loc.Terminal.Tab.StateFormat",
+                        profile.Name,
+                        tabNumber,
+                        TerminalPresentationText.State(state));
                     if (ReferenceEquals(TerminalTabs.SelectedItem, tab))
                     {
-                        StatusText.Text = $"{profile.Username}@{profile.Host}:{profile.Port} — {state}";
+                        StatusText.Text = TerminalPresentationText.Format(
+                            "Loc.Terminal.Status.EndpointStateFormat",
+                            Endpoint(profile),
+                            TerminalPresentationText.State(state));
                     }
                 });
             }
@@ -105,16 +113,16 @@ public partial class TerminalWindow : Window
         _hosts.Add(tab, host);
         TerminalTabs.Items.Add(tab);
         TerminalTabs.SelectedItem = tab;
-        StatusText.Text = $"Opening terminal for {profile.Name}…";
+        StatusText.Text = TerminalPresentationText.Format("Loc.Terminal.Status.OpeningFormat", profile.Name);
 
         try
         {
             await host.InitializeAsync().ConfigureAwait(true);
-            StatusText.Text = $"Connected to {profile.Username}@{profile.Host}:{profile.Port}";
+            StatusText.Text = TerminalPresentationText.Format("Loc.Terminal.Status.ConnectedFormat", Endpoint(profile));
         }
         catch (OperationCanceledException)
         {
-            StatusText.Text = $"Terminal connection to {profile.Name} was cancelled.";
+            StatusText.Text = TerminalPresentationText.Format("Loc.Terminal.Status.ConnectCancelledFormat", profile.Name);
         }
         catch (TerminalSessionException exception)
         {
@@ -122,7 +130,7 @@ public partial class TerminalWindow : Window
         }
         catch (Exception exception)
         {
-            StatusText.Text = $"Could not open terminal: {exception.Message}";
+            StatusText.Text = TerminalPresentationText.Format("Loc.Terminal.Status.OpenErrorFormat", exception.Message);
         }
     }
 
@@ -134,9 +142,10 @@ public partial class TerminalWindow : Window
         }
 
         TerminalTabs.Items.Remove(tab);
-        StatusText.Text = "Closing remote PTY…";
+        StatusText.Text = TerminalPresentationText.Get("Loc.Terminal.Status.ClosingPty");
         await host.DisposeAsync().ConfigureAwait(true);
-        StatusText.Text = _hosts.Count == 0 ? "No terminal tabs are open." : "Terminal tab closed.";
+        StatusText.Text = TerminalPresentationText.Get(
+            _hosts.Count == 0 ? "Loc.Terminal.Status.NoTabs" : "Loc.Terminal.Status.TabClosed");
     }
 
     private void TerminalWindowOnClosing(object? sender, CancelEventArgs e)
@@ -158,7 +167,7 @@ public partial class TerminalWindow : Window
 
     private async Task CloseAllAndCloseAsync()
     {
-        StatusText.Text = "Closing remote terminal sessions…";
+        StatusText.Text = TerminalPresentationText.Get("Loc.Terminal.Status.ClosingAll");
         var hosts = _hosts.Values.ToArray();
         _hosts.Clear();
         TerminalTabs.Items.Clear();
@@ -178,6 +187,31 @@ public partial class TerminalWindow : Window
         _allowClose = true;
         Close();
     }
+
+    private static string Endpoint(ServerProfile profile) =>
+        $"{profile.Username}@{profile.Host}:{profile.Port}";
+}
+
+internal static class TerminalPresentationText
+{
+    public static string Get(string key) =>
+        System.Windows.Application.Current?.TryFindResource(key) as string ?? key;
+
+    public static string Format(string key, params object?[] arguments)
+    {
+        var template = Get(key);
+        try
+        {
+            return string.Format(CultureInfo.CurrentCulture, template, arguments);
+        }
+        catch (FormatException)
+        {
+            return template;
+        }
+    }
+
+    public static string State(TerminalSessionState state) =>
+        Get($"Loc.Terminal.State.{state}");
 }
 
 internal sealed class TerminalTabHost : Grid, IAsyncDisposable
@@ -217,7 +251,7 @@ internal sealed class TerminalTabHost : Grid, IAsyncDisposable
         if (!File.Exists(frontendEntry))
         {
             throw new FileNotFoundException(
-                "The local terminal frontend bundle is missing. Rebuild ServerDesk so the xterm assets are generated.",
+                TerminalPresentationText.Get("Loc.Terminal.Bridge.MissingFrontend"),
                 frontendEntry);
         }
 
@@ -288,7 +322,7 @@ internal sealed class TerminalTabHost : Grid, IAsyncDisposable
         if (!e.Uri.StartsWith(VirtualOrigin, StringComparison.OrdinalIgnoreCase))
         {
             e.Cancel = true;
-            ErrorRaised?.Invoke("Terminal navigation outside the packaged local frontend was blocked.");
+            ErrorRaised?.Invoke(TerminalPresentationText.Get("Loc.Terminal.Bridge.NavigationBlocked"));
         }
     }
 
@@ -355,7 +389,7 @@ internal sealed class TerminalTabHost : Grid, IAsyncDisposable
                         }
                         else
                         {
-                            ErrorRaised?.Invoke("Clipboard text is too large to paste into a terminal in one operation.");
+                            ErrorRaised?.Invoke(TerminalPresentationText.Get("Loc.Terminal.Bridge.ClipboardTooLarge"));
                         }
                     }
                     break;
@@ -370,7 +404,7 @@ internal sealed class TerminalTabHost : Grid, IAsyncDisposable
         }
         catch (Exception exception)
         {
-            ErrorRaised?.Invoke($"Terminal bridge error: {exception.Message}");
+            ErrorRaised?.Invoke(TerminalPresentationText.Format("Loc.Terminal.Bridge.ErrorFormat", exception.Message));
         }
     }
 
