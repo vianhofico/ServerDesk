@@ -89,6 +89,15 @@
         <Setter Property="Background" Value="{DynamicResource SurfaceSecondaryBrush}" />
     </Style>
 
+    <Style x:Key="MetricTile" TargetType="Border">
+        <Setter Property="Padding" Value="16,14" />
+        <Setter Property="MinHeight" Value="76" />
+        <Setter Property="CornerRadius" Value="{StaticResource RadiusMedium}" />
+        <Setter Property="Background" Value="{DynamicResource SurfaceSecondaryBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+    </Style>
+
     <Style x:Key="ToolbarSeparator" TargetType="Separator">
         <Setter Property="Width" Value="1" />
         <Setter Property="Height" Value="24" />
