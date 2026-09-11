@@ -9,6 +9,7 @@
     <system:String x:Key="Loc.Nginx.Cancel">Hủy</system:String>
     <system:String x:Key="Loc.Nginx.Edit">Sửa site</system:String>
     <system:String x:Key="Loc.Nginx.Search">Tìm site, file nguồn, cổng nghe hoặc proxy target</system:String>
+    <system:String x:Key="Loc.Nginx.ClearSearch">Xóa tìm kiếm</system:String>
     <system:String x:Key="Loc.Nginx.Initial">Sẵn sàng kiểm tra nginx.</system:String>
     <system:String x:Key="Loc.Nginx.Loading">Đang kiểm tra cấu hình nginx…</system:String>
     <system:String x:Key="Loc.Nginx.Disconnected">Hãy kết nối server trước khi kiểm tra nginx.</system:String>
