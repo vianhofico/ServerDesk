@@ -347,7 +347,18 @@ public sealed class ServerConnectionRouteService : IServerConnectionRouteService
             await TryDeleteSecretAsync(desiredReference.Value).ConfigureAwait(false);
         }
 
-        if (oldDeleted && oldReference is not null && oldSecret is not null)
+        var oldReferenceChanged = oldDeleted ||
+            (newWritten && oldReference is not null && desiredReference == oldReference);
+        if (!oldReferenceChanged || oldReference is null)
+        {
+            return;
+        }
+
+        if (oldSecret is null)
+        {
+            await TryDeleteSecretAsync(oldReference.Value).ConfigureAwait(false);
+        }
+        else
         {
             await TrySetSecretAsync(oldReference.Value, oldSecret).ConfigureAwait(false);
         }
