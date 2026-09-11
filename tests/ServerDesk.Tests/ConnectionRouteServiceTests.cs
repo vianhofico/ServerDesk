@@ -74,6 +74,97 @@ public sealed class ConnectionRouteServiceTests
     }
 
     [Fact]
+    public async Task FailedSameReferencePasswordReplacementRestoresPreviousSecret()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var profile = ServerProfile.Create("Target", "target.internal", 22, "deploy");
+        var profiles = new MemoryProfileRepository(profile);
+        var routes = new MemoryRouteRepository();
+        var secrets = new MemorySecretStore();
+        var service = new ServerConnectionRouteService(profiles, routes, secrets);
+
+        var original = await service.SaveAsync(
+            profile.Id,
+            new ServerConnectionRouteSpec(ServerConnectionRouteKind.HttpProxy, "proxy-a", 8080, "user-a"),
+            "old-password",
+            replaceProxyPassword: true,
+            cancellationToken);
+        var reference = original.ProxyCredentialReference!.Value;
+        routes.FailUpsert = true;
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            service.SaveAsync(
+                profile.Id,
+                new ServerConnectionRouteSpec(ServerConnectionRouteKind.HttpProxy, "proxy-b", 8081, "user-b"),
+                "new-password",
+                replaceProxyPassword: true,
+                cancellationToken).AsTask());
+
+        Assert.Equal(original, await routes.GetAsync(profile.Id, cancellationToken));
+        Assert.Equal("old-password", await secrets.GetAsync(reference, cancellationToken));
+    }
+
+    [Fact]
+    public async Task FailedSameReferencePasswordReplacementRestoresPreviouslyMissingSecretState()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var profile = ServerProfile.Create("Target", "target.internal", 22, "deploy");
+        var profiles = new MemoryProfileRepository(profile);
+        var routes = new MemoryRouteRepository();
+        var secrets = new MemorySecretStore();
+        var service = new ServerConnectionRouteService(profiles, routes, secrets);
+
+        var original = await service.SaveAsync(
+            profile.Id,
+            new ServerConnectionRouteSpec(ServerConnectionRouteKind.Socks5Proxy, "proxy-a", 1080, "user-a"),
+            "old-password",
+            replaceProxyPassword: true,
+            cancellationToken);
+        var reference = original.ProxyCredentialReference!.Value;
+        await secrets.DeleteAsync(reference, cancellationToken);
+        routes.FailUpsert = true;
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            service.SaveAsync(
+                profile.Id,
+                new ServerConnectionRouteSpec(ServerConnectionRouteKind.Socks5Proxy, "proxy-b", 1081, "user-b"),
+                "new-password",
+                replaceProxyPassword: true,
+                cancellationToken).AsTask());
+
+        Assert.Equal(original, await routes.GetAsync(profile.Id, cancellationToken));
+        Assert.Null(await secrets.GetAsync(reference, cancellationToken));
+    }
+
+    [Fact]
+    public async Task SuccessfulSameReferencePasswordReplacementPersistsNewSecret()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var profile = ServerProfile.Create("Target", "target.internal", 22, "deploy");
+        var profiles = new MemoryProfileRepository(profile);
+        var routes = new MemoryRouteRepository();
+        var secrets = new MemorySecretStore();
+        var service = new ServerConnectionRouteService(profiles, routes, secrets);
+
+        var original = await service.SaveAsync(
+            profile.Id,
+            new ServerConnectionRouteSpec(ServerConnectionRouteKind.HttpProxy, "proxy-a", 8080, "user-a"),
+            "old-password",
+            replaceProxyPassword: true,
+            cancellationToken);
+        var updated = await service.SaveAsync(
+            profile.Id,
+            new ServerConnectionRouteSpec(ServerConnectionRouteKind.HttpProxy, "proxy-b", 8081, "user-b"),
+            "new-password",
+            replaceProxyPassword: true,
+            cancellationToken);
+
+        Assert.Equal(original.ProxyCredentialReference, updated.ProxyCredentialReference);
+        Assert.Equal("new-password", await secrets.GetAsync(updated.ProxyCredentialReference!.Value, cancellationToken));
+        Assert.Equal(updated, await routes.GetAsync(profile.Id, cancellationToken));
+    }
+
+    [Fact]
     public async Task MissingBastionIsRejectedBeforePersistence()
     {
         var cancellationToken = TestContext.Current.CancellationToken;
@@ -161,6 +252,8 @@ public sealed class ConnectionRouteServiceTests
             _routes = routes.ToDictionary(route => route.ServerProfileId);
         }
 
+        public bool FailUpsert { get; set; }
+
         public ValueTask<ServerConnectionRoute?> GetAsync(
             Guid serverProfileId,
             CancellationToken cancellationToken = default)
@@ -174,6 +267,11 @@ public sealed class ConnectionRouteServiceTests
             CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            if (FailUpsert)
+            {
+                throw new InvalidOperationException("Route upsert fixture failed.");
+            }
+
             _routes[route.ServerProfileId] = route;
             return ValueTask.CompletedTask;
         }
