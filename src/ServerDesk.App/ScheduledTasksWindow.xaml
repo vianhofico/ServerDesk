@@ -2,6 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:ServerDesk.App"
+        xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
         Title="{DynamicResource Loc.Tasks.WindowTitle}"
         Width="1480"
         Height="900"
@@ -14,34 +15,11 @@
         Closed="WindowOnClosed">
     <Window.Resources>
         <local:ScheduledTaskKindDisplayConverter x:Key="ScheduledTaskKindDisplayConverter" />
-        <Style x:Key="TaskSummaryLabel" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="11" />
-            <Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" />
-        </Style>
-        <Style x:Key="TaskSummaryValue" TargetType="TextBlock">
-            <Setter Property="Margin" Value="0,3,0,0" />
-            <Setter Property="FontSize" Value="19" />
-            <Setter Property="FontWeight" Value="SemiBold" />
-        </Style>
-        <Style x:Key="TaskDetailLabel" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="11" />
-            <Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" />
-        </Style>
-        <Style x:Key="TaskDetailValue" TargetType="TextBlock">
-            <Setter Property="Margin" Value="0,2,0,10" />
-            <Setter Property="TextWrapping" Value="Wrap" />
-        </Style>
-        <Style x:Key="TaskTechnicalValue"
-               TargetType="TextBlock"
-               BasedOn="{StaticResource TaskDetailValue}">
-            <Setter Property="FontFamily" Value="Cascadia Mono, Consolas" />
-            <Setter Property="FontSize" Value="12" />
-        </Style>
     </Window.Resources>
 
-    <Grid Margin="20">
+    <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
+            <RowDefinition Height="76" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
@@ -49,21 +27,24 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <Border Grid.Row="0" Style="{StaticResource SurfaceCard}" Padding="18">
-            <Grid>
+        <Border Grid.Row="0"
+                Background="{DynamicResource SurfaceBrush}"
+                BorderBrush="{DynamicResource BorderBrush}"
+                BorderThickness="0,0,0,1">
+            <Grid Margin="24,0,28,0">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
-                <StackPanel>
+
+                <StackPanel VerticalAlignment="Center">
                     <TextBlock Text="{DynamicResource Loc.TasksWorkspace.Header.Title}"
-                               FontSize="27"
-                               FontWeight="SemiBold" />
-                    <TextBlock Text="{DynamicResource Loc.TasksWorkspace.Header.Subtitle}"
-                               Margin="0,3,0,10"
-                               Foreground="{DynamicResource MutedTextBrush}" />
+                               Style="{StaticResource PageTitleText}" />
+                    <TextBlock Margin="0,2,0,3"
+                               Text="{DynamicResource Loc.TasksWorkspace.Header.Subtitle}"
+                               Style="{StaticResource CaptionText}" />
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock x:Name="ServerNameText" FontWeight="SemiBold" />
+                        <TextBlock x:Name="ServerNameText" FontSize="11" FontWeight="SemiBold" />
                         <TextBlock Text="  ·  " Foreground="{DynamicResource MutedTextBrush}" />
                         <TextBlock x:Name="EndpointText"
                                    Style="{StaticResource TechnicalText}"
@@ -72,36 +53,54 @@
                 </StackPanel>
 
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                    <Border Padding="12,8" CornerRadius="8" Background="{DynamicResource SurfaceSecondaryBrush}">
-                        <StackPanel>
-                            <TextBlock Text="{DynamicResource Loc.TasksWorkspace.Header.Environment}" Style="{StaticResource TaskSummaryLabel}" />
-                            <TextBlock x:Name="EnvironmentValueText" Margin="0,2,0,0" FontWeight="SemiBold" />
+                    <Border Style="{StaticResource StatusPill}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="{DynamicResource Loc.TasksWorkspace.Header.Environment}"
+                                       Style="{StaticResource CaptionText}" />
+                            <TextBlock Text=" · " Foreground="{DynamicResource MutedTextBrush}" />
+                            <TextBlock x:Name="EnvironmentValueText" FontSize="11" FontWeight="SemiBold" />
                         </StackPanel>
                     </Border>
-                    <Border Margin="8,0,0,0" Padding="12,8" CornerRadius="8" Background="{DynamicResource AccentSoftBrush}">
-                        <StackPanel>
-                            <TextBlock Text="{DynamicResource Loc.TasksWorkspace.Header.Connection}" Style="{StaticResource TaskSummaryLabel}" />
-                            <TextBlock x:Name="ConnectionValueText" Margin="0,2,0,0" FontWeight="SemiBold" />
+                    <Border Margin="8,0,0,0" Style="{StaticResource AccentStatusPill}">
+                        <StackPanel Orientation="Horizontal">
+                            <Ellipse Width="6"
+                                     Height="6"
+                                     Margin="0,0,7,0"
+                                     Fill="{DynamicResource AccentBrush}"
+                                     VerticalAlignment="Center" />
+                            <TextBlock x:Name="ConnectionValueText" FontSize="11" FontWeight="SemiBold" />
                         </StackPanel>
                     </Border>
                 </StackPanel>
             </Grid>
         </Border>
 
-        <Border Grid.Row="1" Margin="0,12,0,0" Style="{StaticResource CommandBarSurface}">
+        <Border Grid.Row="1"
+                Margin="20,14,20,0"
+                Style="{StaticResource CommandBarSurface}">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
+
                 <StackPanel Orientation="Horizontal">
                     <Button x:Name="RefreshButton"
-                            Content="{DynamicResource Loc.Tasks.Refresh}"
                             Click="RefreshOnClick"
-                            Style="{StaticResource SecondaryButton}" />
+                            Style="{StaticResource PrimaryButton}"
+                            AutomationProperties.Name="{DynamicResource Loc.Tasks.Refresh}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE72C;"
+                                       Margin="0,0,7,0"
+                                       FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                       FontSize="13"
+                                       Foreground="White" />
+                            <TextBlock Text="{DynamicResource Loc.Tasks.Refresh}" Foreground="White" />
+                        </StackPanel>
+                    </Button>
                     <Button x:Name="CancelButton"
-                            Margin="6,0,0,0"
+                            Margin="8,0,0,0"
                             Content="{DynamicResource Loc.TasksWorkspace.Command.Cancel}"
                             Click="CancelOnClick"
                             Style="{StaticResource GhostButton}"
@@ -110,12 +109,12 @@
 
                 <StackPanel Grid.Column="1" Margin="16,0" VerticalAlignment="Center">
                     <TextBlock Text="{DynamicResource Loc.TasksWorkspace.Command.Target}"
-                               FontSize="11"
-                               Foreground="{DynamicResource MutedTextBrush}" />
+                               Style="{StaticResource EyebrowText}" />
                     <TextBlock x:Name="TargetValueText"
                                Margin="0,2,0,0"
-                               FontFamily="Cascadia Mono, Consolas"
-                               Text="{DynamicResource Loc.TasksWorkspace.Command.NoTarget}" />
+                               Style="{StaticResource TechnicalText}"
+                               Text="{DynamicResource Loc.TasksWorkspace.Command.NoTarget}"
+                               TextTrimming="CharacterEllipsis" />
                 </StackPanel>
 
                 <StackPanel Grid.Column="2" Orientation="Horizontal">
@@ -140,49 +139,57 @@
             </Grid>
         </Border>
 
-        <Grid Grid.Row="2" Margin="0,10,0,0">
+        <Grid Grid.Row="2" Margin="20,10,20,0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="8" />
                 <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="8" />
                 <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="8" />
                 <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="8" />
                 <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="1.55*" />
+                <ColumnDefinition Width="8" />
+                <ColumnDefinition Width="1.7*" />
             </Grid.ColumnDefinitions>
-            <Border Grid.Column="0" Style="{StaticResource SurfaceCard}" Padding="12" Margin="0,0,8,0">
+
+            <Border Grid.Column="0" Style="{StaticResource MetricTile}">
                 <StackPanel>
-                    <TextBlock Text="{DynamicResource Loc.TasksWorkspace.Summary.Total}" Style="{StaticResource TaskSummaryLabel}" />
-                    <TextBlock x:Name="TotalTasksValue" Text="0" Style="{StaticResource TaskSummaryValue}" />
+                    <TextBlock Text="{DynamicResource Loc.TasksWorkspace.Summary.Total}" Style="{StaticResource EyebrowText}" />
+                    <TextBlock x:Name="TotalTasksValue" Margin="0,4,0,0" Text="0" FontSize="22" FontWeight="SemiBold" />
                 </StackPanel>
             </Border>
-            <Border Grid.Column="1" Style="{StaticResource SurfaceCard}" Padding="12" Margin="0,0,8,0">
+            <Border Grid.Column="2" Style="{StaticResource MetricTile}">
                 <StackPanel>
-                    <TextBlock Text="{DynamicResource Loc.TasksWorkspace.Summary.Visible}" Style="{StaticResource TaskSummaryLabel}" />
-                    <TextBlock x:Name="VisibleTasksValue" Text="0" Style="{StaticResource TaskSummaryValue}" />
+                    <TextBlock Text="{DynamicResource Loc.TasksWorkspace.Summary.Visible}" Style="{StaticResource EyebrowText}" />
+                    <TextBlock x:Name="VisibleTasksValue" Margin="0,4,0,0" Text="0" FontSize="22" FontWeight="SemiBold" />
                 </StackPanel>
             </Border>
-            <Border Grid.Column="2" Style="{StaticResource SurfaceCard}" Padding="12" Margin="0,0,8,0">
+            <Border Grid.Column="4" Style="{StaticResource MetricTile}">
                 <StackPanel>
-                    <TextBlock Text="{DynamicResource Loc.TasksWorkspace.Summary.Cron}" Style="{StaticResource TaskSummaryLabel}" />
-                    <TextBlock x:Name="CronTasksValue" Text="0" Style="{StaticResource TaskSummaryValue}" />
+                    <TextBlock Text="{DynamicResource Loc.TasksWorkspace.Summary.Cron}" Style="{StaticResource EyebrowText}" />
+                    <TextBlock x:Name="CronTasksValue" Margin="0,4,0,0" Text="0" FontSize="22" FontWeight="SemiBold" />
                 </StackPanel>
             </Border>
-            <Border Grid.Column="3" Style="{StaticResource SurfaceCard}" Padding="12" Margin="0,0,8,0">
+            <Border Grid.Column="6" Style="{StaticResource MetricTile}">
                 <StackPanel>
-                    <TextBlock Text="{DynamicResource Loc.TasksWorkspace.Summary.Systemd}" Style="{StaticResource TaskSummaryLabel}" />
-                    <TextBlock x:Name="SystemdTasksValue" Text="0" Style="{StaticResource TaskSummaryValue}" />
+                    <TextBlock Text="{DynamicResource Loc.TasksWorkspace.Summary.Systemd}" Style="{StaticResource EyebrowText}" />
+                    <TextBlock x:Name="SystemdTasksValue" Margin="0,4,0,0" Text="0" FontSize="22" FontWeight="SemiBold" />
                 </StackPanel>
             </Border>
-            <Border Grid.Column="4" Style="{StaticResource SurfaceCard}" Padding="12" Margin="0,0,8,0">
+            <Border Grid.Column="8" Style="{StaticResource MetricTile}">
                 <StackPanel>
-                    <TextBlock Text="{DynamicResource Loc.TasksWorkspace.Summary.Enabled}" Style="{StaticResource TaskSummaryLabel}" />
-                    <TextBlock x:Name="EnabledTasksValue" Text="0" Style="{StaticResource TaskSummaryValue}" />
+                    <TextBlock Text="{DynamicResource Loc.TasksWorkspace.Summary.Enabled}" Style="{StaticResource EyebrowText}" />
+                    <TextBlock x:Name="EnabledTasksValue" Margin="0,4,0,0" Text="0" FontSize="22" FontWeight="SemiBold" />
                 </StackPanel>
             </Border>
-            <Border Grid.Column="5" Style="{StaticResource SurfaceCard}" Padding="12">
+            <Border Grid.Column="10" Style="{StaticResource InlineInfoCard}">
                 <StackPanel>
-                    <TextBlock Text="{DynamicResource Loc.Tasks.ActionTooltip}" Style="{StaticResource TaskSummaryLabel}" TextWrapping="Wrap" />
-                    <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                    <TextBlock Text="{DynamicResource Loc.Tasks.ActionTooltip}"
+                               Style="{StaticResource CaptionText}"
+                               TextWrapping="Wrap" />
+                    <StackPanel Orientation="Horizontal" Margin="0,7,0,0">
                         <TextBlock Text="{DynamicResource Loc.TasksWorkspace.Summary.CronCapability}" FontWeight="SemiBold" />
                         <TextBlock Text=": " />
                         <TextBlock x:Name="CronCapabilityText" />
@@ -195,7 +202,7 @@
             </Border>
         </Grid>
 
-        <Grid Grid.Row="3" Margin="0,10,0,10">
+        <Grid Grid.Row="3" Margin="20,10,20,10">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="360" />
@@ -206,16 +213,24 @@
                     <TextBlock x:Name="CapabilityText"
                                Margin="0,4,0,0"
                                TextWrapping="Wrap"
-                               Foreground="{DynamicResource MutedTextBrush}" />
+                               Style="{StaticResource CaptionText}" />
                 </StackPanel>
             </Border>
             <Grid Grid.Column="1">
                 <TextBox x:Name="SearchBox"
                          Style="{StaticResource OperationalSearchTextBox}"
-                         Padding="10,6,38,6"
+                         Padding="34,6,36,6"
                          TextChanged="SearchBoxOnTextChanged"
                          ToolTip="{DynamicResource Loc.Tasks.SearchHint}"
                          AutomationProperties.Name="{DynamicResource Loc.TasksWorkspace.Search.Label}" />
+                <TextBlock Text="&#xE721;"
+                           Margin="11,0,0,0"
+                           HorizontalAlignment="Left"
+                           VerticalAlignment="Center"
+                           IsHitTestVisible="False"
+                           FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                           FontSize="13"
+                           Foreground="{DynamicResource MutedTextBrush}" />
                 <Button x:Name="ClearSearchButton"
                         Width="32"
                         Height="30"
@@ -223,22 +238,26 @@
                         VerticalAlignment="Center"
                         Margin="0,0,3,0"
                         Padding="0"
-                        Content="×"
                         ToolTip="{DynamicResource Loc.TasksWorkspace.Search.Clear}"
                         Click="ClearSearchOnClick"
                         Style="{StaticResource GhostButton}"
                         Visibility="Collapsed"
-                        AutomationProperties.Name="{DynamicResource Loc.TasksWorkspace.Search.Clear}" />
+                        AutomationProperties.Name="{DynamicResource Loc.TasksWorkspace.Search.Clear}">
+                    <TextBlock Text="&#xE711;"
+                               FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                               FontSize="11" />
+                </Button>
             </Grid>
         </Grid>
 
-        <Grid Grid.Row="4">
+        <Grid Grid.Row="4" Margin="20,0,20,0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="3.1*" />
+                <ColumnDefinition Width="12" />
                 <ColumnDefinition Width="1.55*" />
             </Grid.ColumnDefinitions>
 
-            <Border Style="{StaticResource SurfaceCard}" CornerRadius="8" ClipToBounds="True">
+            <ui:Card Grid.Column="0" Padding="0" ClipToBounds="True">
                 <Grid>
                     <DataGrid x:Name="TaskGrid"
                               Style="{StaticResource OperationalDataGrid}"
@@ -273,50 +292,66 @@
                             Visibility="Visible"
                             IsHitTestVisible="False">
                         <StackPanel MaxWidth="520" HorizontalAlignment="Center" VerticalAlignment="Center">
-                            <TextBlock x:Name="TaskStateTitle" FontSize="20" FontWeight="SemiBold" TextAlignment="Center" />
+                            <Border Width="48"
+                                    Height="48"
+                                    Margin="0,0,0,14"
+                                    CornerRadius="14"
+                                    Background="{DynamicResource SurfaceSecondaryBrush}"
+                                    HorizontalAlignment="Center">
+                                <TextBlock Text="&#xE823;"
+                                           FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                           FontSize="20"
+                                           Foreground="{DynamicResource MutedTextBrush}"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center" />
+                            </Border>
+                            <TextBlock x:Name="TaskStateTitle"
+                                       Style="{StaticResource SectionTitleText}"
+                                       TextAlignment="Center" />
                             <TextBlock x:Name="TaskStateDetail"
                                        Margin="0,7,0,0"
-                                       Foreground="{DynamicResource MutedTextBrush}"
+                                       Style="{StaticResource SecondaryBodyText}"
                                        TextAlignment="Center"
                                        TextWrapping="Wrap" />
                         </StackPanel>
                     </Border>
                 </Grid>
-            </Border>
+            </ui:Card>
 
-            <Border Grid.Column="1" Margin="14,0,0,0" Style="{StaticResource DetailsPane}">
+            <Border Grid.Column="2" Style="{StaticResource DetailsPane}">
                 <TabControl x:Name="WorkspaceTabs">
                     <TabItem Header="{DynamicResource Loc.Tasks.Details}">
                         <ScrollViewer VerticalScrollBarVisibility="Auto">
                             <StackPanel Margin="4">
-                                <TextBlock Text="{DynamicResource Loc.TasksWorkspace.Details.Title}" FontSize="17" FontWeight="SemiBold" />
+                                <TextBlock Text="{DynamicResource Loc.TasksWorkspace.Details.Title}"
+                                           Style="{StaticResource SectionTitleText}" />
                                 <TextBlock x:Name="DetailsHintText"
                                            Margin="0,9,0,0"
                                            Text="{DynamicResource Loc.TasksWorkspace.Details.Hint}"
-                                           Foreground="{DynamicResource MutedTextBrush}"
+                                           Style="{StaticResource SecondaryBodyText}"
                                            TextWrapping="Wrap" />
 
                                 <StackPanel x:Name="DetailsContent" Margin="0,14,0,0" Visibility="Collapsed">
-                                    <TextBlock Text="{DynamicResource Loc.TasksWorkspace.Details.Kind}" Style="{StaticResource TaskDetailLabel}" />
-                                    <TextBlock x:Name="DetailKindText" Style="{StaticResource TaskDetailValue}" />
-                                    <TextBlock Text="{DynamicResource Loc.TasksWorkspace.Details.Name}" Style="{StaticResource TaskDetailLabel}" />
-                                    <TextBlock x:Name="DetailNameText" Style="{StaticResource TaskTechnicalValue}" />
-                                    <TextBlock Text="{DynamicResource Loc.TasksWorkspace.Details.Schedule}" Style="{StaticResource TaskDetailLabel}" />
-                                    <TextBlock x:Name="DetailScheduleText" Style="{StaticResource TaskTechnicalValue}" />
-                                    <TextBlock Text="{DynamicResource Loc.TasksWorkspace.Details.Command}" Style="{StaticResource TaskDetailLabel}" />
-                                    <TextBlock x:Name="DetailCommandText" Style="{StaticResource TaskTechnicalValue}" />
-                                    <TextBlock Text="{DynamicResource Loc.TasksWorkspace.Details.Enabled}" Style="{StaticResource TaskDetailLabel}" />
-                                    <TextBlock x:Name="DetailEnabledText" Style="{StaticResource TaskDetailValue}" />
-                                    <TextBlock Text="{DynamicResource Loc.TasksWorkspace.Details.Active}" Style="{StaticResource TaskDetailLabel}" />
-                                    <TextBlock x:Name="DetailActiveText" Style="{StaticResource TaskDetailValue}" />
-                                    <TextBlock Text="{DynamicResource Loc.TasksWorkspace.Details.LastRun}" Style="{StaticResource TaskDetailLabel}" />
-                                    <TextBlock x:Name="DetailLastRunText" Style="{StaticResource TaskTechnicalValue}" />
-                                    <TextBlock Text="{DynamicResource Loc.TasksWorkspace.Details.NextRun}" Style="{StaticResource TaskDetailLabel}" />
-                                    <TextBlock x:Name="DetailNextRunText" Style="{StaticResource TaskTechnicalValue}" />
-                                    <TextBlock Text="{DynamicResource Loc.TasksWorkspace.Details.Source}" Style="{StaticResource TaskDetailLabel}" />
-                                    <TextBlock x:Name="DetailSourceText" Style="{StaticResource TaskTechnicalValue}" />
-                                    <TextBlock Text="{DynamicResource Loc.TasksWorkspace.Details.Editable}" Style="{StaticResource TaskDetailLabel}" />
-                                    <TextBlock x:Name="DetailEditableText" Style="{StaticResource TaskDetailValue}" />
+                                    <TextBlock Text="{DynamicResource Loc.TasksWorkspace.Details.Kind}" Style="{StaticResource FormLabelText}" />
+                                    <TextBlock x:Name="DetailKindText" Margin="0,2,0,10" />
+                                    <TextBlock Text="{DynamicResource Loc.TasksWorkspace.Details.Name}" Style="{StaticResource FormLabelText}" />
+                                    <TextBlock x:Name="DetailNameText" Margin="0,2,0,10" Style="{StaticResource TechnicalText}" TextWrapping="Wrap" />
+                                    <TextBlock Text="{DynamicResource Loc.TasksWorkspace.Details.Schedule}" Style="{StaticResource FormLabelText}" />
+                                    <TextBlock x:Name="DetailScheduleText" Margin="0,2,0,10" Style="{StaticResource TechnicalText}" TextWrapping="Wrap" />
+                                    <TextBlock Text="{DynamicResource Loc.TasksWorkspace.Details.Command}" Style="{StaticResource FormLabelText}" />
+                                    <TextBlock x:Name="DetailCommandText" Margin="0,2,0,10" Style="{StaticResource TechnicalText}" TextWrapping="Wrap" />
+                                    <TextBlock Text="{DynamicResource Loc.TasksWorkspace.Details.Enabled}" Style="{StaticResource FormLabelText}" />
+                                    <TextBlock x:Name="DetailEnabledText" Margin="0,2,0,10" />
+                                    <TextBlock Text="{DynamicResource Loc.TasksWorkspace.Details.Active}" Style="{StaticResource FormLabelText}" />
+                                    <TextBlock x:Name="DetailActiveText" Margin="0,2,0,10" />
+                                    <TextBlock Text="{DynamicResource Loc.TasksWorkspace.Details.LastRun}" Style="{StaticResource FormLabelText}" />
+                                    <TextBlock x:Name="DetailLastRunText" Margin="0,2,0,10" Style="{StaticResource TechnicalText}" TextWrapping="Wrap" />
+                                    <TextBlock Text="{DynamicResource Loc.TasksWorkspace.Details.NextRun}" Style="{StaticResource FormLabelText}" />
+                                    <TextBlock x:Name="DetailNextRunText" Margin="0,2,0,10" Style="{StaticResource TechnicalText}" TextWrapping="Wrap" />
+                                    <TextBlock Text="{DynamicResource Loc.TasksWorkspace.Details.Source}" Style="{StaticResource FormLabelText}" />
+                                    <TextBlock x:Name="DetailSourceText" Margin="0,2,0,10" Style="{StaticResource TechnicalText}" TextWrapping="Wrap" />
+                                    <TextBlock Text="{DynamicResource Loc.TasksWorkspace.Details.Editable}" Style="{StaticResource FormLabelText}" />
+                                    <TextBlock x:Name="DetailEditableText" Margin="0,2,0,10" />
 
                                     <StackPanel Orientation="Horizontal" Margin="0,4,0,14">
                                         <Button x:Name="HistoryButton"
@@ -333,14 +368,15 @@
                                     </StackPanel>
                                 </StackPanel>
 
-                                <Border Margin="0,4,0,0" Padding="12" CornerRadius="8" Background="{DynamicResource SurfaceSecondaryBrush}">
+                                <Border Margin="0,4,0,0" Style="{StaticResource SectionSurface}">
                                     <StackPanel>
                                         <Grid>
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="*" />
                                                 <ColumnDefinition Width="Auto" />
                                             </Grid.ColumnDefinitions>
-                                            <TextBlock Text="{DynamicResource Loc.Tasks.CronEditor}" FontWeight="SemiBold" FontSize="16" />
+                                            <TextBlock Text="{DynamicResource Loc.Tasks.CronEditor}"
+                                                       Style="{StaticResource SectionTitleText}" />
                                             <Button x:Name="NewCronButton"
                                                     Grid.Column="1"
                                                     Content="{DynamicResource Loc.Tasks.NewCron}"
@@ -350,8 +386,8 @@
                                         </Grid>
                                         <TextBlock Margin="0,6,0,8"
                                                    Text="{DynamicResource Loc.TasksWorkspace.Editor.AdvancedHint}"
-                                                   TextWrapping="Wrap"
-                                                   Foreground="{DynamicResource MutedTextBrush}" />
+                                                   Style="{StaticResource SecondaryBodyText}"
+                                                   TextWrapping="Wrap" />
                                         <Grid>
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="*" />
@@ -361,31 +397,37 @@
                                                 <ColumnDefinition Width="*" />
                                             </Grid.ColumnDefinitions>
                                             <StackPanel Grid.Column="0" Margin="0,0,6,0">
-                                                <TextBlock Text="{DynamicResource Loc.Tasks.Minute}" />
-                                                <TextBox x:Name="MinuteBox" Style="{StaticResource FieldTextBox}" Margin="0,4,0,8" />
+                                                <TextBlock Text="{DynamicResource Loc.Tasks.Minute}" Style="{StaticResource FormLabelText}" />
+                                                <TextBox x:Name="MinuteBox" Style="{StaticResource FieldTextBox}" Margin="0,4,0,8"
+                                                         AutomationProperties.Name="{DynamicResource Loc.Tasks.Minute}" />
                                             </StackPanel>
                                             <StackPanel Grid.Column="1" Margin="0,0,6,0">
-                                                <TextBlock Text="{DynamicResource Loc.Tasks.Hour}" />
-                                                <TextBox x:Name="HourBox" Style="{StaticResource FieldTextBox}" Margin="0,4,0,8" />
+                                                <TextBlock Text="{DynamicResource Loc.Tasks.Hour}" Style="{StaticResource FormLabelText}" />
+                                                <TextBox x:Name="HourBox" Style="{StaticResource FieldTextBox}" Margin="0,4,0,8"
+                                                         AutomationProperties.Name="{DynamicResource Loc.Tasks.Hour}" />
                                             </StackPanel>
                                             <StackPanel Grid.Column="2" Margin="0,0,6,0">
-                                                <TextBlock Text="{DynamicResource Loc.Tasks.DayOfMonth}" />
-                                                <TextBox x:Name="DayOfMonthBox" Style="{StaticResource FieldTextBox}" Margin="0,4,0,8" />
+                                                <TextBlock Text="{DynamicResource Loc.Tasks.DayOfMonth}" Style="{StaticResource FormLabelText}" />
+                                                <TextBox x:Name="DayOfMonthBox" Style="{StaticResource FieldTextBox}" Margin="0,4,0,8"
+                                                         AutomationProperties.Name="{DynamicResource Loc.Tasks.DayOfMonth}" />
                                             </StackPanel>
                                             <StackPanel Grid.Column="3" Margin="0,0,6,0">
-                                                <TextBlock Text="{DynamicResource Loc.Tasks.Month}" />
-                                                <TextBox x:Name="MonthBox" Style="{StaticResource FieldTextBox}" Margin="0,4,0,8" />
+                                                <TextBlock Text="{DynamicResource Loc.Tasks.Month}" Style="{StaticResource FormLabelText}" />
+                                                <TextBox x:Name="MonthBox" Style="{StaticResource FieldTextBox}" Margin="0,4,0,8"
+                                                         AutomationProperties.Name="{DynamicResource Loc.Tasks.Month}" />
                                             </StackPanel>
                                             <StackPanel Grid.Column="4">
-                                                <TextBlock Text="{DynamicResource Loc.Tasks.DayOfWeek}" />
-                                                <TextBox x:Name="DayOfWeekBox" Style="{StaticResource FieldTextBox}" Margin="0,4,0,8" />
+                                                <TextBlock Text="{DynamicResource Loc.Tasks.DayOfWeek}" Style="{StaticResource FormLabelText}" />
+                                                <TextBox x:Name="DayOfWeekBox" Style="{StaticResource FieldTextBox}" Margin="0,4,0,8"
+                                                         AutomationProperties.Name="{DynamicResource Loc.Tasks.DayOfWeek}" />
                                             </StackPanel>
                                         </Grid>
-                                        <TextBlock Text="{DynamicResource Loc.Tasks.Command}" />
+                                        <TextBlock Text="{DynamicResource Loc.Tasks.Command}" Style="{StaticResource FormLabelText}" />
                                         <TextBox x:Name="CommandBox"
                                                  Style="{StaticResource FieldTextBox}"
                                                  Margin="0,4,0,8"
-                                                 FontFamily="Cascadia Mono, Consolas" />
+                                                 FontFamily="Cascadia Mono, Consolas"
+                                                 AutomationProperties.Name="{DynamicResource Loc.Tasks.Command}" />
                                         <CheckBox x:Name="CronEnabledCheck"
                                                   Content="{DynamicResource Loc.Tasks.Enabled}"
                                                   Margin="0,2,0,10"
@@ -410,8 +452,8 @@
                                 <RowDefinition Height="Auto" />
                             </Grid.RowDefinitions>
                             <TextBlock Text="{DynamicResource Loc.Tasks.RawCrontabHint}"
-                                       TextWrapping="Wrap"
-                                       Foreground="{DynamicResource MutedTextBrush}" />
+                                       Style="{StaticResource SecondaryBodyText}"
+                                       TextWrapping="Wrap" />
                             <TextBox x:Name="RawCronBox"
                                      Grid.Row="1"
                                      Margin="0,10,0,10"
@@ -460,9 +502,9 @@
         </Grid>
 
         <TextBlock Grid.Row="5"
-                   Margin="0,10,0,0"
+                   Margin="22,10,22,14"
                    Text="{DynamicResource Loc.Tasks.SafetyFooter}"
-                   Foreground="{DynamicResource MutedTextBrush}"
+                   Style="{StaticResource CaptionText}"
                    TextWrapping="Wrap" />
     </Grid>
 </Window>
