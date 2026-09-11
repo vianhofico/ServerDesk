@@ -9,6 +9,7 @@
     <system:String x:Key="Loc.Nginx.Cancel">Cancel</system:String>
     <system:String x:Key="Loc.Nginx.Edit">Edit site</system:String>
     <system:String x:Key="Loc.Nginx.Search">Search sites, sources, listeners or proxy targets</system:String>
+    <system:String x:Key="Loc.Nginx.ClearSearch">Clear search</system:String>
     <system:String x:Key="Loc.Nginx.Initial">Ready to inspect nginx.</system:String>
     <system:String x:Key="Loc.Nginx.Loading">Inspecting nginx configuration…</system:String>
     <system:String x:Key="Loc.Nginx.Disconnected">Connect to this server before inspecting nginx.</system:String>
