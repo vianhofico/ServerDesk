@@ -72,6 +72,12 @@ public partial class NginxInventoryWindow : Window
 
     private void SearchOnTextChanged(object sender, TextChangedEventArgs e) => ApplyFilter();
 
+    private void ClearSearchOnClick(object sender, RoutedEventArgs e)
+    {
+        SearchTextBox.Clear();
+        SearchTextBox.Focus();
+    }
+
     private void SiteSelectionChanged(object sender, SelectionChangedEventArgs e) => RenderSelectedSite();
 
     private async Task RefreshAsync()
@@ -124,6 +130,8 @@ public partial class NginxInventoryWindow : Window
     private void ApplyFilter()
     {
         var query = SearchTextBox.Text.Trim();
+        ClearSearchButton.Visibility = query.Length == 0 ? Visibility.Collapsed : Visibility.Visible;
+
         IEnumerable<SiteRow> filtered = _rows;
         if (query.Length > 0)
         {
@@ -213,6 +221,7 @@ public partial class NginxInventoryWindow : Window
     private void RefreshLocalizedPresentation()
     {
         TitleText.Text = _localization.Format("Loc.Nginx.Title", _profile.Name);
+        EndpointText.Text = $"{_profile.Username}@{_profile.Host}:{_profile.Port}";
         RenderStatus();
         RenderSelectedSite();
     }

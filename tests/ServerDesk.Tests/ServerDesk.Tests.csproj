@@ -128,5 +128,9 @@
           Link="Fixtures\Presentation\GitOperationsWindow.xaml"
           CopyToOutputDirectory="PreserveNewest"
           CopyToPublishDirectory="Never" />
+    <None Include="..\..\src\ServerDesk.App\NginxInventoryWindow.xaml"
+          Link="Fixtures\Presentation\NginxInventoryWindow.xaml"
+          CopyToOutputDirectory="PreserveNewest"
+          CopyToPublishDirectory="Never" />
   </ItemGroup>
 </Project>
