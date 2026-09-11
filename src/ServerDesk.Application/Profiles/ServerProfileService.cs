@@ -196,22 +196,24 @@ public sealed class ServerProfileService : IServerProfileService
             .Distinct()
             .ToArray();
         var previousSecrets = new Dictionary<SecretReference, string?>();
-
-        foreach (var reference in references)
-        {
-            previousSecrets[reference] = await _secretStore.GetAsync(reference, cancellationToken).ConfigureAwait(false);
-            await _secretStore.DeleteAsync(reference, cancellationToken).ConfigureAwait(false);
-        }
+        var deletedReferences = new List<SecretReference>();
 
         try
         {
+            foreach (var reference in references)
+            {
+                previousSecrets[reference] = await _secretStore.GetAsync(reference, cancellationToken).ConfigureAwait(false);
+                await _secretStore.DeleteAsync(reference, cancellationToken).ConfigureAwait(false);
+                deletedReferences.Add(reference);
+            }
+
             await _profileRepository.DeleteAsync(id, cancellationToken).ConfigureAwait(false);
         }
         catch
         {
-            foreach (var (reference, previousSecret) in previousSecrets)
+            foreach (var reference in deletedReferences)
             {
-                if (previousSecret is not null)
+                if (previousSecrets[reference] is { } previousSecret)
                 {
                     await TrySetSecretForCompensationAsync(reference, previousSecret).ConfigureAwait(false);
                 }
