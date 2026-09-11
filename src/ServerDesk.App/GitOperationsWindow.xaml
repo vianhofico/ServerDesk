@@ -1,9 +1,10 @@
 <Window x:Class="ServerDesk.App.GitOperationsWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
         Title="{DynamicResource Loc.Git.Title}"
         Width="1420"
-        Height="860"
+        Height="880"
         MinWidth="1080"
         MinHeight="680"
         WindowStartupLocation="CenterOwner"
@@ -11,27 +12,9 @@
         Foreground="{DynamicResource PrimaryTextBrush}"
         Loaded="WindowOnLoaded"
         Closed="WindowOnClosed">
-    <Window.Resources>
-        <Style x:Key="GitButton" TargetType="Button">
-            <Setter Property="Padding" Value="11,7" />
-            <Setter Property="MinHeight" Value="34" />
-            <Setter Property="Margin" Value="8,0,0,0" />
-            <Setter Property="Cursor" Value="Hand" />
-        </Style>
-        <Style x:Key="GitSummaryValue" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="17" />
-            <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="TextTrimming" Value="CharacterEllipsis" />
-        </Style>
-        <Style x:Key="GitSummaryLabel" TargetType="TextBlock">
-            <Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" />
-            <Setter Property="Margin" Value="0,3,0,0" />
-        </Style>
-    </Window.Resources>
-
-    <Grid Margin="20">
+    <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
+            <RowDefinition Height="76" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
@@ -39,172 +22,322 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <Grid>
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
-            </Grid.ColumnDefinitions>
-            <StackPanel>
-                <TextBlock x:Name="TitleText" FontSize="26" FontWeight="SemiBold" />
-                <TextBlock x:Name="EndpointText" Margin="0,5,0,0" Foreground="{DynamicResource MutedTextBrush}" />
-            </StackPanel>
-            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Top">
-                <Button x:Name="InspectButton" Content="{DynamicResource Loc.Git.Inspect}" Click="InspectOnClick" Style="{StaticResource GitButton}" Margin="0" />
-                <Button x:Name="CancelButton" Content="{DynamicResource Loc.Common.Cancel}" Click="CancelOnClick" Style="{StaticResource GitButton}" />
-            </StackPanel>
-        </Grid>
-
-        <Border Grid.Row="1" Margin="0,14,0,0" Padding="12" CornerRadius="9"
+        <Border Grid.Row="0"
                 Background="{DynamicResource SurfaceBrush}"
-                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
-            <Grid>
+                BorderBrush="{DynamicResource BorderBrush}"
+                BorderThickness="0,0,0,1">
+            <Grid Margin="24,0,28,0">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="2*" />
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
-                <TextBlock Text="{DynamicResource Loc.Git.RepositoryPath}" VerticalAlignment="Center"
-                           Foreground="{DynamicResource MutedTextBrush}" />
-                <TextBox x:Name="RepositoryPathBox" Grid.Column="1" Margin="10,0,0,0"
-                         ToolTip="{DynamicResource Loc.Git.RepositoryPathHint}" />
-                <Button x:Name="FetchButton" Grid.Column="2" Content="{DynamicResource Loc.Git.Fetch}" Click="FetchOnClick"
-                        Style="{StaticResource GitButton}" IsEnabled="False" />
-                <Button x:Name="PreviewPullButton" Grid.Column="3" Content="{DynamicResource Loc.Git.PreviewPull}" Click="PreviewPullOnClick"
-                        Style="{StaticResource GitButton}" IsEnabled="False" />
-                <Button x:Name="PullButton" Grid.Column="4" Content="{DynamicResource Loc.Git.ApplyPull}" Click="PullOnClick"
-                        Style="{StaticResource GitButton}" IsEnabled="False" />
-                <TextBlock Grid.Column="5" Margin="10,0,0,0" VerticalAlignment="Center"
-                           Text="{DynamicResource Loc.Git.FastForwardOnly}"
-                           Foreground="{DynamicResource MutedTextBrush}" />
+
+                <StackPanel VerticalAlignment="Center">
+                    <TextBlock x:Name="TitleText" Style="{StaticResource PageTitleText}" />
+                    <TextBlock x:Name="EndpointText"
+                               Margin="0,5,0,0"
+                               Style="{StaticResource TechnicalText}"
+                               Foreground="{DynamicResource MutedTextBrush}" />
+                </StackPanel>
+
+                <Border Grid.Column="1"
+                        Style="{StaticResource StatusPill}"
+                        VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE73E;"
+                                   Margin="0,0,7,0"
+                                   FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                   FontSize="12"
+                                   Foreground="{DynamicResource MutedTextBrush}" />
+                        <TextBlock Text="{DynamicResource Loc.Git.FastForwardOnly}"
+                                   FontSize="11"
+                                   FontWeight="SemiBold" />
+                    </StackPanel>
+                </Border>
             </Grid>
         </Border>
 
-        <Border Grid.Row="2" Margin="0,10,0,0" Padding="12" CornerRadius="9"
-                Background="{DynamicResource SurfaceSecondaryBrush}">
+        <Border Grid.Row="1"
+                Margin="20,14,20,0"
+                Style="{StaticResource CommandBarSurface}">
             <Grid>
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="260" />
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="70" />
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
-                <TextBlock Text="{DynamicResource Loc.Git.DiscoveryRoot}" VerticalAlignment="Center"
-                           Foreground="{DynamicResource MutedTextBrush}" />
-                <TextBox x:Name="DiscoveryRootBox" Grid.Column="1" Margin="10,0,0,0" Text="/srv" />
-                <TextBlock Grid.Column="2" Margin="14,0,0,0" Text="{DynamicResource Loc.Git.Depth}" VerticalAlignment="Center"
-                           Foreground="{DynamicResource MutedTextBrush}" />
-                <TextBox x:Name="DiscoveryDepthBox" Grid.Column="3" Margin="8,0,0,0" Text="4" />
-                <Button x:Name="DiscoverButton" Grid.Column="4" Content="{DynamicResource Loc.Git.Discover}" Click="DiscoverOnClick"
-                        Style="{StaticResource GitButton}" />
-                <ComboBox x:Name="DiscoveryCombo" Grid.Column="5" Margin="10,0,0,0"
-                          SelectionChanged="DiscoveryComboOnSelectionChanged"
-                          ToolTip="{DynamicResource Loc.Git.DiscoveryHint}" />
+
+                <Button x:Name="InspectButton"
+                        Click="InspectOnClick"
+                        Style="{StaticResource PrimaryButton}"
+                        AutomationProperties.Name="{DynamicResource Loc.Git.Inspect}">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE721;"
+                                   Margin="0,0,7,0"
+                                   FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                   FontSize="13"
+                                   Foreground="White" />
+                        <TextBlock Text="{DynamicResource Loc.Git.Inspect}" Foreground="White" />
+                    </StackPanel>
+                </Button>
+
+                <StackPanel Grid.Column="1" Margin="14,0" VerticalAlignment="Center">
+                    <TextBlock Text="{DynamicResource Loc.Git.RepositoryPath}"
+                               Style="{StaticResource FormLabelText}" />
+                    <TextBox x:Name="RepositoryPathBox"
+                             Margin="0,4,0,0"
+                             Style="{StaticResource FieldTextBox}"
+                             FontFamily="Cascadia Mono, Consolas"
+                             ToolTip="{DynamicResource Loc.Git.RepositoryPathHint}"
+                             AutomationProperties.Name="{DynamicResource Loc.Git.RepositoryPath}" />
+                </StackPanel>
+
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button x:Name="FetchButton"
+                            Content="{DynamicResource Loc.Git.Fetch}"
+                            Click="FetchOnClick"
+                            Style="{StaticResource SecondaryButton}"
+                            IsEnabled="False"
+                            AutomationProperties.Name="{DynamicResource Loc.Git.Fetch}" />
+                    <Button x:Name="PreviewPullButton"
+                            Margin="6,0,0,0"
+                            Content="{DynamicResource Loc.Git.PreviewPull}"
+                            Click="PreviewPullOnClick"
+                            Style="{StaticResource SecondaryButton}"
+                            IsEnabled="False"
+                            AutomationProperties.Name="{DynamicResource Loc.Git.PreviewPull}" />
+                    <Button x:Name="PullButton"
+                            Margin="8,0,0,0"
+                            Content="{DynamicResource Loc.Git.ApplyPull}"
+                            Click="PullOnClick"
+                            Style="{StaticResource PrimaryButton}"
+                            IsEnabled="False"
+                            AutomationProperties.Name="{DynamicResource Loc.Git.ApplyPull}" />
+                    <Button x:Name="CancelButton"
+                            Margin="8,0,0,0"
+                            Content="{DynamicResource Loc.Common.Cancel}"
+                            Click="CancelOnClick"
+                            Style="{StaticResource GhostButton}"
+                            AutomationProperties.Name="{DynamicResource Loc.Common.Cancel}" />
+                </StackPanel>
             </Grid>
         </Border>
 
-        <Border Grid.Row="3" Margin="0,10,0,10" Padding="10" CornerRadius="7"
-                Background="{DynamicResource SurfaceSecondaryBrush}">
-            <TextBlock x:Name="StatusText" TextWrapping="Wrap" />
+        <Border Grid.Row="2"
+                Margin="20,10,20,0"
+                Style="{StaticResource SectionSurface}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="1.1*" />
+                    <ColumnDefinition Width="110" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="1.2*" />
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0" Margin="0,0,12,0">
+                    <TextBlock Text="{DynamicResource Loc.Git.DiscoveryRoot}"
+                               Style="{StaticResource FormLabelText}" />
+                    <TextBox x:Name="DiscoveryRootBox"
+                             Margin="0,4,0,0"
+                             Text="/srv"
+                             Style="{StaticResource FieldTextBox}"
+                             FontFamily="Cascadia Mono, Consolas"
+                             AutomationProperties.Name="{DynamicResource Loc.Git.DiscoveryRoot}" />
+                </StackPanel>
+
+                <StackPanel Grid.Column="1" Margin="0,0,12,0">
+                    <TextBlock Text="{DynamicResource Loc.Git.Depth}"
+                               Style="{StaticResource FormLabelText}" />
+                    <TextBox x:Name="DiscoveryDepthBox"
+                             Margin="0,4,0,0"
+                             Text="4"
+                             Style="{StaticResource FieldTextBox}"
+                             AutomationProperties.Name="{DynamicResource Loc.Git.Depth}" />
+                </StackPanel>
+
+                <Button x:Name="DiscoverButton"
+                        Grid.Column="2"
+                        Margin="0,18,12,0"
+                        VerticalAlignment="Top"
+                        Content="{DynamicResource Loc.Git.Discover}"
+                        Click="DiscoverOnClick"
+                        Style="{StaticResource SecondaryButton}"
+                        AutomationProperties.Name="{DynamicResource Loc.Git.Discover}" />
+
+                <StackPanel Grid.Column="3">
+                    <TextBlock Text="{DynamicResource Loc.Git.RepositoryPath}"
+                               Style="{StaticResource FormLabelText}" />
+                    <ComboBox x:Name="DiscoveryCombo"
+                              Margin="0,4,0,0"
+                              SelectionChanged="DiscoveryComboOnSelectionChanged"
+                              ToolTip="{DynamicResource Loc.Git.DiscoveryHint}"
+                              AutomationProperties.Name="{DynamicResource Loc.Git.DiscoveryHint}" />
+                </StackPanel>
+            </Grid>
         </Border>
 
-        <Grid Grid.Row="4">
+        <Grid Grid.Row="3" Margin="20,10,20,10">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
-                <RowDefinition Height="12" />
-                <RowDefinition Height="*" />
+                <RowDefinition Height="10" />
+                <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
-            <Grid>
+            <Border Grid.Row="0" Style="{StaticResource InlineInfoCard}">
+                <TextBlock x:Name="StatusText" TextWrapping="Wrap" />
+            </Border>
+
+            <Grid Grid.Row="2">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="1.2*" />
-                    <ColumnDefinition Width="1.6*" />
-                    <ColumnDefinition Width="1.6*" />
-                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="1.1*" />
+                    <ColumnDefinition Width="8" />
+                    <ColumnDefinition Width="1.5*" />
+                    <ColumnDefinition Width="8" />
+                    <ColumnDefinition Width="1.5*" />
+                    <ColumnDefinition Width="8" />
+                    <ColumnDefinition Width="1.05*" />
+                    <ColumnDefinition Width="8" />
                     <ColumnDefinition Width="1.2*" />
                 </Grid.ColumnDefinitions>
-                <Border Grid.Column="0" Margin="0,0,8,0" Padding="12" CornerRadius="7" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+
+                <Border Grid.Column="0" Style="{StaticResource MetricTile}">
                     <StackPanel>
-                        <TextBlock x:Name="BranchValue" Text="—" Style="{StaticResource GitSummaryValue}" />
-                        <TextBlock Text="{DynamicResource Loc.Git.Branch}" Style="{StaticResource GitSummaryLabel}" />
+                        <TextBlock Text="{DynamicResource Loc.Git.Branch}" Style="{StaticResource EyebrowText}" />
+                        <TextBlock x:Name="BranchValue"
+                                   Margin="0,4,0,0"
+                                   Text="—"
+                                   FontSize="18"
+                                   FontWeight="SemiBold"
+                                   TextTrimming="CharacterEllipsis" />
                     </StackPanel>
                 </Border>
-                <Border Grid.Column="1" Margin="0,0,8,0" Padding="12" CornerRadius="7" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                <Border Grid.Column="2" Style="{StaticResource MetricTile}">
                     <StackPanel>
-                        <TextBlock x:Name="RevisionValue" Text="—" Style="{StaticResource GitSummaryValue}" />
-                        <TextBlock Text="{DynamicResource Loc.Git.Revision}" Style="{StaticResource GitSummaryLabel}" />
+                        <TextBlock Text="{DynamicResource Loc.Git.Revision}" Style="{StaticResource EyebrowText}" />
+                        <TextBlock x:Name="RevisionValue"
+                                   Margin="0,4,0,0"
+                                   Text="—"
+                                   Style="{StaticResource TechnicalText}"
+                                   FontSize="14"
+                                   FontWeight="SemiBold"
+                                   TextTrimming="CharacterEllipsis" />
                     </StackPanel>
                 </Border>
-                <Border Grid.Column="2" Margin="0,0,8,0" Padding="12" CornerRadius="7" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                <Border Grid.Column="4" Style="{StaticResource MetricTile}">
                     <StackPanel>
-                        <TextBlock x:Name="UpstreamValue" Text="—" Style="{StaticResource GitSummaryValue}" />
-                        <TextBlock Text="{DynamicResource Loc.Git.Upstream}" Style="{StaticResource GitSummaryLabel}" />
+                        <TextBlock Text="{DynamicResource Loc.Git.Upstream}" Style="{StaticResource EyebrowText}" />
+                        <TextBlock x:Name="UpstreamValue"
+                                   Margin="0,4,0,0"
+                                   Text="—"
+                                   Style="{StaticResource TechnicalText}"
+                                   FontSize="13"
+                                   FontWeight="SemiBold"
+                                   TextTrimming="CharacterEllipsis" />
                     </StackPanel>
                 </Border>
-                <Border Grid.Column="3" Margin="0,0,8,0" Padding="12" CornerRadius="7" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                <Border Grid.Column="6" Style="{StaticResource MetricTile}">
                     <StackPanel>
-                        <TextBlock x:Name="AheadBehindValue" Text="—" Style="{StaticResource GitSummaryValue}" />
-                        <TextBlock Text="{DynamicResource Loc.Git.AheadBehind}" Style="{StaticResource GitSummaryLabel}" />
+                        <TextBlock Text="{DynamicResource Loc.Git.AheadBehind}" Style="{StaticResource EyebrowText}" />
+                        <TextBlock x:Name="AheadBehindValue"
+                                   Margin="0,4,0,0"
+                                   Text="—"
+                                   FontSize="18"
+                                   FontWeight="SemiBold" />
                     </StackPanel>
                 </Border>
-                <Border Grid.Column="4" Padding="12" CornerRadius="7" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                <Border Grid.Column="8" Style="{StaticResource MetricTile}">
                     <StackPanel>
-                        <TextBlock x:Name="WorktreeValue" Text="—" Style="{StaticResource GitSummaryValue}" />
-                        <TextBlock Text="{DynamicResource Loc.Git.Worktree}" Style="{StaticResource GitSummaryLabel}" />
+                        <TextBlock Text="{DynamicResource Loc.Git.Worktree}" Style="{StaticResource EyebrowText}" />
+                        <TextBlock x:Name="WorktreeValue"
+                                   Margin="0,4,0,0"
+                                   Text="—"
+                                   FontSize="18"
+                                   FontWeight="SemiBold"
+                                   TextTrimming="CharacterEllipsis" />
                     </StackPanel>
                 </Border>
             </Grid>
+        </Grid>
 
-            <TabControl Grid.Row="2">
+        <ui:Card Grid.Row="4"
+                 Margin="20,0,20,0"
+                 Padding="0"
+                 ClipToBounds="True">
+            <TabControl>
                 <TabItem Header="{DynamicResource Loc.Git.Changes}">
-                    <Grid>
+                    <Grid Margin="6">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="*" />
                         </Grid.RowDefinitions>
-                        <TextBlock x:Name="DiffSummaryText" Margin="8" TextWrapping="Wrap"
-                                   Foreground="{DynamicResource MutedTextBrush}" />
-                        <DataGrid x:Name="ChangesGrid" Grid.Row="1" AutoGenerateColumns="False" IsReadOnly="True"
-                                  EnableRowVirtualization="True" VirtualizingPanel.IsVirtualizing="True"
-                                  VirtualizingPanel.VirtualizationMode="Recycling">
+                        <TextBlock x:Name="DiffSummaryText"
+                                   Margin="8,5,8,10"
+                                   Style="{StaticResource SecondaryBodyText}"
+                                   TextWrapping="Wrap" />
+                        <DataGrid x:Name="ChangesGrid"
+                                  Grid.Row="1"
+                                  Style="{StaticResource OperationalDataGrid}"
+                                  BorderThickness="0">
                             <DataGrid.Columns>
-                                <DataGridTextColumn Header="{DynamicResource Loc.Git.ChangeStatus}" Binding="{Binding StatusDisplay}" Width="80" />
-                                <DataGridTextColumn Header="{DynamicResource Loc.Git.Path}" Binding="{Binding Path}" Width="*" />
-                                <DataGridTextColumn Header="{DynamicResource Loc.Git.OriginalPath}" Binding="{Binding OriginalPath}" Width="*" />
+                                <DataGridTextColumn Header="{DynamicResource Loc.Git.ChangeStatus}" Binding="{Binding StatusDisplay}" Width="90" />
+                                <DataGridTextColumn Header="{DynamicResource Loc.Git.Path}" Binding="{Binding Path}" Width="*">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock" BasedOn="{StaticResource TechnicalText}" />
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                                <DataGridTextColumn Header="{DynamicResource Loc.Git.OriginalPath}" Binding="{Binding OriginalPath}" Width="*">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock" BasedOn="{StaticResource TechnicalText}" />
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
                             </DataGrid.Columns>
                         </DataGrid>
                     </Grid>
                 </TabItem>
+
                 <TabItem Header="{DynamicResource Loc.Git.Remotes}">
-                    <DataGrid x:Name="RemotesGrid" AutoGenerateColumns="False" IsReadOnly="True"
-                              EnableRowVirtualization="True" VirtualizingPanel.IsVirtualizing="True"
-                              VirtualizingPanel.VirtualizationMode="Recycling">
+                    <DataGrid x:Name="RemotesGrid"
+                              Margin="6"
+                              Style="{StaticResource OperationalDataGrid}"
+                              BorderThickness="0">
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="{DynamicResource Loc.Git.Remote}" Binding="{Binding Name}" Width="180" />
-                            <DataGridTextColumn Header="{DynamicResource Loc.Git.SafeUrl}" Binding="{Binding SafeUrl}" Width="*" />
+                            <DataGridTextColumn Header="{DynamicResource Loc.Git.SafeUrl}" Binding="{Binding SafeUrl}" Width="*">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock" BasedOn="{StaticResource TechnicalText}" />
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
                         </DataGrid.Columns>
                     </DataGrid>
                 </TabItem>
+
                 <TabItem Header="{DynamicResource Loc.Git.PullPreview}">
-                    <Grid Margin="10">
+                    <Grid Margin="14">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="*" />
                         </Grid.RowDefinitions>
-                        <TextBlock x:Name="PreviewText" Text="{DynamicResource Loc.Git.NoPreview}" TextWrapping="Wrap" />
-                        <ListBox x:Name="IncomingCommitsList" Grid.Row="1" Margin="0,10,0,0"
-                                 FontFamily="Consolas" FontSize="12"
-                                 VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling" />
+                        <Border Style="{StaticResource InlineInfoCard}">
+                            <TextBlock x:Name="PreviewText"
+                                       Text="{DynamicResource Loc.Git.NoPreview}"
+                                       TextWrapping="Wrap" />
+                        </Border>
+                        <ListBox x:Name="IncomingCommitsList"
+                                 Grid.Row="1"
+                                 Margin="0,12,0,0"
+                                 FontFamily="Cascadia Mono, Consolas"
+                                 FontSize="12"
+                                 VirtualizingPanel.IsVirtualizing="True"
+                                 VirtualizingPanel.VirtualizationMode="Recycling" />
                     </Grid>
                 </TabItem>
             </TabControl>
-        </Grid>
+        </ui:Card>
 
-        <TextBlock Grid.Row="5" Margin="0,10,0,0" Text="{DynamicResource Loc.Git.SafetyFooter}"
-                   Foreground="{DynamicResource MutedTextBrush}" TextWrapping="Wrap" />
+        <TextBlock Grid.Row="5"
+                   Margin="22,10,22,14"
+                   Text="{DynamicResource Loc.Git.SafetyFooter}"
+                   Style="{StaticResource CaptionText}"
+                   TextWrapping="Wrap" />
     </Grid>
 </Window>

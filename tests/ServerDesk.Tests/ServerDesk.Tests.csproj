@@ -124,5 +124,9 @@
           Link="Fixtures\Presentation\StorageWindow.xaml"
           CopyToOutputDirectory="PreserveNewest"
           CopyToPublishDirectory="Never" />
+    <None Include="..\..\src\ServerDesk.App\GitOperationsWindow.xaml"
+          Link="Fixtures\Presentation\GitOperationsWindow.xaml"
+          CopyToOutputDirectory="PreserveNewest"
+          CopyToPublishDirectory="Never" />
   </ItemGroup>
 </Project>
