@@ -29,13 +29,13 @@ public sealed class ShellSettingsPersistenceTests
         store.ReleaseFirstSave.TrySetResult();
         await shutdownTask.WaitAsync(TimeSpan.FromSeconds(5), cancellationToken);
 
-        Assert.Equal(
-            [
-                new AppSettings(AppThemePreference.Dark, AppLanguagePreference.System),
-                new AppSettings(AppThemePreference.Dark, AppLanguagePreference.Vietnamese),
-                new AppSettings(AppThemePreference.Light, AppLanguagePreference.Vietnamese),
-            ],
-            store.Saved);
+        AppSettings[] expected =
+        [
+            new(AppThemePreference.Dark, AppLanguagePreference.System),
+            new(AppThemePreference.Dark, AppLanguagePreference.Vietnamese),
+            new(AppThemePreference.Light, AppLanguagePreference.Vietnamese),
+        ];
+        Assert.Equal(expected, store.Saved);
     }
 
     private static ShellViewModel CreateViewModel(IAppSettingsStore settingsStore) =>
