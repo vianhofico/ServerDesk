@@ -1,0 +1,32 @@
+name: Patch profile delete compensation
+
+on:
+  push:
+    branches:
+      - fix/216-profile-delete-secret-compensation
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Apply profile delete compensation patch
+        run: python .github/scripts/patch-profile-delete-compensation.py
+
+      - name: Commit implementation and regressions
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/ServerDesk.Application/Profiles/ServerProfileService.cs
+          git diff --cached --check
+          git commit -m "fix(profiles): compensate partial credential deletion"
+          git add tests/ServerDesk.Tests/ServerProfileServiceTests.cs
+          git diff --cached --check
+          git commit -m "test(profiles): cover delete credential compensation"
+          git push
