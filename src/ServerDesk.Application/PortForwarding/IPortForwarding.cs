@@ -84,7 +84,12 @@ public sealed class PortForwardManager : IAsyncDisposable
     private readonly IPortForwardSessionFactory _sessionFactory;
     private readonly ConcurrentDictionary<Guid, ActiveForward> _activeForwards = new();
     private readonly SemaphoreSlim _lifecycleGate = new(1, 1);
+    private readonly object _lifecycleSync = new();
+    private readonly TaskCompletionSource _operationsDrained =
+        new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private int _activeOperations;
     private bool _disposed;
+    private Task? _disposeTask;
 
     public PortForwardManager(
         IPortForwardProfileRepository forwardRepository,
@@ -98,19 +103,19 @@ public sealed class PortForwardManager : IAsyncDisposable
 
     public event Action<Guid>? Changed;
 
-    public ValueTask<IReadOnlyList<PortForwardProfile>> ListProfilesAsync(
+    public async ValueTask<IReadOnlyList<PortForwardProfile>> ListProfilesAsync(
         Guid serverProfileId,
         CancellationToken cancellationToken = default)
     {
-        ThrowIfDisposed();
-        return _forwardRepository.ListForServerAsync(serverProfileId, cancellationToken);
+        using var operation = EnterOperation();
+        return await _forwardRepository.ListForServerAsync(serverProfileId, cancellationToken).ConfigureAwait(false);
     }
 
     public async ValueTask SaveProfileAsync(
         PortForwardProfile profile,
         CancellationToken cancellationToken = default)
     {
-        ThrowIfDisposed();
+        using var operation = EnterOperation();
         ArgumentNullException.ThrowIfNull(profile);
         await _lifecycleGate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
@@ -154,15 +159,23 @@ public sealed class PortForwardManager : IAsyncDisposable
         Guid profileId,
         CancellationToken cancellationToken = default)
     {
-        ThrowIfDisposed();
-        await StopAsync(profileId, cancellationToken).ConfigureAwait(false);
-        await _forwardRepository.DeleteAsync(profileId, cancellationToken).ConfigureAwait(false);
-        Changed?.Invoke(profileId);
+        using var operation = EnterOperation();
+        await _lifecycleGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await StopCoreAsync(profileId, cancellationToken).ConfigureAwait(false);
+            await _forwardRepository.DeleteAsync(profileId, cancellationToken).ConfigureAwait(false);
+            Changed?.Invoke(profileId);
+        }
+        finally
+        {
+            _lifecycleGate.Release();
+        }
     }
 
     public bool TryGetRuntimeSnapshot(Guid profileId, out PortForwardRuntimeSnapshot snapshot)
     {
-        ThrowIfDisposed();
+        using var operation = EnterOperation();
         if (_activeForwards.TryGetValue(profileId, out var active))
         {
             snapshot = ToSnapshot(active.Session);
@@ -177,7 +190,7 @@ public sealed class PortForwardManager : IAsyncDisposable
         Guid profileId,
         CancellationToken cancellationToken = default)
     {
-        ThrowIfDisposed();
+        using var operation = EnterOperation();
         await _lifecycleGate.WaitAsync(cancellationToken).ConfigureAwait(false);
         ActiveForward? active = null;
         try
@@ -251,26 +264,11 @@ public sealed class PortForwardManager : IAsyncDisposable
         Guid profileId,
         CancellationToken cancellationToken = default)
     {
-        ThrowIfDisposed();
+        using var operation = EnterOperation();
         await _lifecycleGate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            if (!_activeForwards.TryGetValue(profileId, out var active))
-            {
-                return;
-            }
-
-            try
-            {
-                await active.Session.StopAsync(cancellationToken).ConfigureAwait(false);
-            }
-            finally
-            {
-                _activeForwards.TryRemove(profileId, out _);
-                active.Session.StateChanged -= active.StateHandler;
-                await active.Session.DisposeAsync().ConfigureAwait(false);
-                Changed?.Invoke(profileId);
-            }
+            await StopCoreAsync(profileId, cancellationToken).ConfigureAwait(false);
         }
         finally
         {
@@ -278,15 +276,49 @@ public sealed class PortForwardManager : IAsyncDisposable
         }
     }
 
-    public async ValueTask DisposeAsync()
+    private async ValueTask StopCoreAsync(
+        Guid profileId,
+        CancellationToken cancellationToken)
     {
-        if (_disposed)
+        if (!_activeForwards.TryGetValue(profileId, out var active))
         {
             return;
         }
 
-        _disposed = true;
-        await _lifecycleGate.WaitAsync(CancellationToken.None).ConfigureAwait(false);
+        try
+        {
+            await active.Session.StopAsync(cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            _activeForwards.TryRemove(profileId, out _);
+            active.Session.StateChanged -= active.StateHandler;
+            await active.Session.DisposeAsync().ConfigureAwait(false);
+            Changed?.Invoke(profileId);
+        }
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        lock (_lifecycleSync)
+        {
+            if (_disposeTask is not null)
+            {
+                return new ValueTask(_disposeTask);
+            }
+
+            _disposed = true;
+            var drainTask = _activeOperations == 0
+                ? Task.CompletedTask
+                : _operationsDrained.Task;
+            _disposeTask = DisposeCoreAsync(drainTask);
+            return new ValueTask(_disposeTask);
+        }
+    }
+
+    private async Task DisposeCoreAsync(Task drainTask)
+    {
+        await drainTask.ConfigureAwait(false);
         try
         {
             var active = _activeForwards.Values.ToArray();
@@ -306,8 +338,48 @@ public sealed class PortForwardManager : IAsyncDisposable
         }
         finally
         {
-            _lifecycleGate.Release();
             _lifecycleGate.Dispose();
+        }
+    }
+
+    private OperationLease EnterOperation()
+    {
+        lock (_lifecycleSync)
+        {
+            ObjectDisposedException.ThrowIf(_disposed, this);
+            _activeOperations++;
+            return new OperationLease(this);
+        }
+    }
+
+    private void EndOperation()
+    {
+        lock (_lifecycleSync)
+        {
+            _activeOperations--;
+            if (_disposed && _activeOperations == 0)
+            {
+                _operationsDrained.TrySetResult();
+            }
+        }
+    }
+
+    private sealed class OperationLease : IDisposable
+    {
+        private readonly PortForwardManager _owner;
+        private int _disposed;
+
+        public OperationLease(PortForwardManager owner)
+        {
+            _owner = owner;
+        }
+
+        public void Dispose()
+        {
+            if (Interlocked.Exchange(ref _disposed, 1) == 0)
+            {
+                _owner.EndOperation();
+            }
         }
     }
 
@@ -316,11 +388,6 @@ public sealed class PortForwardManager : IAsyncDisposable
 
     private static PortForwardSessionException CreateException(RemoteErrorCode code, string message) =>
         new(new RemoteError(code, message));
-
-    private void ThrowIfDisposed()
-    {
-        ObjectDisposedException.ThrowIf(_disposed, this);
-    }
 
     private sealed record ActiveForward(
         PortForwardProfile Profile,
