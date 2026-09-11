@@ -57,7 +57,7 @@ public sealed class GitOperationsPresentationTests
     }
 
     [Fact]
-    public void GitWorkspaceDoesNotReintroduceLocalStylesOrDuplicatedGridVirtualization()
+    public void GitWorkspaceDoesNotReintroduceLocalStylesOrDuplicatedDataGridVirtualization()
     {
         var xaml = ReadPresentation();
 
@@ -65,8 +65,22 @@ public sealed class GitOperationsPresentationTests
         Assert.DoesNotContain("x:Key=\"GitSummaryValue\"", xaml, StringComparison.Ordinal);
         Assert.DoesNotContain("x:Key=\"GitSummaryLabel\"", xaml, StringComparison.Ordinal);
         Assert.DoesNotContain("EnableRowVirtualization=\"True\"", xaml, StringComparison.Ordinal);
-        Assert.DoesNotContain("VirtualizingPanel.IsVirtualizing=\"True\"", xaml, StringComparison.Ordinal);
-        Assert.DoesNotContain("VirtualizingPanel.VirtualizationMode=\"Recycling\"", xaml, StringComparison.Ordinal);
+        Assert.Equal(2, CountOccurrences(xaml, "Style=\"{StaticResource OperationalDataGrid}\""));
+        Assert.Contains("VirtualizingPanel.IsVirtualizing=\"True\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("VirtualizingPanel.VirtualizationMode=\"Recycling\"", xaml, StringComparison.Ordinal);
+    }
+
+    private static int CountOccurrences(string content, string value)
+    {
+        var count = 0;
+        var index = 0;
+        while ((index = content.IndexOf(value, index, StringComparison.Ordinal)) >= 0)
+        {
+            count++;
+            index += value.Length;
+        }
+
+        return count;
     }
 
     private static string ReadPresentation()
