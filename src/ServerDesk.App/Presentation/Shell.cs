@@ -319,7 +319,9 @@ public sealed class ShellViewModel : ObservableObject
     private readonly Dictionary<Guid, IRemoteSession> _sessions = [];
     private readonly Dictionary<Guid, Action<RemoteSessionState>> _sessionHandlers = [];
     private readonly Dictionary<Guid, CancellationTokenSource> _connectionCancellations = [];
-    private readonly SemaphoreSlim _settingsSaveGate = new(1, 1);
+    private readonly object _settingsSaveSync = new();
+    private Task _settingsSaveTail = Task.CompletedTask;
+    private bool _settingsSaveStopping;
     private NavigationItem _selectedNavigationItem;
     private ServerProfileListItemViewModel? _selectedServer;
     private ProfileEditorViewModel? _editor;
@@ -538,7 +540,7 @@ public sealed class ShellViewModel : ObservableObject
 
             _themeService.Apply(value);
             OnPropertyChanged(nameof(EffectiveTheme));
-            _ = PersistSettingsAsync();
+            QueueSettingsSave();
         }
     }
 
@@ -554,7 +556,7 @@ public sealed class ShellViewModel : ObservableObject
 
             _localizationService.Apply(value);
             OnPropertyChanged(nameof(EffectiveLanguage));
-            _ = PersistSettingsAsync();
+            QueueSettingsSave();
         }
     }
 
@@ -586,6 +588,13 @@ public sealed class ShellViewModel : ObservableObject
 
     public async ValueTask ShutdownAsync()
     {
+        Task settingsSaveTail;
+        lock (_settingsSaveSync)
+        {
+            _settingsSaveStopping = true;
+            settingsSaveTail = _settingsSaveTail;
+        }
+
         _localizationService.LanguageChanged -= OnLanguageChanged;
         foreach (var cancellation in _connectionCancellations.Values)
         {
@@ -595,6 +604,15 @@ public sealed class ShellViewModel : ObservableObject
         foreach (var id in _sessions.Keys.ToArray())
         {
             await DisposeCachedSessionAsync(id).ConfigureAwait(false);
+        }
+
+        try
+        {
+            await settingsSaveTail.ConfigureAwait(false);
+        }
+        catch
+        {
+            // App shutdown must continue. Expected settings I/O/access failures are handled by the save path.
         }
     }
 
@@ -923,27 +941,67 @@ public sealed class ShellViewModel : ObservableObject
         OnPropertyChanged(nameof(ServerCountLabel));
     }
 
-    private async Task PersistSettingsAsync()
+    private void QueueSettingsSave()
     {
-        await _settingsSaveGate.WaitAsync().ConfigureAwait(true);
+        var settings = new AppSettings(_themePreference, _languagePreference);
+        lock (_settingsSaveSync)
+        {
+            if (_settingsSaveStopping)
+            {
+                return;
+            }
+
+            var previous = _settingsSaveTail;
+            _settingsSaveTail = Task.Run(
+                () => PersistSettingsAfterAsync(previous, settings),
+                CancellationToken.None);
+        }
+    }
+
+    private async Task PersistSettingsAfterAsync(Task previous, AppSettings settings)
+    {
         try
         {
-            await _settingsStore.SaveAsync(
-                new AppSettings(_themePreference, _languagePreference)).ConfigureAwait(true);
-            SettingsMessage = null;
+            await previous.ConfigureAwait(false);
+        }
+        catch
+        {
+            // Keep later accepted settings writes alive even if an unexpected earlier save failed.
+        }
+
+        await PersistSettingsSnapshotAsync(settings).ConfigureAwait(false);
+    }
+
+    private async Task PersistSettingsSnapshotAsync(AppSettings settings)
+    {
+        try
+        {
+            await _settingsStore.SaveAsync(settings).ConfigureAwait(false);
+            PostSettingsMessage(saveFailed: false);
         }
         catch (System.IO.IOException)
         {
-            SettingsMessage = _localizationService.Get("Loc.Settings.SaveFailed");
+            PostSettingsMessage(saveFailed: true);
         }
         catch (UnauthorizedAccessException)
         {
-            SettingsMessage = _localizationService.Get("Loc.Settings.SaveFailed");
+            PostSettingsMessage(saveFailed: true);
         }
-        finally
+    }
+
+    private void PostSettingsMessage(bool saveFailed)
+    {
+        void Apply() => SettingsMessage = saveFailed
+            ? _localizationService.Get("Loc.Settings.SaveFailed")
+            : null;
+
+        if (_uiContext is null || ReferenceEquals(SynchronizationContext.Current, _uiContext))
         {
-            _settingsSaveGate.Release();
+            Apply();
+            return;
         }
+
+        _uiContext.Post(_ => Apply(), null);
     }
 
     private void OnLanguageChanged()
