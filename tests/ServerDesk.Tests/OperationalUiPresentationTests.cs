@@ -144,6 +144,29 @@ public sealed class OperationalUiPresentationTests
     }
 
     [Fact]
+    public void ProcessWorkspaceUsesFluentHeaderMetricsRiskHierarchyAndSharedDetailsPattern()
+    {
+        var content = File.ReadAllText(PresentationFixture("ProcessManagerWindow.xaml"));
+
+        Assert.Contains("xmlns:ui=\"http://schemas.lepo.co/wpfui/2022/xaml\"", content, StringComparison.Ordinal);
+        Assert.Contains("Style=\"{StaticResource PageTitleText}\"", content, StringComparison.Ordinal);
+        Assert.Contains("Style=\"{StaticResource StatusPill}\"", content, StringComparison.Ordinal);
+        Assert.Contains("Style=\"{StaticResource AccentStatusPill}\"", content, StringComparison.Ordinal);
+        Assert.Contains("Style=\"{StaticResource MetricTile}\"", content, StringComparison.Ordinal);
+        Assert.Contains("<ui:Card", content, StringComparison.Ordinal);
+        Assert.Contains("Style=\"{StaticResource DetailsPane}\"", content, StringComparison.Ordinal);
+        Assert.Contains("Style=\"{StaticResource PrimaryButton}\"", content, StringComparison.Ordinal);
+        Assert.Contains("x:Name=\"TerminateButton\"", content, StringComparison.Ordinal);
+        Assert.Contains("Style=\"{StaticResource DangerButton}\"", content, StringComparison.Ordinal);
+        Assert.Contains("AutomationProperties.Name=\"{DynamicResource Loc.Processes.Command.Refresh}\"", content, StringComparison.Ordinal);
+        Assert.Contains("AutomationProperties.Name=\"{DynamicResource Loc.Processes.Search.Clear}\"", content, StringComparison.Ordinal);
+        Assert.DoesNotContain("x:Key=\"ProcessSummaryLabel\"", content, StringComparison.Ordinal);
+        Assert.DoesNotContain("x:Key=\"ProcessSummaryValue\"", content, StringComparison.Ordinal);
+        Assert.DoesNotContain("x:Key=\"ProcessDetailLabel\"", content, StringComparison.Ordinal);
+        Assert.DoesNotContain("x:Key=\"ProcessDetailValue\"", content, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void ServiceWorkspaceUsesFluentMetricsStatusCueAndSharedDetailsPattern()
     {
         var content = File.ReadAllText(PresentationFixture("ServiceManagerWindow.xaml"));
@@ -175,6 +198,29 @@ public sealed class OperationalUiPresentationTests
         Assert.Contains("AutomationProperties.Name=\"{DynamicResource Loc.Docker.Command.Diagnostics}\"", content, StringComparison.Ordinal);
         Assert.DoesNotContain("x:Key=\"DockerSummaryLabel\"", content, StringComparison.Ordinal);
         Assert.DoesNotContain("x:Key=\"DockerDetailLabel\"", content, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void StorageWorkspaceUsesFluentMetricsTextualHealthAndSharedVirtualizedTabs()
+    {
+        var content = File.ReadAllText(PresentationFixture("StorageWindow.xaml"));
+
+        Assert.Contains("xmlns:ui=\"http://schemas.lepo.co/wpfui/2022/xaml\"", content, StringComparison.Ordinal);
+        Assert.Contains("Style=\"{StaticResource PageTitleText}\"", content, StringComparison.Ordinal);
+        Assert.Contains("Style=\"{StaticResource StatusPill}\"", content, StringComparison.Ordinal);
+        Assert.Contains("Style=\"{StaticResource AccentStatusPill}\"", content, StringComparison.Ordinal);
+        Assert.Contains("Style=\"{StaticResource MetricTile}\"", content, StringComparison.Ordinal);
+        Assert.Contains("<ui:Card", content, StringComparison.Ordinal);
+        Assert.Contains("Style=\"{StaticResource OperationalDataGrid}\"", content, StringComparison.Ordinal);
+        Assert.Contains("Style=\"{StaticResource OperationalSearchTextBox}\"", content, StringComparison.Ordinal);
+        Assert.Contains("Binding=\"{Binding IsWarning}\" Value=\"True\"", content, StringComparison.Ordinal);
+        Assert.Contains("Loc.Storage.Health.Healthy", content, StringComparison.Ordinal);
+        Assert.Contains("Loc.Storage.Health.Warning", content, StringComparison.Ordinal);
+        Assert.Contains("AutomationProperties.Name=\"{DynamicResource Loc.Storage.Command.Refresh}\"", content, StringComparison.Ordinal);
+        Assert.Contains("AutomationProperties.Name=\"{DynamicResource Loc.Storage.Search.Clear}\"", content, StringComparison.Ordinal);
+        Assert.Contains("AutomationProperties.Name=\"{DynamicResource Loc.Storage.Directory.Path}\"", content, StringComparison.Ordinal);
+        Assert.DoesNotContain("x:Key=\"StorageSummaryLabel\"", content, StringComparison.Ordinal);
+        Assert.DoesNotContain("x:Key=\"StorageSummaryValue\"", content, StringComparison.Ordinal);
     }
 
     [Fact]
