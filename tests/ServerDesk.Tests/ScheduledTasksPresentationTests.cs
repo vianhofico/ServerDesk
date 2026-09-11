@@ -33,28 +33,76 @@ public sealed class ScheduledTasksPresentationTests
     [Fact]
     public void ScheduledTasksWindowUsesCanonicalOperationalPatternsAndDangerDelete()
     {
-        var path = Path.Combine(AppContext.BaseDirectory, "Fixtures", "Presentation", "ScheduledTasksWindow.xaml");
-        var xaml = File.ReadAllText(path);
+        var xaml = ReadPresentation();
 
+        Assert.Contains("xmlns:ui=\"http://schemas.lepo.co/wpfui/2022/xaml\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Style=\"{StaticResource PageTitleText}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Style=\"{StaticResource StatusPill}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Style=\"{StaticResource AccentStatusPill}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Style=\"{StaticResource OperationalDataGrid}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Style=\"{StaticResource OperationalSearchTextBox}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Style=\"{StaticResource CommandBarSurface}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Style=\"{StaticResource DetailsPane}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Style=\"{StaticResource MetricTile}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("<ui:Card", xaml, StringComparison.Ordinal);
         Assert.Contains("x:Name=\"TaskStateOverlay\"", xaml, StringComparison.Ordinal);
         Assert.Contains("x:Name=\"DetailsContent\"", xaml, StringComparison.Ordinal);
         Assert.Contains("x:Name=\"ClearSearchButton\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("x:Name=\"EnableButton\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("x:Name=\"DisableButton\"", xaml, StringComparison.Ordinal);
         Assert.Contains("x:Name=\"DeleteButton\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Style=\"{StaticResource DangerButton}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("FontFamily=\"Cascadia Mono, Consolas\"", xaml, StringComparison.Ordinal);
         Assert.Contains("x:Name=\"RawCronBox\"", xaml, StringComparison.Ordinal);
         Assert.Contains("x:Name=\"ApplyRawCronButton\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("x:Name=\"SaveCronButton\"", xaml, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ScheduledTasksEditorHasVisibleLabelsAndAutomationNames()
+    {
+        var xaml = ReadPresentation();
+
+        Assert.Contains("Style=\"{StaticResource FormLabelText}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("AutomationProperties.Name=\"{DynamicResource Loc.Tasks.Refresh}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("AutomationProperties.Name=\"{DynamicResource Loc.TasksWorkspace.Search.Clear}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("AutomationProperties.Name=\"{DynamicResource Loc.Tasks.Minute}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("AutomationProperties.Name=\"{DynamicResource Loc.Tasks.Hour}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("AutomationProperties.Name=\"{DynamicResource Loc.Tasks.DayOfMonth}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("AutomationProperties.Name=\"{DynamicResource Loc.Tasks.Month}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("AutomationProperties.Name=\"{DynamicResource Loc.Tasks.DayOfWeek}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("AutomationProperties.Name=\"{DynamicResource Loc.Tasks.Command}\"", xaml, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ScheduledTasksWindowRemovesDuplicatedLocalTypographyStyles()
+    {
+        var xaml = ReadPresentation();
+
+        Assert.DoesNotContain("x:Key=\"TaskSummaryLabel\"", xaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("x:Key=\"TaskSummaryValue\"", xaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("x:Key=\"TaskDetailLabel\"", xaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("x:Key=\"TaskDetailValue\"", xaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("x:Key=\"TaskTechnicalValue\"", xaml, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ScheduledTasksWindowKeepsStatusStackPanelForRuntimeFooterLocalization()
+    {
+        var xaml = ReadPresentation();
+        var statusCard = xaml.IndexOf("x:Name=\"StatusCard\"", StringComparison.Ordinal);
+        var stackPanel = xaml.IndexOf("<StackPanel>", statusCard, StringComparison.Ordinal);
+        var capabilityText = xaml.IndexOf("x:Name=\"CapabilityText\"", statusCard, StringComparison.Ordinal);
+
+        Assert.True(statusCard >= 0);
+        Assert.True(stackPanel > statusCard);
+        Assert.True(capabilityText > stackPanel);
     }
 
     [Fact]
     public void ScheduledTasksWindowKeepsAdvancedAndReadOnlySurfacesSeparate()
     {
-        var path = Path.Combine(AppContext.BaseDirectory, "Fixtures", "Presentation", "ScheduledTasksWindow.xaml");
-        var xaml = File.ReadAllText(path);
+        var xaml = ReadPresentation();
 
         Assert.Contains("Loc.Tasks.RawCrontab", xaml, StringComparison.Ordinal);
         Assert.Contains("Loc.Tasks.History", xaml, StringComparison.Ordinal);
@@ -62,6 +110,12 @@ public sealed class ScheduledTasksPresentationTests
         Assert.Contains("IsReadOnly=\"True\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Click=\"ApplyRawCronOnClick\"", xaml, StringComparison.Ordinal);
         Assert.DoesNotContain("AutoGenerateColumns=\"True\"", xaml, StringComparison.Ordinal);
+    }
+
+    private static string ReadPresentation()
+    {
+        var path = Path.Combine(AppContext.BaseDirectory, "Fixtures", "Presentation", "ScheduledTasksWindow.xaml");
+        return File.ReadAllText(path);
     }
 
     private static IReadOnlyDictionary<string, string> ReadResources(string fileName)
